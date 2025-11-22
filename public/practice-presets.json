@@ -1,0 +1,3221 @@
+{
+  "version": "1.3",
+  "presets": [
+    {
+      "id": "beginner-single-stroke-quarter",
+      "name": "Single Stroke Roll (Quarter Notes)",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "single-stroke",
+        "roll",
+        "quarter-notes",
+        "basic"
+      ],
+      "description": "Basic single stroke roll in quarter notes - perfect for absolute beginners",
+      "timeSignature": "4/4",
+      "subdivision": 4,
+      "phrase": "1 1 1 1",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L",
+      "bpm": 60,
+      "repeat": 4,
+      "difficulty": 1
+    },
+    {
+      "id": "beginner-double-stroke-quarter",
+      "name": "Double Stroke Roll (Quarter Notes)",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "double-stroke",
+        "roll",
+        "quarter-notes"
+      ],
+      "description": "Double stroke roll in quarter notes - develops rebound control",
+      "timeSignature": "4/4",
+      "subdivision": 4,
+      "phrase": "1 1 1 1",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L",
+      "bpm": 55,
+      "repeat": 4,
+      "difficulty": 1
+    },
+    {
+      "id": "beginner-single-stroke-eighth",
+      "name": "Single Stroke Roll (Eighth Notes)",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "single-stroke",
+        "roll",
+        "8th-notes"
+      ],
+      "description": "Single stroke roll in eighth notes - slower tempo for beginners",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 1
+    },
+    {
+      "id": "beginner-double-stroke-eighth",
+      "name": "Double Stroke Roll (Eighth Notes)",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "double-stroke",
+        "roll",
+        "8th-notes"
+      ],
+      "description": "Double stroke roll in eighth notes - focus on rebound control",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L",
+      "bpm": 70,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-paradiddle-eighth",
+      "name": "Single Paradiddle (Eighth Notes)",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "paradiddle",
+        "8th-notes"
+      ],
+      "description": "Paradiddle in eighth notes - slower tempo for learning",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-single-stroke-roll",
+      "name": "Single Stroke Roll",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "single-stroke",
+        "roll",
+        "alternating",
+        "control"
+      ],
+      "description": "Alternate strokes between hands (R L R L) - builds evenness and control",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 1
+    },
+    {
+      "id": "beginner-double-stroke-roll",
+      "name": "Double Stroke Roll",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "double-stroke",
+        "roll",
+        "rebound"
+      ],
+      "description": "Two strokes per hand (R R L L) - develops wrist control and rebound",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L L R R L L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-paradiddle",
+      "name": "Single Paradiddle",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "paradiddle",
+        "coordination",
+        "classic"
+      ],
+      "description": "Classic paradiddle pattern (R L R R L R L L) - enhances coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L R L R R L R L L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-basic-accent",
+      "name": "Basic Accent Pattern",
+      "category": "beginner",
+      "subcategory": "dynamics",
+      "tags": [
+        "accent",
+        "dynamics",
+        "control"
+      ],
+      "description": "Accent on beat 1 - develops dynamic control",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "accents": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-single-stroke-four",
+      "name": "Single Stroke Four",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "single-stroke",
+        "four",
+        "control"
+      ],
+      "description": "Four strokes per hand (R R R R L L L L) - builds control and speed",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R R R L L L L R R R R L L L L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-five-stroke-roll",
+      "name": "Five Stroke Roll",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "five-stroke",
+        "roll",
+        "rudiment"
+      ],
+      "description": "Five-stroke pattern (R R L L R) - fundamental roll rudiment",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R R L L R R R L L R R R L L R",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-six-stroke-roll",
+      "name": "Six Stroke Roll",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "six-stroke",
+        "roll"
+      ],
+      "description": "Six-stroke pattern (R R L L R L) - develops roll technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R L R R L L R L R R L L R L R R L L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-seven-stroke-roll",
+      "name": "Seven Stroke Roll",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "seven-stroke",
+        "roll"
+      ],
+      "description": "Seven-stroke pattern (R R L L R R L) - advanced roll control",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L R R L L R R L R R L L R R L R R L L R R L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "beginner-nine-stroke-roll",
+      "name": "Nine Stroke Roll",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "nine-stroke",
+        "roll"
+      ],
+      "description": "Nine-stroke pattern (R R L L R R L L R) - extended roll technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R R L L R R L L R R R L L R R L L R R R L L R R L L R",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "beginner-triplet-basic",
+      "name": "Basic Triplets",
+      "category": "beginner",
+      "subcategory": "subdivisions",
+      "tags": [
+        "triplets",
+        "subdivision",
+        "timing"
+      ],
+      "description": "Basic triplets - develops triplet feel and timing",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-triplet-paradiddle",
+      "name": "Triplet Paradiddle",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "triplets",
+        "paradiddle"
+      ],
+      "description": "Paradiddle in triplets - combines paradiddle with triplet feel",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L R L R R L R L L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "beginner-sextuplet-basic",
+      "name": "Basic Sextuplets",
+      "category": "beginner",
+      "subcategory": "subdivisions",
+      "tags": [
+        "sextuplets",
+        "24th-notes"
+      ],
+      "description": "Basic sextuplets - six notes per beat",
+      "timeSignature": "4/4",
+      "subdivision": 24,
+      "phrase": "6 6 6 6",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L R L R L R L R L",
+      "bpm": 70,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "beginner-32nd-basic",
+      "name": "Basic 32nd Notes",
+      "category": "beginner",
+      "subcategory": "subdivisions",
+      "tags": [
+        "32nd-notes"
+      ],
+      "description": "Basic 32nd note pattern - builds speed",
+      "timeSignature": "4/4",
+      "subdivision": 32,
+      "phrase": "8 8 8 8",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L",
+      "bpm": 50,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "intermediate-accented-triplets",
+      "name": "Accented Triplets",
+      "category": "intermediate",
+      "subcategory": "dynamics",
+      "tags": [
+        "triplets",
+        "accent",
+        "dynamics"
+      ],
+      "description": "Triplet groups with accents - improves dynamic control",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L",
+      "bpm": 110,
+      "repeat": 4,
+      "accents": [
+        0,
+        3,
+        6,
+        9
+      ],
+      "difficulty": 4
+    },
+    {
+      "id": "intermediate-paradiddle-diddle",
+      "name": "Paradiddle-Diddle",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "paradiddle",
+        "diddle",
+        "speed"
+      ],
+      "description": "Extended paradiddle (R L R R L L) - builds speed and fluidity",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L L R L R R L L R L R R L L R L R R L L",
+      "bpm": 110,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "intermediate-double-paradiddle",
+      "name": "Double Paradiddle",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "double-paradiddle",
+        "coordination"
+      ],
+      "description": "Six-stroke pattern (R L R L R R L R L R L L) - advanced coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R R L R L R L L R L R L R R L R L R L L",
+      "bpm": 105,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "intermediate-flam-tap",
+      "name": "Flam Tap Pattern",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "tap",
+        "grace-notes"
+      ],
+      "description": "Flam followed by tap - develops grace note technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL lR rL lR rL lR rL lR rL lR rL lR rL lR rL",
+      "bpm": 100,
+      "repeat": 4,
+      "_hasFlams": true,
+      "difficulty": 5
+    },
+    {
+      "id": "intermediate-accent-every-other",
+      "name": "Accent Pattern - Every Other",
+      "category": "intermediate",
+      "subcategory": "dynamics",
+      "tags": [
+        "accent",
+        "pattern",
+        "control"
+      ],
+      "description": "Accent every other note - challenges control",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "accents": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12,
+        14
+      ],
+      "difficulty": 4
+    },
+    {
+      "id": "intermediate-triple-paradiddle",
+      "name": "Triple Paradiddle",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "triple-paradiddle",
+        "extended"
+      ],
+      "description": "Twelve-stroke pattern (R L R L R L R R L R L R L R L L) - extended paradiddle",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R R L R L R L R L L R L R L R L R R L R L R L R L L",
+      "bpm": 105,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "intermediate-flam-accent",
+      "name": "Flam Accent",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "accent"
+      ],
+      "description": "Flam followed by accent pattern - develops flam technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL lR rL lR rL lR rL lR rL lR rL lR rL lR rL",
+      "bpm": 100,
+      "repeat": 4,
+      "accents": [
+        0,
+        4,
+        8,
+        12
+      ],
+      "_hasFlams": true,
+      "difficulty": 5
+    },
+    {
+      "id": "intermediate-flam-paradiddle",
+      "name": "Flam Paradiddle",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "paradiddle"
+      ],
+      "description": "Flam combined with paradiddle (R L R R L R L L) - advanced flam work",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL R R L R L L lR rL R R L R L L lR rL R R L R L L lR rL R R L R L L",
+      "bpm": 100,
+      "repeat": 4,
+      "_hasFlams": true,
+      "difficulty": 5
+    },
+    {
+      "id": "intermediate-drag",
+      "name": "Drag (Ruff)",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "drag",
+        "ruff",
+        "grace-notes"
+      ],
+      "description": "Two grace notes before main note - develops drag technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 95,
+      "repeat": 4,
+      "accents": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "difficulty": 5
+    },
+    {
+      "id": "intermediate-single-ratamacue",
+      "name": "Single Ratamacue",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "ratamacue",
+        "drag"
+      ],
+      "description": "Drag followed by two taps (R R L R L) - classic rudiment",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L R L R R L R L R R L R L R R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "intermediate-flam-paradiddle-diddle",
+      "name": "Flam Paradiddle-Diddle",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "paradiddle-diddle"
+      ],
+      "description": "Flam with paradiddle-diddle pattern - advanced coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL R R L L lR rL R R L L lR rL R R L L lR rL R R L L",
+      "bpm": 105,
+      "repeat": 4,
+      "_hasFlams": true,
+      "difficulty": 6
+    },
+    {
+      "id": "intermediate-sextuplet-paradiddle",
+      "name": "Sextuplet Paradiddle",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "sextuplets",
+        "paradiddle"
+      ],
+      "description": "Paradiddle in sextuplets - advanced speed work",
+      "timeSignature": "4/4",
+      "subdivision": 24,
+      "phrase": "6 6 6 6",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L L R L R R L L R L R R L L R L R R L L",
+      "bpm": 75,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "intermediate-32nd-paradiddle",
+      "name": "32nd Notes Paradiddle",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "32nd-notes",
+        "paradiddle"
+      ],
+      "description": "Paradiddle in 32nd notes - extreme speed work",
+      "timeSignature": "4/4",
+      "subdivision": 32,
+      "phrase": "8 8 8 8",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L R L R R L R L L R L R R L R L L R L R R L R L L",
+      "bpm": 55,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "advanced-complex-rudiment",
+      "name": "Complex Rudiment Combination",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "complex",
+        "combination"
+      ],
+      "description": "Alternating paradiddles and flams - advanced coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL R R L R L L lR rL R R L R L L",
+      "bpm": 115,
+      "repeat": 4,
+      "_hasFlams": true,
+      "difficulty": 8
+    },
+    {
+      "id": "advanced-triple-ratamacue",
+      "name": "Triple Ratamacue",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "ratamacue",
+        "drag"
+      ],
+      "description": "Three-drag ratamacue - most advanced ratamacue",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R R L R L R R R L R L R R R L R L R R R L R L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 9
+    },
+    {
+      "id": "advanced-inverted-flam-tap",
+      "name": "Inverted Flam Tap",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "inverted"
+      ],
+      "description": "Tap followed by flam - reverses flam tap pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R lR L rL R lR L rL R lR L rL R lR L rL",
+      "bpm": 100,
+      "repeat": 4,
+      "_hasFlams": true,
+      "difficulty": 8
+    },
+    {
+      "id": "advanced-flamacue",
+      "name": "Flamacue",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "drag"
+      ],
+      "description": "Flam followed by drag - combines flam and drag techniques",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL R L lR rL R L lR rL R L lR rL R L",
+      "bpm": 100,
+      "repeat": 4,
+      "accents": [
+        0,
+        3,
+        6,
+        9,
+        12,
+        15
+      ],
+      "_hasFlams": true,
+      "difficulty": 9
+    },
+    {
+      "id": "advanced-single-dragadiddle",
+      "name": "Single Dragadiddle",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "drag",
+        "paradiddle"
+      ],
+      "description": "Drag combined with paradiddle - advanced drag work",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L R R L R L L R R L R R L R L L R R L R R L R L L R R L R R L R L L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 8
+    },
+    {
+      "id": "advanced-lesson-25",
+      "name": "Lesson 25",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "lesson",
+        "coordination"
+      ],
+      "description": "Classic lesson pattern (R L R R L L R L) - builds coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L L R L R L R R L L R L R L R R L L R L R L R R L L R L",
+      "bpm": 105,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "advanced-flam-drag",
+      "name": "Flam Drag",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "drag"
+      ],
+      "description": "Flam followed by drag - combines both techniques",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL R L lR rL R L lR rL R L lR rL R L",
+      "bpm": 100,
+      "repeat": 4,
+      "accents": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12,
+        14
+      ],
+      "_hasFlams": true,
+      "difficulty": 9
+    },
+    {
+      "id": "advanced-single-stroke-seven",
+      "name": "Single Stroke Seven",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "single-stroke",
+        "seven"
+      ],
+      "description": "Seven strokes per hand - extended single stroke pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R R R R R R L L L L L L L R R R R R R R L L L L L L L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "coordination-paradiddle-variations",
+      "name": "Paradiddle Variations",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "paradiddle",
+        "coordination",
+        "variations"
+      ],
+      "description": "Multiple paradiddle variations - builds coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L R L R R L R L L R L R R L R L L R L R R L R L L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "independence-hand-foot-basic",
+      "name": "Independence: Hand-Foot Basic",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "coordination"
+      ],
+      "description": "Basic hand-foot independence pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S K S K",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "groove-basic-rock",
+      "name": "Groove: Basic Rock",
+      "category": "grooves",
+      "subcategory": "rock",
+      "tags": [
+        "groove",
+        "rock",
+        "basic"
+      ],
+      "description": "Basic rock groove pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "K S K S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "rudiment-ten-stroke-roll",
+      "name": "Ten Stroke Roll",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "ten-stroke",
+        "roll"
+      ],
+      "description": "Ten-stroke roll pattern - extended roll technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R R R L L R R L L R R R R L L R R L L R R",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "rudiment-eleven-stroke-roll",
+      "name": "Eleven Stroke Roll",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "eleven-stroke",
+        "roll"
+      ],
+      "description": "Eleven-stroke roll pattern - advanced roll technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L R R L L R R L L R R L R R L L R R L L R R L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "rudiment-thirteen-stroke-roll",
+      "name": "Thirteen Stroke Roll",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "thirteen-stroke",
+        "roll"
+      ],
+      "description": "Thirteen-stroke roll pattern - extended roll technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L L R R R L L R R L L R R L L R R R L L R R L L R R L L R R",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "rudiment-fifteen-stroke-roll",
+      "name": "Fifteen Stroke Roll",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "fifteen-stroke",
+        "roll"
+      ],
+      "description": "Fifteen-stroke roll pattern - very extended roll technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L L R R L L R R R L L R R L L R R L L R R L L R R R L L R R L L R R L L R R L L R R",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "rudiment-seventeen-stroke-roll",
+      "name": "Seventeen Stroke Roll",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "seventeen-stroke",
+        "roll"
+      ],
+      "description": "Seventeen-stroke roll pattern - extremely extended roll technique",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L L R R L L R R L R R L L R R L L R R L L R R L L R R L R R L L R R L L R R L L R R L L R R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "rudiment-single-stroke-five",
+      "name": "Single Stroke Five",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "single-stroke",
+        "five"
+      ],
+      "description": "Five strokes per hand - builds control",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R R R R L L L L L R R R R R L L L L L R R R R R L L L L L R R R R R L L L L L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "rudiment-single-stroke-nine",
+      "name": "Single Stroke Nine",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "single-stroke",
+        "nine"
+      ],
+      "description": "Nine strokes per hand - extended single stroke pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R R R R R R R R L L L L L L L L L R R R R R R R R R L L L L L L L L L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "rudiment-single-stroke-thirteen",
+      "name": "Single Stroke Thirteen",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "single-stroke",
+        "thirteen"
+      ],
+      "description": "Thirteen strokes per hand - very extended single stroke pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R R R R R R R R R R R R L L L L L L L L L L L L R R R R R R R R R R R R R L L L L L L L L L L L L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "rudiment-single-stroke-fifteen",
+      "name": "Single Stroke Fifteen",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "single-stroke",
+        "fifteen"
+      ],
+      "description": "Fifteen strokes per hand - extremely extended single stroke pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R R R R R R R R R R R R R R L L L L L L L L L L L L L L L R R R R R R R R R R R R R R R L L L L L L L L L L L L L L L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "rudiment-flam-paradiddle-diddle-alt",
+      "name": "Flam Paradiddle-Diddle (Alt)",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "paradiddle-diddle"
+      ],
+      "description": "Alternating flam paradiddle-diddle pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL R R L L rL lR L L R R lR rL R R L L rL lR L L R R",
+      "bpm": 105,
+      "repeat": 4,
+      "_hasFlams": true,
+      "difficulty": 7
+    },
+    {
+      "id": "rudiment-single-flammed-mill",
+      "name": "Single Flammed Mill",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "mill"
+      ],
+      "description": "Flammed mill pattern - advanced flam work",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL R L lR rL R L lR rL R L lR rL R L",
+      "bpm": 100,
+      "repeat": 4,
+      "_hasFlams": true,
+      "difficulty": 8
+    },
+    {
+      "id": "rudiment-flam-tap-five",
+      "name": "Flam Tap Five",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "flam",
+        "tap",
+        "five"
+      ],
+      "description": "Five-stroke flam tap pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL lR rL lR rL lR rL lR rL lR rL lR rL lR rL lR rL lR rL",
+      "bpm": 95,
+      "repeat": 4,
+      "_hasFlams": true,
+      "difficulty": 7
+    },
+    {
+      "id": "rudiment-double-ratamacue-alt",
+      "name": "Double Ratamacue (Alt)",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "ratamacue",
+        "drag"
+      ],
+      "description": "Alternating double ratamacue pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L R L L L R L R R R L R L L L R L R",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 8
+    },
+    {
+      "id": "rudiment-triple-ratamacue-alt",
+      "name": "Triple Ratamacue (Alt)",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "ratamacue",
+        "drag"
+      ],
+      "description": "Alternating triple ratamacue pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R R L R L L L L R L R R R R L R L L L L R L R",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 9
+    },
+    {
+      "id": "rudiment-single-drag-tap",
+      "name": "Single Drag Tap",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "drag",
+        "tap"
+      ],
+      "description": "Single drag followed by tap",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L R R L R R L R R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "rudiment-lesson-25-alt",
+      "name": "Lesson 25 (Alt Pattern)",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "lesson",
+        "coordination"
+      ],
+      "description": "Alternative lesson 25 pattern variation",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L L R L L R R L L R L R R L L R L",
+      "bpm": 105,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "independence-hand-foot-advanced",
+      "name": "Independence: Hand-Foot Advanced",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "advanced"
+      ],
+      "description": "Advanced hand-foot independence pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "K S K S K S K S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "independence-hand-foot-complex",
+      "name": "Independence: Hand-Foot Complex",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "complex"
+      ],
+      "description": "Complex hand-foot independence pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "K S K S S K S K",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 8
+    },
+    {
+      "id": "groove-rock-8th",
+      "name": "Groove: Rock 8th Notes",
+      "category": "grooves",
+      "subcategory": "rock",
+      "tags": [
+        "groove",
+        "rock",
+        "8th-notes"
+      ],
+      "description": "Rock groove in eighth notes",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "K S K S",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "technique-finger-fives",
+      "name": "Finger Technique: Fives",
+      "category": "technique",
+      "subcategory": "finger",
+      "tags": [
+        "finger",
+        "technique",
+        "fives"
+      ],
+      "description": "Finger control exercise using groups of five",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R R R R L L L L L R R R R R L L L L L",
+      "bpm": 90,
+      "repeat": 6,
+      "difficulty": 6
+    },
+    {
+      "id": "warmup-full-rudiment-set",
+      "name": "Warm-up: Full Rudiment Set",
+      "category": "warmup",
+      "subcategory": "rudiments",
+      "tags": [
+        "warm-up",
+        "rudiments",
+        "full-set"
+      ],
+      "description": "Complete rudiment warm-up set",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R R L L R L R R L R L L",
+      "bpm": 80,
+      "repeat": 8,
+      "difficulty": 4
+    },
+    {
+      "id": "advanced-polyrhythm-5over4",
+      "name": "Polyrhythm - 5 over 4",
+      "category": "advanced",
+      "subcategory": "coordination",
+      "tags": [
+        "polyrhythm",
+        "independence",
+        "advanced"
+      ],
+      "description": "Five notes per beat in one hand, four in other - extreme independence",
+      "timeSignature": "4/4",
+      "subdivision": 20,
+      "phrase": "5 5 5 5",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L R L R L R L",
+      "bpm": 70,
+      "repeat": 4,
+      "difficulty": 10
+    },
+    {
+      "id": "advanced-combination-rudiments",
+      "name": "Advanced Combination Rudiments",
+      "category": "advanced",
+      "subcategory": "rudiments",
+      "tags": [
+        "combination",
+        "rudiments",
+        "advanced"
+      ],
+      "description": "Combining multiple advanced rudiments",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR rL R R L L R L R R L R L L lR rL R R L L",
+      "bpm": 110,
+      "repeat": 4,
+      "_hasFlams": true,
+      "difficulty": 9
+    },
+    {
+      "id": "advanced-technical-mastery",
+      "name": "Technical Mastery Exercise",
+      "category": "advanced",
+      "subcategory": "technique",
+      "tags": [
+        "technical",
+        "mastery",
+        "advanced"
+      ],
+      "description": "Comprehensive technical mastery exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L L R L R R L R L L R L R R L L",
+      "bpm": 115,
+      "repeat": 6,
+      "difficulty": 9
+    },
+    {
+      "id": "warmup-single-stroke-4",
+      "name": "Warm-up: Single Stroke (Quarter Notes)",
+      "category": "warmup",
+      "subcategory": "rudiments",
+      "tags": [
+        "warm-up",
+        "single-stroke",
+        "quarter-notes"
+      ],
+      "description": "Slow single stroke roll in quarter notes - gentle warm-up",
+      "timeSignature": "4/4",
+      "subdivision": 4,
+      "phrase": "1 1 1 1",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L",
+      "bpm": 50,
+      "repeat": 8,
+      "difficulty": 1
+    },
+    {
+      "id": "warmup-single-stroke-8",
+      "name": "Warm-up: Single Stroke (Eighth Notes)",
+      "category": "warmup",
+      "subcategory": "rudiments",
+      "tags": [
+        "warm-up",
+        "single-stroke",
+        "8th-notes"
+      ],
+      "description": "Slow single stroke roll in eighth notes - gentle warm-up",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 60,
+      "repeat": 8,
+      "difficulty": 1
+    },
+    {
+      "id": "warmup-single-stroke-12",
+      "name": "Warm-up: Single Stroke (Triplet Notes)",
+      "category": "warmup",
+      "subcategory": "rudiments",
+      "tags": [
+        "warm-up",
+        "single-stroke",
+        "triplets"
+      ],
+      "description": "Slow single stroke roll in triplet notes - gentle warm-up",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L",
+      "bpm": 55,
+      "repeat": 8,
+      "difficulty": 2
+    },
+    {
+      "id": "warmup-single-stroke-24",
+      "name": "Warm-up: Single Stroke (Sextuplet Notes)",
+      "category": "warmup",
+      "subcategory": "rudiments",
+      "tags": [
+        "warm-up",
+        "single-stroke",
+        "sextuplets"
+      ],
+      "description": "Slow single stroke roll in sextuplet notes - gentle warm-up",
+      "timeSignature": "4/4",
+      "subdivision": 24,
+      "phrase": "6 6 6 6",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L R L R L R L R L",
+      "bpm": 45,
+      "repeat": 8,
+      "difficulty": 2
+    },
+    {
+      "id": "warmup-single-stroke-32",
+      "name": "Warm-up: Single Stroke (32nd Notes)",
+      "category": "warmup",
+      "subcategory": "rudiments",
+      "tags": [
+        "warm-up",
+        "single-stroke",
+        "32nd-notes"
+      ],
+      "description": "Slow single stroke roll in 32nd notes - gentle warm-up",
+      "timeSignature": "4/4",
+      "subdivision": 32,
+      "phrase": "8 8 8 8",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L",
+      "bpm": 40,
+      "repeat": 8,
+      "difficulty": 2
+    },
+    {
+      "id": "groove-rock-hihat",
+      "name": "Groove: Rock with Hi-Hat",
+      "category": "grooves",
+      "subcategory": "rock",
+      "tags": [
+        "groove",
+        "rock",
+        "hi-hat"
+      ],
+      "description": "Basic rock groove with hi-hat pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H S H+K H S H+K H S H+K H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "groove-funk-hihat",
+      "name": "Groove: Funk with Hi-Hat",
+      "category": "grooves",
+      "subcategory": "funk",
+      "tags": [
+        "groove",
+        "funk",
+        "hi-hat"
+      ],
+      "description": "Funk groove with hi-hat pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H H+K H H H+K H H H+K H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "groove-jazz-hihat",
+      "name": "Groove: Jazz with Hi-Hat",
+      "category": "grooves",
+      "subcategory": "jazz",
+      "tags": [
+        "groove",
+        "jazz",
+        "hi-hat"
+      ],
+      "description": "Jazz groove with hi-hat pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H H+K H H H+K H H H+K H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 120,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "fill-tom-basic",
+      "name": "Fill: Basic Tom Pattern",
+      "category": "grooves",
+      "subcategory": "fills",
+      "tags": [
+        "fill",
+        "tom"
+      ],
+      "description": "Basic tom fill pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S T T F F T T",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "fill-tom-advanced",
+      "name": "Fill: Advanced Tom Pattern",
+      "category": "grooves",
+      "subcategory": "fills",
+      "tags": [
+        "fill",
+        "tom",
+        "advanced"
+      ],
+      "description": "Advanced tom fill with floor tom",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "T T F F T T F F",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 110,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "groove-latin-hihat",
+      "name": "Groove: Latin with Hi-Hat",
+      "category": "grooves",
+      "subcategory": "latin",
+      "tags": [
+        "groove",
+        "latin",
+        "hi-hat"
+      ],
+      "description": "Latin groove with hi-hat pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H H+K H H H+K H H H+K H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 110,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "warmup-hihat-quarter",
+      "name": "Warm-up: Hi-Hat (Quarter Notes)",
+      "category": "warmup",
+      "subcategory": "grooves",
+      "tags": [
+        "warm-up",
+        "hi-hat",
+        "quarter-notes"
+      ],
+      "description": "Slow hi-hat pattern in quarter notes - gentle warm-up",
+      "timeSignature": "4/4",
+      "subdivision": 4,
+      "phrase": "1 1 1 1",
+      "drumPattern": "H H H H",
+      "stickingPattern": "R L R L",
+      "bpm": 50,
+      "repeat": 8,
+      "difficulty": 1
+    },
+    {
+      "id": "warmup-hihat-eighth",
+      "name": "Warm-up: Hi-Hat (Eighth Notes)",
+      "category": "warmup",
+      "subcategory": "grooves",
+      "tags": [
+        "warm-up",
+        "hi-hat",
+        "8th-notes"
+      ],
+      "description": "Slow hi-hat pattern in eighth notes - gentle warm-up",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "H H H H",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 60,
+      "repeat": 8,
+      "difficulty": 1
+    },
+    {
+      "id": "beginner-triplet-tom",
+      "name": "Triplet Tom Pattern",
+      "category": "beginner",
+      "subcategory": "coordination",
+      "tags": [
+        "triplets",
+        "tom",
+        "coordination"
+      ],
+      "description": "Basic triplet pattern using toms",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "T T T T",
+      "stickingPattern": "R L R L R L R L R L R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "intermediate-hihat-paradiddle",
+      "name": "Hi-Hat Paradiddle",
+      "category": "intermediate",
+      "subcategory": "grooves",
+      "tags": [
+        "hi-hat",
+        "paradiddle",
+        "groove"
+      ],
+      "description": "Paradiddle pattern on hi-hat",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H H H H",
+      "stickingPattern": "R L R R L R L L R L R R L R L L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "groove-rock-simultaneous",
+      "name": "Groove: Rock (Simultaneous)",
+      "category": "grooves",
+      "subcategory": "rock",
+      "tags": [
+        "groove",
+        "rock",
+        "simultaneous"
+      ],
+      "description": "Rock groove with simultaneous snare+kick hits",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H S H+K H S H+K H S H+K H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "groove-funk-simultaneous",
+      "name": "Groove: Funk (Simultaneous)",
+      "category": "grooves",
+      "subcategory": "funk",
+      "tags": [
+        "groove",
+        "funk",
+        "simultaneous"
+      ],
+      "description": "Funk groove with simultaneous hi-hat+kick",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H H+K H H H+K H H H+K H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "beginner-quarter-paradiddle",
+      "name": "Paradiddle (Quarter Notes)",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "paradiddle",
+        "quarter-notes"
+      ],
+      "description": "Paradiddle in quarter notes - slower tempo",
+      "timeSignature": "4/4",
+      "subdivision": 4,
+      "phrase": "1 1 1 1",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L",
+      "bpm": 60,
+      "repeat": 4,
+      "difficulty": 1
+    },
+    {
+      "id": "beginner-eighth-double-stroke",
+      "name": "Double Stroke (Eighth Notes)",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "double-stroke",
+        "8th-notes"
+      ],
+      "description": "Double stroke roll in eighth notes",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L",
+      "bpm": 70,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "intermediate-triplet-double",
+      "name": "Double Stroke Triplets",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "double-stroke",
+        "triplets"
+      ],
+      "description": "Double stroke roll in triplets",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "intermediate-sextuplet-double",
+      "name": "Double Stroke Sextuplets",
+      "category": "intermediate",
+      "subcategory": "rudiments",
+      "tags": [
+        "double-stroke",
+        "sextuplets"
+      ],
+      "description": "Double stroke roll in sextuplets",
+      "timeSignature": "4/4",
+      "subdivision": 24,
+      "phrase": "6 6 6 6",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L L R R L L R R L L R R L L",
+      "bpm": 70,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "beginner-phrase-variation-1",
+      "name": "Phrase Variation: 3+1",
+      "category": "beginner",
+      "subcategory": "phrasing",
+      "tags": [
+        "phrasing",
+        "variation"
+      ],
+      "description": "Phrase pattern: 3+1 groups",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "3 3 3 3 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-phrase-variation-2",
+      "name": "Phrase Variation: 2+2+4",
+      "category": "beginner",
+      "subcategory": "phrasing",
+      "tags": [
+        "phrasing",
+        "variation"
+      ],
+      "description": "Phrase pattern: 2+2+4 groups",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "2 2 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "intermediate-phrase-variation-1",
+      "name": "Phrase Variation: 6+6+4",
+      "category": "intermediate",
+      "subcategory": "phrasing",
+      "tags": [
+        "phrasing",
+        "variation"
+      ],
+      "description": "Phrase pattern: 6+6+4 groups",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "6 6 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "advanced-phrase-variation-1",
+      "name": "Phrase Variation: 5+5+3+3",
+      "category": "advanced",
+      "subcategory": "phrasing",
+      "tags": [
+        "phrasing",
+        "variation",
+        "advanced"
+      ],
+      "description": "Complex phrase pattern: 5+5+3+3 groups",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "5 5 3 3",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "groove-basic-rock-simultaneous",
+      "name": "Groove: Basic Rock (Simultaneous)",
+      "category": "grooves",
+      "subcategory": "rock",
+      "tags": [
+        "groove",
+        "rock",
+        "simultaneous",
+        "beginner"
+      ],
+      "description": "Basic rock groove with simultaneous snare+kick on beats 1 and 3",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S+K H H S S+K H H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "groove-basic-rock-hihat",
+      "name": "Groove: Basic Rock (Hi-Hat)",
+      "category": "grooves",
+      "subcategory": "rock",
+      "tags": [
+        "groove",
+        "rock",
+        "hi-hat",
+        "beginner"
+      ],
+      "description": "Basic rock groove with hi-hat pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H S H+K H H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "groove-shuffle-basic",
+      "name": "Groove: Shuffle (Basic)",
+      "category": "grooves",
+      "subcategory": "rock",
+      "tags": [
+        "groove",
+        "shuffle",
+        "hi-hat"
+      ],
+      "description": "Basic shuffle groove with hi-hat",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "H+K H S H+K H S",
+      "stickingPattern": "R L R L R L R L R L R L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "groove-pop-rock",
+      "name": "Groove: Pop Rock",
+      "category": "grooves",
+      "subcategory": "rock",
+      "tags": [
+        "groove",
+        "pop",
+        "rock",
+        "hi-hat"
+      ],
+      "description": "Pop rock groove with hi-hat and simultaneous hits",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H S H+K H H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 110,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "groove-funk-basic",
+      "name": "Groove: Funk (Basic)",
+      "category": "grooves",
+      "subcategory": "funk",
+      "tags": [
+        "groove",
+        "funk",
+        "hi-hat",
+        "beginner"
+      ],
+      "description": "Basic funk groove with hi-hat pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H S H+K H H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "groove-funk-open-hihat",
+      "name": "Groove: Funk (Open Hi-Hat)",
+      "category": "grooves",
+      "subcategory": "funk",
+      "tags": [
+        "groove",
+        "funk",
+        "hi-hat"
+      ],
+      "description": "Funk groove with open hi-hat accents",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H S H+K H H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "groove-latin-basic",
+      "name": "Groove: Latin (Basic)",
+      "category": "grooves",
+      "subcategory": "latin",
+      "tags": [
+        "groove",
+        "latin",
+        "hi-hat"
+      ],
+      "description": "Basic Latin groove with hi-hat",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H S H+K H H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 110,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "groove-reggae-basic",
+      "name": "Groove: Reggae (Basic)",
+      "category": "grooves",
+      "subcategory": "reggae",
+      "tags": [
+        "groove",
+        "reggae",
+        "hi-hat"
+      ],
+      "description": "Basic reggae groove with hi-hat",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H S H+K H H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "groove-disco-basic",
+      "name": "Groove: Disco (Basic)",
+      "category": "grooves",
+      "subcategory": "disco",
+      "tags": [
+        "groove",
+        "disco",
+        "hi-hat"
+      ],
+      "description": "Basic disco groove with hi-hat pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H H+K H H H+K H H H+K H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 120,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "groove-metal-basic",
+      "name": "Groove: Metal (Basic)",
+      "category": "grooves",
+      "subcategory": "metal",
+      "tags": [
+        "groove",
+        "metal",
+        "simultaneous"
+      ],
+      "description": "Basic metal groove with simultaneous snare+kick",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S+K H S+K H S+K H S+K H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 140,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "groove-blues-shuffle",
+      "name": "Groove: Blues Shuffle",
+      "category": "grooves",
+      "subcategory": "blues",
+      "tags": [
+        "groove",
+        "blues",
+        "shuffle",
+        "hi-hat"
+      ],
+      "description": "Blues shuffle groove with hi-hat",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "H+K H S H+K H S",
+      "stickingPattern": "R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "independence-hihat-kick",
+      "name": "Independence: Hi-Hat + Kick",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hi-hat",
+        "kick",
+        "coordination"
+      ],
+      "description": "Hi-hat and kick independence exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H H+K H H H+K H H H+K H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "independence-snare-kick-simultaneous",
+      "name": "Independence: Snare + Kick (Simultaneous)",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "snare",
+        "kick",
+        "simultaneous"
+      ],
+      "description": "Snare and kick simultaneous hits independence",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S+K H S+K H S+K H S+K H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "independence-triple-coordination",
+      "name": "Independence: Triple Coordination",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "advanced",
+        "coordination"
+      ],
+      "description": "Advanced independence with hi-hat, snare, and kick",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H S H+K H S H+K H S H+K H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "beginner-hihat-single-stroke",
+      "name": "Beginner: Hi-Hat Single Stroke",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "beginner",
+        "hi-hat",
+        "single-stroke"
+      ],
+      "description": "Basic single stroke roll on hi-hat",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H H H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "beginner-hihat-paradiddle",
+      "name": "Beginner: Hi-Hat Paradiddle",
+      "category": "beginner",
+      "subcategory": "rudiments",
+      "tags": [
+        "beginner",
+        "hi-hat",
+        "paradiddle"
+      ],
+      "description": "Paradiddle pattern on hi-hat",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H H H H",
+      "stickingPattern": "R L R R L R L L R L R R L R L L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "intermediate-hihat-accent-pattern",
+      "name": "Intermediate: Hi-Hat Accent Pattern",
+      "category": "intermediate",
+      "subcategory": "dynamics",
+      "tags": [
+        "intermediate",
+        "hi-hat",
+        "accent",
+        "dynamics"
+      ],
+      "description": "Hi-hat pattern with accents",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H H H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "accents": [0, 4, 8, 12],
+      "difficulty": 4
+    },
+    {
+      "id": "advanced-groove-complex",
+      "name": "Advanced: Complex Groove",
+      "category": "advanced",
+      "subcategory": "grooves",
+      "tags": [
+        "advanced",
+        "groove",
+        "complex",
+        "simultaneous"
+      ],
+      "description": "Complex groove with multiple simultaneous hits",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H S H+K H S+K H S H+K",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 110,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "fill-simultaneous-basic",
+      "name": "Fill: Simultaneous Hits (Basic)",
+      "category": "grooves",
+      "subcategory": "fills",
+      "tags": [
+        "fill",
+        "simultaneous",
+        "basic"
+      ],
+      "description": "Basic fill using simultaneous snare+kick hits",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S+K S+K S+K S+K H H H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "fill-tom-hihat",
+      "name": "Fill: Tom + Hi-Hat",
+      "category": "grooves",
+      "subcategory": "fills",
+      "tags": [
+        "fill",
+        "tom",
+        "hi-hat"
+      ],
+      "description": "Tom fill with hi-hat accents",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "T T H H F F H+K H+K",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 110,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "technique-hihat-control",
+      "name": "Technique: Hi-Hat Control",
+      "category": "technique",
+      "subcategory": "control",
+      "tags": [
+        "technique",
+        "hi-hat",
+        "control"
+      ],
+      "description": "Hi-hat control and dynamics exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H H H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 95,
+      "repeat": 6,
+      "accents": [0, 2, 4, 6, 8, 10, 12, 14],
+      "difficulty": 5
+    },
+    {
+      "id": "warmup-hihat-triplet",
+      "name": "Warm-up: Hi-Hat (Triplets)",
+      "category": "warmup",
+      "subcategory": "grooves",
+      "tags": [
+        "warm-up",
+        "hi-hat",
+        "triplets"
+      ],
+      "description": "Slow hi-hat pattern in triplets - gentle warm-up",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "H H H H",
+      "stickingPattern": "R L R L R L R L R L R L",
+      "bpm": 55,
+      "repeat": 8,
+      "difficulty": 2
+    },
+    {
+      "id": "warmup-simultaneous-basic",
+      "name": "Warm-up: Simultaneous Hits (Basic)",
+      "category": "warmup",
+      "subcategory": "coordination",
+      "tags": [
+        "warm-up",
+        "simultaneous",
+        "coordination"
+      ],
+      "description": "Basic warm-up with simultaneous snare+kick",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S+K H S+K H",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 60,
+      "repeat": 8,
+      "difficulty": 2
+    },
+    {
+      "id": "coordination-basic-alternating",
+      "name": "Coordination: Basic Alternating",
+      "category": "coordination",
+      "subcategory": "basic",
+      "tags": [
+        "coordination",
+        "alternating",
+        "basic"
+      ],
+      "description": "Basic alternating hand coordination - perfect starting point",
+      "timeSignature": "4/4",
+      "subdivision": 4,
+      "phrase": "1 1 1 1",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L",
+      "bpm": 60,
+      "repeat": 4,
+      "difficulty": 1
+    },
+    {
+      "id": "coordination-eighth-notes",
+      "name": "Coordination: Eighth Notes",
+      "category": "coordination",
+      "subcategory": "basic",
+      "tags": [
+        "coordination",
+        "eighth-notes",
+        "basic"
+      ],
+      "description": "Eighth note coordination exercise",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 70,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "coordination-double-stroke-basic",
+      "name": "Coordination: Double Stroke Basic",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "double-stroke",
+        "rudiments"
+      ],
+      "description": "Basic double stroke coordination",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L",
+      "bpm": 65,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "coordination-paradiddle-basic",
+      "name": "Coordination: Paradiddle Basic",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "paradiddle",
+        "rudiments"
+      ],
+      "description": "Basic paradiddle coordination pattern",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L",
+      "bpm": 75,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "coordination-sixteenth-basic",
+      "name": "Coordination: Sixteenth Notes Basic",
+      "category": "coordination",
+      "subcategory": "basic",
+      "tags": [
+        "coordination",
+        "sixteenth-notes",
+        "basic"
+      ],
+      "description": "Basic sixteenth note coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "coordination-paradiddle-variations",
+      "name": "Coordination: Paradiddle Variations",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "paradiddle",
+        "variations"
+      ],
+      "description": "Multiple paradiddle variations - builds coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L R L R R L R L L R L R R L R L L R L R R L R L L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "coordination-flam-taps",
+      "name": "Coordination: Flam Taps",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "flam",
+        "taps"
+      ],
+      "description": "Flam tap coordination exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR lL lR lL lR lL lR lL lR lL lR lL lR lL lR lL",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "coordination-swiss-army-triplet",
+      "name": "Coordination: Swiss Army Triplet",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "swiss-army",
+        "triplet"
+      ],
+      "description": "Swiss army triplet coordination pattern",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R lR L R lR L R lR L R lR L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "coordination-inverted-paradiddle",
+      "name": "Coordination: Inverted Paradiddle",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "inverted",
+        "paradiddle"
+      ],
+      "description": "Inverted paradiddle coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L L R L R R L R L L R L R R L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "coordination-double-paradiddle",
+      "name": "Coordination: Double Paradiddle",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "double",
+        "paradiddle"
+      ],
+      "description": "Double paradiddle coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R R L R L R L L R L R L R R L R L R L L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "coordination-triple-paradiddle",
+      "name": "Coordination: Triple Paradiddle",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "triple",
+        "paradiddle"
+      ],
+      "description": "Triple paradiddle coordination",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R R L R L R L R L L R L R L R L R R L R L R L R L L",
+      "bpm": 105,
+      "repeat": 4,
+      "difficulty": 8
+    },
+    {
+      "id": "coordination-ratamacue",
+      "name": "Coordination: Ratamacue",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "ratamacue",
+        "advanced"
+      ],
+      "description": "Ratamacue coordination exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "lR lL R lR lL R lR lL R lR lL R",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 9
+    },
+    {
+      "id": "coordination-complex-rudiment-combination",
+      "name": "Coordination: Complex Rudiment Combination",
+      "category": "coordination",
+      "subcategory": "rudiments",
+      "tags": [
+        "coordination",
+        "complex",
+        "rudiments"
+      ],
+      "description": "Complex combination of multiple rudiments",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L R L L R L R R L R L R R L R L L R L L R L R R L",
+      "bpm": 110,
+      "repeat": 4,
+      "difficulty": 10
+    },
+    {
+      "id": "speed-single-stroke-slow",
+      "name": "Speed: Single Stroke Slow",
+      "category": "speed",
+      "subcategory": "single-stroke",
+      "tags": [
+        "speed",
+        "single-stroke",
+        "beginner"
+      ],
+      "description": "Slow single stroke speed building - start here",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 60,
+      "repeat": 8,
+      "difficulty": 1
+    },
+    {
+      "id": "speed-single-stroke-moderate",
+      "name": "Speed: Single Stroke Moderate",
+      "category": "speed",
+      "subcategory": "single-stroke",
+      "tags": [
+        "speed",
+        "single-stroke",
+        "moderate"
+      ],
+      "description": "Moderate tempo single stroke speed",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 80,
+      "repeat": 8,
+      "difficulty": 2
+    },
+    {
+      "id": "speed-single-stroke-sixteenth",
+      "name": "Speed: Single Stroke Sixteenth",
+      "category": "speed",
+      "subcategory": "single-stroke",
+      "tags": [
+        "speed",
+        "single-stroke",
+        "sixteenth"
+      ],
+      "description": "Sixteenth note single stroke speed",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 90,
+      "repeat": 6,
+      "difficulty": 3
+    },
+    {
+      "id": "speed-double-stroke-basic",
+      "name": "Speed: Double Stroke Basic",
+      "category": "speed",
+      "subcategory": "double-stroke",
+      "tags": [
+        "speed",
+        "double-stroke",
+        "basic"
+      ],
+      "description": "Basic double stroke speed building",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L",
+      "bpm": 70,
+      "repeat": 8,
+      "difficulty": 3
+    },
+    {
+      "id": "speed-single-stroke-accelerating",
+      "name": "Speed: Single Stroke Accelerating",
+      "category": "speed",
+      "subcategory": "single-stroke",
+      "tags": [
+        "speed",
+        "single-stroke",
+        "accelerating"
+      ],
+      "description": "Accelerating single stroke pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 6,
+      "difficulty": 4
+    },
+    {
+      "id": "speed-double-stroke-sixteenth",
+      "name": "Speed: Double Stroke Sixteenth",
+      "category": "speed",
+      "subcategory": "double-stroke",
+      "tags": [
+        "speed",
+        "double-stroke",
+        "sixteenth"
+      ],
+      "description": "Sixteenth note double stroke speed",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L L R R L L",
+      "bpm": 95,
+      "repeat": 6,
+      "difficulty": 4
+    },
+    {
+      "id": "speed-paradiddle-speed",
+      "name": "Speed: Paradiddle Speed",
+      "category": "speed",
+      "subcategory": "paradiddle",
+      "tags": [
+        "speed",
+        "paradiddle",
+        "moderate"
+      ],
+      "description": "Paradiddle speed building exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L R L R R L R L L",
+      "bpm": 110,
+      "repeat": 6,
+      "difficulty": 5
+    },
+    {
+      "id": "speed-single-stroke-fast",
+      "name": "Speed: Single Stroke Fast",
+      "category": "speed",
+      "subcategory": "single-stroke",
+      "tags": [
+        "speed",
+        "single-stroke",
+        "fast"
+      ],
+      "description": "Fast single stroke speed exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 120,
+      "repeat": 8,
+      "difficulty": 6
+    },
+    {
+      "id": "speed-triplet-single-stroke",
+      "name": "Speed: Triplet Single Stroke",
+      "category": "speed",
+      "subcategory": "triplet",
+      "tags": [
+        "speed",
+        "triplet",
+        "single-stroke"
+      ],
+      "description": "Triplet single stroke speed",
+      "timeSignature": "4/4",
+      "subdivision": 12,
+      "phrase": "3 3 3 3",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L",
+      "bpm": 110,
+      "repeat": 6,
+      "difficulty": 6
+    },
+    {
+      "id": "speed-double-stroke-fast",
+      "name": "Speed: Double Stroke Fast",
+      "category": "speed",
+      "subcategory": "double-stroke",
+      "tags": [
+        "speed",
+        "double-stroke",
+        "fast"
+      ],
+      "description": "Fast double stroke speed exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L L R R L L",
+      "bpm": 115,
+      "repeat": 8,
+      "difficulty": 7
+    },
+    {
+      "id": "speed-paradiddle-fast",
+      "name": "Speed: Paradiddle Fast",
+      "category": "speed",
+      "subcategory": "paradiddle",
+      "tags": [
+        "speed",
+        "paradiddle",
+        "fast"
+      ],
+      "description": "Fast paradiddle speed exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R R L R L L R L R R L R L L",
+      "bpm": 130,
+      "repeat": 8,
+      "difficulty": 7
+    },
+    {
+      "id": "speed-thirty-second-notes",
+      "name": "Speed: Thirty-Second Notes",
+      "category": "speed",
+      "subcategory": "single-stroke",
+      "tags": [
+        "speed",
+        "thirty-second",
+        "advanced"
+      ],
+      "description": "Thirty-second note single stroke speed",
+      "timeSignature": "4/4",
+      "subdivision": 32,
+      "phrase": "8 8 8 8",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 8
+    },
+    {
+      "id": "speed-extreme-single-stroke",
+      "name": "Speed: Extreme Single Stroke",
+      "category": "speed",
+      "subcategory": "single-stroke",
+      "tags": [
+        "speed",
+        "extreme",
+        "single-stroke"
+      ],
+      "description": "Extreme single stroke speed challenge",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 140,
+      "repeat": 10,
+      "difficulty": 9
+    },
+    {
+      "id": "speed-extreme-double-stroke",
+      "name": "Speed: Extreme Double Stroke",
+      "category": "speed",
+      "subcategory": "double-stroke",
+      "tags": [
+        "speed",
+        "extreme",
+        "double-stroke"
+      ],
+      "description": "Extreme double stroke speed challenge",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R R L L R R L L R R L L R R L L",
+      "bpm": 135,
+      "repeat": 10,
+      "difficulty": 10
+    },
+    {
+      "id": "independence-hand-foot-basic-1",
+      "name": "Independence: Hand-Foot Basic 1",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "basic"
+      ],
+      "description": "Very basic hand-foot independence - quarter notes",
+      "timeSignature": "4/4",
+      "subdivision": 4,
+      "phrase": "1 1 1 1",
+      "drumPattern": "S K S K",
+      "stickingPattern": "R L R L",
+      "bpm": 60,
+      "repeat": 4,
+      "difficulty": 1
+    },
+    {
+      "id": "independence-hand-foot-basic-2",
+      "name": "Independence: Hand-Foot Basic 2",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "basic"
+      ],
+      "description": "Basic hand-foot independence - eighth notes",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "S K S K",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 70,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "independence-hand-foot-alternating",
+      "name": "Independence: Hand-Foot Alternating",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "alternating"
+      ],
+      "description": "Alternating hand-foot pattern",
+      "timeSignature": "4/4",
+      "subdivision": 8,
+      "phrase": "2 2 2 2",
+      "drumPattern": "K S K S",
+      "stickingPattern": "R L R L R L R L",
+      "bpm": 75,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "independence-hand-foot-sixteenth-basic",
+      "name": "Independence: Hand-Foot Sixteenth Basic",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "sixteenth"
+      ],
+      "description": "Basic sixteenth note hand-foot independence",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S K S K",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "independence-hand-foot-pattern-1",
+      "name": "Independence: Hand-Foot Pattern 1",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "pattern"
+      ],
+      "description": "Hand-foot independence pattern variation",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S K S K S K S K",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "independence-hand-foot-pattern-4",
+      "name": "Independence: Hand-Foot Pattern 4",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "pattern"
+      ],
+      "description": "Basic hand-foot independence pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S K S K",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "independence-hand-foot-pattern-2",
+      "name": "Independence: Hand-Foot Pattern 2",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "pattern"
+      ],
+      "description": "More complex hand-foot independence pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "K S K S K S K S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "independence-hand-foot-pattern-3",
+      "name": "Independence: Hand-Foot Pattern 3",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "pattern"
+      ],
+      "description": "Complex hand-foot independence pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "K S K S S K S K",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "independence-hand-foot-advanced",
+      "name": "Independence: Hand-Foot Advanced",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "advanced"
+      ],
+      "description": "Advanced hand-foot independence pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "K S K S K S K S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "independence-hand-foot-complex",
+      "name": "Independence: Hand-Foot Complex",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hand-foot",
+        "complex"
+      ],
+      "description": "Complex hand-foot independence pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "K S K S S K S K",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 8
+    },
+    {
+      "id": "independence-hihat-kick",
+      "name": "Independence: Hi-Hat + Kick",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hi-hat",
+        "kick",
+        "coordination"
+      ],
+      "description": "Hi-hat and kick independence exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H H H+K H H H+K H H H+K H H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 80,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "independence-snare-kick-simultaneous",
+      "name": "Independence: Snare + Kick (Simultaneous)",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "snare",
+        "kick",
+        "simultaneous"
+      ],
+      "description": "Snare and kick simultaneous hits independence",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S+K H S+K H S+K H S+K H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 85,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "independence-triple-coordination",
+      "name": "Independence: Triple Coordination",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "advanced",
+        "coordination"
+      ],
+      "description": "Advanced independence with hi-hat, snare, and kick",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H S H+K H S H+K H S H+K H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 90,
+      "repeat": 4,
+      "difficulty": 6
+    },
+    {
+      "id": "independence-hihat-snare-kick-basic",
+      "name": "Independence: Hi-Hat + Snare + Kick Basic",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hi-hat",
+        "snare",
+        "kick",
+        "basic"
+      ],
+      "description": "Basic three-way independence exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H S K H S K H S K H S K",
+      "stickingPattern": "R L R L R L R L R L R L",
+      "bpm": 75,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "independence-hihat-snare-kick-advanced",
+      "name": "Independence: Hi-Hat + Snare + Kick Advanced",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "hi-hat",
+        "snare",
+        "kick",
+        "advanced"
+      ],
+      "description": "Advanced three-way independence exercise",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H S H+K H S H+K H S H+K H S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 95,
+      "repeat": 4,
+      "difficulty": 7
+    },
+    {
+      "id": "independence-complex-pattern-1",
+      "name": "Independence: Complex Pattern 1",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "complex",
+        "pattern"
+      ],
+      "description": "Complex independence pattern with multiple voices",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H S H S+K H H+K H S H S+K H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 8
+    },
+    {
+      "id": "independence-complex-pattern-2",
+      "name": "Independence: Complex Pattern 2",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "complex",
+        "pattern"
+      ],
+      "description": "Very complex independence pattern",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H S+K H H+K H S+K H H+K H S+K H H+K H S+K H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 105,
+      "repeat": 4,
+      "difficulty": 9
+    },
+    {
+      "id": "independence-master-level",
+      "name": "Independence: Master Level",
+      "category": "independence",
+      "subcategory": "coordination",
+      "tags": [
+        "independence",
+        "master",
+        "advanced"
+      ],
+      "description": "Master-level independence challenge",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "H+K H S H+K S+K H H+K H S H+K S+K H",
+      "stickingPattern": "R L R L R L R L R L R L R L R L",
+      "bpm": 110,
+      "repeat": 4,
+      "difficulty": 10
+    }
+  ]
+}
