@@ -21,8 +21,14 @@ import { LearningPathModal } from '../PracticeMode/LearningPathModal';
 import { PolyrhythmBuilder } from '../PracticeMode/PolyrhythmBuilder';
 import { AudioSettingsModal } from '../PracticeMode/AudioSettingsModal';
 import { PlaybackSettingsModal } from '../PracticeMode/PlaybackSettingsModal';
+import { MIDIRecording } from '../PracticeMode/MIDIRecording';
 import { usePresets } from '@/hooks/usePresets';
 import { parseTimeSignature, buildAccentIndices, parseNumberList } from '@/lib/utils/patternUtils';
+import { exportSVG, exportPNG, exportMIDI, sharePatternURL } from '@/lib/utils/exportUtils';
+import { useMIDIRecording } from '@/hooks/useMIDIRecording';
+import { useMIDIDevices } from '@/hooks/useMIDIDevices';
+import { convertMIDIRecordingToPattern } from '@/lib/utils/midiRecordingUtils';
+import { startCountIn, stopCountIn, startMetronome, stopMetronome } from '@/lib/utils/midiRecordingManager';
 
 export function Toolbar() {
   const [midiPracticeOpen, setMidiPracticeOpen] = useState(false);
@@ -36,11 +42,16 @@ export function Toolbar() {
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showPlaybackSettings, setShowPlaybackSettings] = useState(false);
   const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
+  const [midiRecordingOpen, setMidiRecordingOpen] = useState(false);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [tapTempoMessage, setTapTempoMessage] = useState<string | null>(null);
   
   // Load presets for the dropdown
   const { presets, loading: presetsLoading } = usePresets();
+  
+  // MIDI Recording
+  const { devices: midiDevices, access: midiAccess } = useMIDIDevices();
+  const { startRecording: startMIDIRecordingHook, stopRecording: stopMIDIRecordingHook } = useMIDIRecording();
   
   // Close settings dropdown when modals open
   useEffect(() => {
@@ -64,6 +75,7 @@ export function Toolbar() {
   const midiPracticeEnabled = useStore((state) => state.midiPractice.enabled);
   const microphonePractice = useStore((state) => state.microphonePractice);
   const microphonePracticeEnabled = useStore((state) => state.microphonePractice.enabled);
+  const midiRecording = useStore((state) => state.midiRecording);
   
   const setBPM = useStore((state) => state.setBPM);
   const setIsPlaying = useStore((state) => state.setIsPlaying);
@@ -80,6 +92,15 @@ export function Toolbar() {
   const saveToHistory = useStore((state) => state.saveToHistory);
   const setMIDIPracticeEnabled = useStore((state) => state.setMIDIPracticeEnabled);
   const setMicrophonePracticeEnabled = useStore((state) => state.setMicrophonePracticeEnabled);
+  const setMIDIRecordingEnabled = useStore((state) => state.setMIDIRecordingEnabled);
+  const setMIDIRecordingStartTime = useStore((state) => state.setMIDIRecordingStartTime);
+  const clearMIDIRecordingNotes = useStore((state) => state.clearMIDIRecordingNotes);
+  const addMIDIRecordingNote = useStore((state) => state.addMIDIRecordingNote);
+  const setMIDIRecordingTimeSignature = useStore((state) => state.setMIDIRecordingTimeSignature);
+  const setMIDIRecordingSubdivision = useStore((state) => state.setMIDIRecordingSubdivision);
+  const setMIDIRecordingCountInEnabled = useStore((state) => state.setMIDIRecordingCountInEnabled);
+  const setMIDIRecordingCountInBeats = useStore((state) => state.setMIDIRecordingCountInBeats);
+  const setMIDIRecordingInput = useStore((state) => state.setMIDIRecordingInput);
 
   // Close presets dropdown when modals open
   useEffect(() => {
@@ -210,6 +231,126 @@ export function Toolbar() {
     }
   };
 
+  // MIDI Recording handlers
+  const handleStartMIDIRecording = async () => {
+    if (!midiRecording.input) {
+      // Try to get device from settings
+      if (typeof window !== 'undefined') {
+        try {
+          const saved = window.localStorage.getItem('dpgen_midi_recording_settings');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.deviceId && midiAccess) {
+              const input = midiAccess.inputs.get(parsed.deviceId);
+              if (input) {
+                setMIDIRecordingInput(input);
+                // Load settings
+                setMIDIRecordingTimeSignature(parsed.timeSignature || '4/4');
+                setMIDIRecordingSubdivision(parsed.subdivision || 16);
+                setMIDIRecordingCountInEnabled(parsed.countInEnabled !== false);
+                setMIDIRecordingCountInBeats(parsed.countInBeats || 4);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load MIDI recording settings:', e);
+        }
+      }
+      
+      if (!midiRecording.input) {
+        alert('Please configure MIDI recording settings first. Click the microphone icon to open settings.');
+        setMidiRecordingOpen(true);
+        return;
+      }
+    }
+    
+    // Get settings for count-in
+    const countInEnabled = midiRecording.countInEnabled !== false;
+    const countInBeats = midiRecording.countInBeats || 4;
+    const metronomeEnabled = midiRecording.metronomeEnabled !== false;
+    
+    // Start recording with count-in if enabled
+    if (countInEnabled) {
+      startCountIn(
+        bpm,
+        countInBeats,
+        () => {
+          // Count-in complete, start actual recording
+          if (metronomeEnabled) {
+            startMetronome(bpm);
+          }
+          startMIDIRecordingHook(midiRecording.input!);
+        },
+        undefined // No beat change callback for toolbar
+      );
+    } else {
+      if (metronomeEnabled) {
+        startMetronome(bpm);
+      }
+      await startMIDIRecordingHook(midiRecording.input);
+    }
+  };
+
+  const handleStopMIDIRecording = () => {
+    // Stop count-in and metronome
+    stopCountIn();
+    stopMetronome();
+    
+    const recordedNotes = stopMIDIRecordingHook();
+    
+    if (recordedNotes && recordedNotes.length > 0) {
+      // Get settings for conversion
+      const timeSignature = midiRecording.timeSignature || '4/4';
+      const subdivision = midiRecording.subdivision || 16;
+      
+      const patterns = convertMIDIRecordingToPattern(recordedNotes, timeSignature, subdivision, bpm);
+      
+      if (patterns.length > 0) {
+        // Replace all patterns with new ones
+        clearPatterns();
+        patterns.forEach(pattern => {
+          addPattern(pattern);
+        });
+        saveToHistory();
+        
+        alert(`${patterns.length} pattern${patterns.length > 1 ? 's' : ''} created from ${recordedNotes.length} MIDI notes!`);
+      } else {
+        alert('No patterns could be created from the recording.');
+      }
+    } else {
+      alert('No notes recorded.');
+    }
+  };
+
+  // Keyboard shortcuts for MIDI recording
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+R to stop recording
+      if (e.ctrlKey && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+        e.preventDefault();
+        if (midiRecording.enabled) {
+          handleStopMIDIRecording();
+        }
+      } 
+      // Ctrl+R to start recording (only if not already recording and not playing)
+      else if (e.ctrlKey && !e.shiftKey && (e.key === 'R' || e.key === 'r') && !e.altKey) {
+        // Don't prevent default if in an input field
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
+        
+        e.preventDefault();
+        if (!midiRecording.enabled && !isPlaying && midiRecording.input) {
+          handleStartMIDIRecording();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [midiRecording.enabled, midiRecording.input, isPlaying, bpm]);
+
   const handleLoadPreset = (presetId: string) => {
     const preset = presets.find(p => p.id === presetId);
     if (!preset) return;
@@ -222,6 +363,7 @@ export function Toolbar() {
 
     // Create pattern from preset
     const pattern = {
+      id: 0, // Will be replaced by addPattern
       timeSignature: preset.timeSignature,
       beats,
       beatType,
@@ -335,17 +477,43 @@ export function Toolbar() {
       {/* Export */}
       <ToolbarGroup>
         <ToolbarDropdown buttonIcon="fas fa-download" buttonTitle="Export Options">
-          <button type="button" className="dpgen-toolbar__menu-item" data-action="export-png">
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item" 
+            onClick={() => {
+              const staveElement = document.querySelector('.dpgen-stave__surface') as HTMLElement;
+              exportPNG(staveElement);
+            }}
+          >
             <i className="fas fa-image" /> Export PNG
           </button>
-          <button type="button" className="dpgen-toolbar__menu-item" data-action="export-svg">
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item" 
+            onClick={() => {
+              const staveElement = document.querySelector('.dpgen-stave__surface') as HTMLElement;
+              exportSVG(staveElement);
+            }}
+          >
             <i className="fas fa-file-code" /> Export SVG
           </button>
-          <button type="button" className="dpgen-toolbar__menu-item" data-action="export-midi">
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item" 
+            onClick={() => {
+              exportMIDI(patterns, bpm);
+            }}
+          >
             <i className="fas fa-music" /> Export MIDI
           </button>
           <div className="dpgen-toolbar__menu-divider" />
-          <button type="button" className="dpgen-toolbar__menu-item" data-action="share">
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item" 
+            onClick={() => {
+              sharePatternURL(patterns, bpm);
+            }}
+          >
             <i className="fas fa-share-alt" /> Share Pattern
           </button>
         </ToolbarDropdown>
@@ -535,10 +703,26 @@ export function Toolbar() {
           </label>
         </div>
         <ToolbarButton
-          onClick={() => console.log('MIDI Recording')}
-          title="Create Pattern from MIDI"
+          onClick={() => setMidiRecordingOpen(true)}
+          title="Create Pattern from MIDI (Open Settings)"
           icon="fas fa-microphone"
         />
+        {midiRecording.enabled ? (
+          <ToolbarButton
+            onClick={handleStopMIDIRecording}
+            title="Stop MIDI Recording (Ctrl+Shift+R)"
+            icon="fas fa-stop"
+            variant="danger"
+          />
+        ) : (
+          <ToolbarButton
+            onClick={handleStartMIDIRecording}
+            title="Start MIDI Recording (Ctrl+R)"
+            icon="fas fa-circle"
+            variant="primary"
+            disabled={!midiRecording.input}
+          />
+        )}
       </ToolbarGroup>
 
       <ToolbarDivider />
@@ -597,7 +781,7 @@ export function Toolbar() {
               </label>
               <select
                 value={polyrhythmDisplayMode}
-                onChange={(e) => setPolyrhythmDisplayMode(e.target.value as 'separate-positions' | 'stacked' | 'two-staves')}
+                onChange={(e) => setPolyrhythmDisplayMode(e.target.value as 'stacked' | 'two-staves')}
                 style={{
                   width: '100%',
                   padding: '0.5rem',
@@ -609,7 +793,6 @@ export function Toolbar() {
                   cursor: 'pointer'
                 }}
               >
-                <option value="separate-positions">Separate Positions</option>
                 <option value="stacked">Stacked</option>
                 <option value="two-staves">Two Staves</option>
               </select>
@@ -794,6 +977,11 @@ export function Toolbar() {
       {/* Playback Settings Modal */}
       {showPlaybackSettings && (
         <PlaybackSettingsModal onClose={() => setShowPlaybackSettings(false)} />
+      )}
+
+      {/* MIDI Recording Modal */}
+      {midiRecordingOpen && (
+        <MIDIRecording onClose={() => setMidiRecordingOpen(false)} />
       )}
     </div>
   );

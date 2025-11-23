@@ -9,6 +9,7 @@ import { PolyrhythmPattern } from '@/types/polyrhythm';
 import { getAudioContext, resumeAudioContext } from '@/lib/audio/audioLoader';
 import { parseTokens, parseNumberList, parseTimeSignature, calculateNotesPerBar, buildAccentIndices } from '@/lib/utils/patternUtils';
 import { polyrhythmToCombinedPattern } from '@/lib/utils/polyrhythmUtils';
+import { calculatePolyrhythmPositions } from '@/lib/utils/polyrhythmPositionCalculator';
 
 interface ScheduledNote {
   time: number;
@@ -17,6 +18,7 @@ interface ScheduledNote {
   noteIndex: number;
   patternIndex: number;
   hasAccent?: boolean; // Whether this note has an accent
+  hand?: 'right' | 'left' | 'both'; // For polyrhythms: which hand(s) this note belongs to
 }
 
 /**
@@ -38,6 +40,7 @@ export function usePlayback() {
   const loopMeasures = useStore((state) => state.loopMeasures);
   const clickSoundType = useStore((state) => state.clickSoundType);
   const clickMode = useStore((state) => state.clickMode); // 'beats', 'subdivision', 'accents', or 'none'
+  const polyrhythmClickMode = useStore((state) => state.polyrhythmClickMode); // 'both', 'right-only', 'left-only', 'metronome-only'
   const tempoRamping = useStore((state) => state.tempoRamping);
   const tempoRampStart = useStore((state) => state.tempoRampStart);
   const tempoRampEnd = useStore((state) => state.tempoRampEnd);
@@ -86,8 +89,13 @@ export function usePlayback() {
   /**
    * Play a drum sound
    */
-  const playDrumSound = useCallback((sound: string, volume: number = 1.0) => {
-    if (!audioContextRef.current || !playDrumSounds) {
+  const playDrumSound = useCallback((sound: string, volume: number = 1.0, scheduledTime?: number) => {
+    if (!audioContextRef.current) {
+      console.warn(`[playDrumSound] No audio context, cannot play: ${sound}`);
+      return;
+    }
+    if (!playDrumSounds) {
+      console.warn(`[playDrumSound] playDrumSounds is false, cannot play: ${sound}`);
       return;
     }
     
@@ -96,6 +104,8 @@ export function usePlayback() {
       return;
     }
 
+    console.log(`[playDrumSound] Called with sound: "${sound}", playDrumSounds: ${playDrumSounds}, audioBuffersLoaded: ${audioBuffersLoaded}`);
+    
     const bufferMap: Record<string, keyof typeof audioBuffers> = {
       S: 'snare',
       K: 'kick',
@@ -113,19 +123,58 @@ export function usePlayback() {
     else if (upperSound === 'MT') normalizedSound = 'M'; // Mid Tom -> M
     else normalizedSound = upperSound; // Single letters (S, K, T, F, H) to uppercase
     
+    console.log(`[playDrumSound] Normalized sound: "${sound}" -> "${normalizedSound}"`);
+    
     const bufferKey = bufferMap[normalizedSound];
     if (!bufferKey) {
-      console.warn(`No buffer found for sound: "${sound}" (normalized: "${normalizedSound}")`);
-      console.warn(`Available bufferMap keys:`, Object.keys(bufferMap));
+      console.warn(`[playDrumSound] No buffer found for sound: "${sound}" (normalized: "${normalizedSound}")`);
+      console.warn(`[playDrumSound] Available bufferMap keys:`, Object.keys(bufferMap));
       return;
     }
 
+    console.log(`[playDrumSound] Buffer key: "${bufferKey}"`);
+    
     const buffer = audioBuffers[bufferKey];
-    if (!buffer) return;
+    if (!buffer) {
+      console.warn(`[playDrumSound] No buffer found for key "${bufferKey}"}" (sound: "${sound}", normalized: "${normalizedSound}")`);
+      console.warn(`[playDrumSound] Available audio buffer keys:`, Object.keys(audioBuffers));
+      console.warn(`[playDrumSound] Buffer values:`, {
+        snare: audioBuffers.snare ? 'loaded' : 'null',
+        kick: audioBuffers.kick ? 'loaded' : 'null',
+        floor: audioBuffers.floor ? 'loaded' : 'null',
+        highTom: audioBuffers.highTom ? 'loaded' : 'null',
+        midTom: audioBuffers.midTom ? 'loaded' : 'null',
+        hiHat: audioBuffers.hiHat ? 'loaded' : 'null',
+      });
+      return;
+    }
+    
+    console.log(`[playDrumSound] Buffer found for "${bufferKey}": duration=${buffer.duration.toFixed(3)}s, sampleRate=${buffer.sampleRate}Hz, numberOfChannels=${buffer.numberOfChannels}, length=${buffer.length} samples`);
 
     try {
-      const source = audioContextRef.current.createBufferSource();
-      const gainNode = audioContextRef.current.createGain();
+      console.log(`[playDrumSound] Entering try block for sound: "${sound}"`);
+      const ctx = audioContextRef.current;
+      if (!ctx) {
+        console.error(`[playDrumSound] Audio context is null!`);
+        return;
+      }
+      const ctxState = ctx.state;
+      const ctxTime = ctx.currentTime;
+      console.log(`[playDrumSound] Audio context state: ${ctxState}, currentTime: ${ctxTime.toFixed(3)}`);
+      
+      
+      // Resume audio context if suspended (required by some browsers)
+      if (ctx.state === 'suspended') {
+        console.log(`[playDrumSound] Audio context suspended, attempting to resume...`);
+        ctx.resume().then(() => {
+          console.log(`[playDrumSound] Audio context resumed, state is now: ${ctx.state}`);
+        }).catch((err) => {
+          console.error(`[playDrumSound] Failed to resume audio context:`, err);
+        });
+      }
+      
+      const source = ctx.createBufferSource();
+      const gainNode = ctx.createGain();
       
       source.buffer = buffer;
       // Map buffer keys to volume keys
@@ -140,20 +189,75 @@ export function usePlayback() {
         bufferKey === 'floor' ? 'snare' : // Use snare volume for floor
         'snare'; // Default to snare volume
       const volumeValue = volumes[volumeKey] || 1.0;
-      gainNode.gain.value = volume * volumeValue;
       
-      // Debug logging
-        // console.log(`Playing drum sound: ${sound} (${bufferKey}), volume: ${(volume * volumeValue * 100).toFixed(0)}%`);
-      if (volumeValue === 0) {
-        console.warn(`Volume for ${volumeKey} is 0 - sound won't be audible`);
+      // Apply volume boost for kick and floor (they tend to be quieter in the audio files)
+      let volumeBoost = 1.0;
+      if (bufferKey === 'kick' || bufferKey === 'floor') {
+        volumeBoost = 2.0; // Double the volume for kick and floor
       }
       
-      source.connect(gainNode);
-      gainNode.connect(audioContextRef.current.destination);
+      const finalGain = volume * volumeValue * volumeBoost;
+      gainNode.gain.value = finalGain;
       
-      source.start(0);
+      console.log(`[playDrumSound] Volume settings: volumeKey="${volumeKey}", volumeValue=${volumeValue}, volumeBoost=${volumeBoost}, finalGain=${finalGain}`);
+      
+      if (volumeValue === 0) {
+        console.warn(`[playDrumSound] Volume for ${volumeKey} is 0 - sound won't be audible`);
+      }
+      
+      console.log(`[playDrumSound] Connecting audio graph: source -> gainNode -> destination`);
+      source.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      console.log(`[playDrumSound] Audio graph connected successfully`);
+      
+      // Verify destination is connected
+      if (!ctx.destination) {
+        console.error(`[playDrumSound] Audio context destination is null!`);
+        return;
+      }
+      console.log(`[playDrumSound] Audio context destination verified, numberOfInputs=${ctx.destination.numberOfInputs}, channelCount=${ctx.destination.channelCount}`);
+      
+      // If scheduledTime is provided, use it; otherwise schedule slightly in the future
+      // Scheduling at exactly currentTime can be unreliable, so add a small offset (5ms)
+      const now = ctx.currentTime;
+      const startTime = scheduledTime !== undefined ? scheduledTime : now + 0.005; // 5ms in the future
+      
+      // Verify buffer is valid
+      if (!source.buffer) {
+        console.error(`[playDrumSound] Source buffer is null after assignment!`);
+        return;
+      }
+      
+      // Check if buffer has actual audio data
+      const hasAudioData = source.buffer.length > 0 && source.buffer.numberOfChannels > 0;
+      if (!hasAudioData) {
+        console.error(`[playDrumSound] Buffer has no audio data! length=${source.buffer.length}, channels=${source.buffer.numberOfChannels}`);
+        return;
+      }
+      
+      // Check if buffer is silent (all zeros)
+      const channelData = source.buffer.getChannelData(0);
+      const maxSample = Math.max(...Array.from(channelData).map(Math.abs));
+      console.log(`[playDrumSound] Source buffer verified: duration=${source.buffer.duration.toFixed(3)}s, sampleRate=${source.buffer.sampleRate}Hz, numberOfChannels=${source.buffer.numberOfChannels}, length=${source.buffer.length} samples, maxSample=${maxSample.toFixed(6)}`);
+      
+      if (maxSample === 0) {
+        console.warn(`[playDrumSound] WARNING: Buffer appears to be silent (maxSample=0)!`);
+      }
+      
+      console.log(`[playDrumSound] Starting sound "${sound}" at time ${startTime.toFixed(3)} (ctx.currentTime=${now.toFixed(3)}, volume=${volumeValue.toFixed(2)})`);
+      
+      // Keep a reference to the source to prevent garbage collection
+      // Store it in a Set that gets cleaned up after the sound finishes
+      const sourceRef = { source, sound, startTime };
+      source.onended = () => {
+        console.log(`[playDrumSound] Sound "${sound}" finished playing`);
+        // Source will be garbage collected after this callback
+      };
+      
+      source.start(startTime);
+      console.log(`[playDrumSound] Successfully called source.start() for "${sound}" at time ${startTime.toFixed(3)}`);
     } catch (error) {
-      console.error(`Error playing drum sound ${sound}:`, error);
+      console.error(`[playDrumSound] Error playing drum sound ${sound}:`, error);
     }
   }, [audioBuffers, audioBuffersLoaded, volumes]);
 
@@ -227,11 +331,21 @@ export function usePlayback() {
     let currentCumulativeTime = cumulativeTimeStart;
 
     const timeSignature = parseTimeSignature(polyrhythmPattern.timeSignature);
-    const notesPerBeat = Math.max(1, polyrhythmPattern.subdivision / 4);
+    const [beatsPerBar, beatValue] = timeSignature;
+    const { numerator, denominator } = polyrhythmPattern.ratio;
+    
+    // Calculate beat positions using the new calculator
+    const positions = calculatePolyrhythmPositions(numerator, denominator, beatsPerBar);
+    
+    // Debug logging
+    console.log(`[Polyrhythm Scheduling] Pattern ${patternIndex}: ${numerator}:${denominator} in ${beatsPerBar}/${beatValue}`);
+    console.log(`[Polyrhythm Scheduling] Right positions:`, positions.rightPositions);
+    console.log(`[Polyrhythm Scheduling] Left positions:`, positions.leftPositions);
+    console.log(`[Polyrhythm Scheduling] Alignments:`, positions.alignments);
+    
+    // Calculate timing
     const beatsPerMinute = bpm;
     const secondsPerBeat = 60.0 / beatsPerMinute;
-    const noteDuration = secondsPerBeat / notesPerBeat;
-    const cycleLength = polyrhythmPattern.cycleLength;
 
     // Voice to sound mapping
     const voiceToSound: Record<string, string> = {
@@ -257,142 +371,428 @@ export function usePlayback() {
       // Phase 1: Right hand only
       for (let loop = 0; loop < rightHandLoops; loop++) {
         const loopStartTime = currentCumulativeTime;
-        for (let cycle = 0; cycle < polyrhythmPattern.repeat; cycle++) {
-          for (let i = 0; i < cycleLength; i++) {
-            const hasRight = polyrhythmPattern.rightRhythm.notes.includes(i);
-            const globalIndex = cycle * cycleLength + i;
-            const timeInLoop = loopStartTime + (cycle * cycleLength * noteDuration) + (i * noteDuration);
-            const time = timeInLoop / speed;
-
-            const noteInBeat = globalIndex % notesPerBeat;
-            const isBeat = noteInBeat === 0;
-
+        for (let repeat = 0; repeat < polyrhythmPattern.repeat; repeat++) {
+          const repeatStartTime = loopStartTime + (repeat * beatsPerBar * secondsPerBeat);
+          
+          // Schedule right voice notes at their beat positions
+          for (let i = 0; i < numerator; i++) {
+            const beatPosition = positions.rightPositions[i];
+            const timeInRepeat = repeatStartTime + (beatPosition * secondsPerBeat);
+            const time = timeInRepeat / speed;
+            
+            // Check if this is on a beat (for click sounds)
+            const isBeat = Math.abs(beatPosition - Math.round(beatPosition)) < 0.001;
+            
             const sounds: string[] = [];
-            // Note: Click logic is handled in the regular pattern section, not here for polyrhythms
-            // This section just handles drum sounds for polyrhythms
-
-            if (hasRight && (playDrumSounds || metronomeOnlyMode === false)) {
+            
+            // Add click based on clickMode and polyrhythmClickMode
+            if (clickMode !== 'none' && !silentPracticeMode && polyrhythmClickMode !== 'none') {
+              let shouldPlayClick = false;
+              if (clickMode === 'beats' && isBeat) {
+                shouldPlayClick = true;
+              } else if (clickMode === 'subdivision') {
+                shouldPlayClick = true; // All notes get clicks
+              }
+              
+              // Filter by polyrhythmClickMode
+              if (shouldPlayClick) {
+                if (polyrhythmClickMode === 'both' || polyrhythmClickMode === 'right-only') {
+                  sounds.push('click');
+                }
+              }
+            }
+            
+            // Filter drum sounds based on polyrhythmClickMode
+            // Phase 1 is right hand only, so only play if right-only or both
+            let shouldPlayDrumSounds = true;
+            if (polyrhythmClickMode === 'left-only' || polyrhythmClickMode === 'none') {
+              shouldPlayDrumSounds = false;
+            }
+            
+            if (shouldPlayDrumSounds && (playDrumSounds || metronomeOnlyMode === false)) {
               sounds.push(rightSound);
             }
-
+            
             scheduledNotes.push({
               time,
               sounds,
               isBeat,
               noteIndex: currentGlobalNoteIndex++,
               patternIndex,
+              hand: 'right', // Right hand only in learning mode phase 1
             });
           }
         }
-        currentCumulativeTime += polyrhythmPattern.repeat * cycleLength * noteDuration;
+        currentCumulativeTime += polyrhythmPattern.repeat * beatsPerBar * secondsPerBeat;
       }
 
       // Phase 2: Left hand only
       for (let loop = 0; loop < leftHandLoops; loop++) {
         const loopStartTime = currentCumulativeTime;
-        for (let cycle = 0; cycle < polyrhythmPattern.repeat; cycle++) {
-          for (let i = 0; i < cycleLength; i++) {
-            const hasLeft = polyrhythmPattern.leftRhythm.notes.includes(i);
-            const globalIndex = cycle * cycleLength + i;
-            const timeInLoop = loopStartTime + (cycle * cycleLength * noteDuration) + (i * noteDuration);
-            const time = timeInLoop / speed;
-
-            const noteInBeat = globalIndex % notesPerBeat;
-            const isBeat = noteInBeat === 0;
-
+        for (let repeat = 0; repeat < polyrhythmPattern.repeat; repeat++) {
+          const repeatStartTime = loopStartTime + (repeat * beatsPerBar * secondsPerBeat);
+          
+          // Schedule left voice notes at their beat positions
+          for (let j = 0; j < denominator; j++) {
+            const beatPosition = positions.leftPositions[j];
+            const timeInRepeat = repeatStartTime + (beatPosition * secondsPerBeat);
+            const time = timeInRepeat / speed;
+            
+            // Check if this is on a beat (for click sounds)
+            const isBeat = Math.abs(beatPosition - Math.round(beatPosition)) < 0.001;
+            
             const sounds: string[] = [];
-            // Note: Click logic is handled in the regular pattern section, not here for polyrhythms
-            // This section just handles drum sounds for polyrhythms
-
-            if (hasLeft && (playDrumSounds || metronomeOnlyMode === false)) {
+            
+            // Add click based on clickMode and polyrhythmClickMode
+            if (clickMode !== 'none' && !silentPracticeMode && polyrhythmClickMode !== 'none') {
+              let shouldPlayClick = false;
+              if (clickMode === 'beats' && isBeat) {
+                shouldPlayClick = true;
+              } else if (clickMode === 'subdivision') {
+                shouldPlayClick = true; // All notes get clicks
+              }
+              
+              // Filter by polyrhythmClickMode
+              if (shouldPlayClick) {
+                if (polyrhythmClickMode === 'both' || polyrhythmClickMode === 'left-only') {
+                  sounds.push('click');
+                }
+              }
+            }
+            
+            // Filter drum sounds based on polyrhythmClickMode
+            // Phase 2 is left hand only, so only play if left-only or both
+            let shouldPlayDrumSounds = true;
+            if (polyrhythmClickMode === 'right-only' || polyrhythmClickMode === 'none') {
+              shouldPlayDrumSounds = false;
+            }
+            
+            if (shouldPlayDrumSounds && (playDrumSounds || metronomeOnlyMode === false)) {
               sounds.push(leftSound);
             }
-
+            
             scheduledNotes.push({
               time,
               sounds,
               isBeat,
               noteIndex: currentGlobalNoteIndex++,
               patternIndex,
+              hand: 'left', // Left hand only in learning mode phase 2
             });
           }
         }
-        currentCumulativeTime += polyrhythmPattern.repeat * cycleLength * noteDuration;
+        currentCumulativeTime += polyrhythmPattern.repeat * beatsPerBar * secondsPerBeat;
       }
 
       // Phase 3: Together
       for (let loop = 0; loop < togetherLoops; loop++) {
         const loopStartTime = currentCumulativeTime;
-        for (let cycle = 0; cycle < polyrhythmPattern.repeat; cycle++) {
-          for (let i = 0; i < cycleLength; i++) {
-            const hasRight = polyrhythmPattern.rightRhythm.notes.includes(i);
-            const hasLeft = polyrhythmPattern.leftRhythm.notes.includes(i);
-            const globalIndex = cycle * cycleLength + i;
-            const timeInLoop = loopStartTime + (cycle * cycleLength * noteDuration) + (i * noteDuration);
-            const time = timeInLoop / speed;
-
-            const noteInBeat = globalIndex % notesPerBeat;
-            const isBeat = noteInBeat === 0;
-
-            const sounds: string[] = [];
-            // Note: Click logic is handled in the regular pattern section, not here for polyrhythms
-            // This section just handles drum sounds for polyrhythms
-
-            if (playDrumSounds || metronomeOnlyMode === false) {
-              if (hasRight) {
-                sounds.push(rightSound);
+        for (let repeat = 0; repeat < polyrhythmPattern.repeat; repeat++) {
+          const repeatStartTime = loopStartTime + (repeat * beatsPerBar * secondsPerBeat);
+          
+          // Combine all note positions and sort by time
+          // Track which hand each sound belongs to
+          const allNoteEvents: Array<{
+            beatPosition: number, 
+            sounds: string[], 
+            isBeat: boolean,
+            rightHandSounds: string[], // Sounds from right hand
+            leftHandSounds: string[]   // Sounds from left hand
+          }> = [];
+          
+          // Add right voice notes
+          for (let i = 0; i < numerator; i++) {
+            const beatPosition = positions.rightPositions[i];
+            const isBeat = Math.abs(beatPosition - Math.round(beatPosition)) < 0.001;
+            allNoteEvents.push({
+              beatPosition,
+              sounds: [rightSound],
+              isBeat,
+              rightHandSounds: [rightSound],
+              leftHandSounds: [],
+            });
+          }
+          
+          // Add left voice notes
+          for (let j = 0; j < denominator; j++) {
+            const beatPosition = positions.leftPositions[j];
+            const isBeat = Math.abs(beatPosition - Math.round(beatPosition)) < 0.001;
+            
+            // Check if this position aligns with a right note
+            const alignment = positions.alignments.find(a => a.leftIndex === j);
+            if (alignment) {
+              // Find the existing event and add left sound to it
+              const existingEvent = allNoteEvents.find(e => 
+                Math.abs(e.beatPosition - beatPosition) < 0.001
+              );
+              if (existingEvent) {
+                existingEvent.sounds.push(leftSound);
+                existingEvent.leftHandSounds.push(leftSound);
+              } else {
+                allNoteEvents.push({
+                  beatPosition,
+                  sounds: [leftSound],
+                  isBeat,
+                  rightHandSounds: [],
+                  leftHandSounds: [leftSound],
+                });
               }
-              if (hasLeft) {
-                sounds.push(leftSound);
+            } else {
+              // New event for left note only
+              allNoteEvents.push({
+                beatPosition,
+                sounds: [leftSound],
+                isBeat,
+                rightHandSounds: [],
+                leftHandSounds: [leftSound],
+              });
+            }
+          }
+          
+          // Sort by beat position and schedule
+          allNoteEvents.sort((a, b) => a.beatPosition - b.beatPosition);
+          
+          for (const event of allNoteEvents) {
+            const timeInRepeat = repeatStartTime + (event.beatPosition * secondsPerBeat);
+            const time = timeInRepeat / speed;
+            
+            // Determine which hand(s) this event belongs to based on which hands have sounds
+            const hasRightHand = event.rightHandSounds.length > 0;
+            const hasLeftHand = event.leftHandSounds.length > 0;
+            const hand: 'right' | 'left' | 'both' = hasRightHand && hasLeftHand ? 'both' 
+              : hasRightHand ? 'right' 
+              : 'left';
+            
+            const sounds: string[] = [];
+            
+            // Add click based on clickMode and polyrhythmClickMode
+            if (clickMode !== 'none' && !silentPracticeMode && polyrhythmClickMode !== 'none') {
+              let shouldPlayClick = false;
+              if (clickMode === 'beats' && event.isBeat) {
+                shouldPlayClick = true;
+              } else if (clickMode === 'subdivision') {
+                shouldPlayClick = true; // All notes get clicks
+              }
+              
+              // Filter by polyrhythmClickMode
+              if (shouldPlayClick) {
+                if (polyrhythmClickMode === 'both') {
+                  sounds.push('click');
+                } else if (polyrhythmClickMode === 'right-only' && (hand === 'right' || hand === 'both')) {
+                  sounds.push('click');
+                } else if (polyrhythmClickMode === 'left-only' && (hand === 'left' || hand === 'both')) {
+                  sounds.push('click');
+                }
+                // metronome-only: don't add click (metronome clicks added separately if needed)
               }
             }
-
+            
+            // Filter drum sounds based on polyrhythmClickMode and hand
+            // Use the hand-specific sound arrays to correctly identify which sounds to play
+            if (polyrhythmClickMode === 'right-only') {
+              // Only play drum sounds for right-hand notes
+              if (hasRightHand) {
+                if (playDrumSounds || metronomeOnlyMode === false) {
+                  // Add only the right-hand sounds
+                  sounds.push(...event.rightHandSounds);
+                }
+              }
+            } else if (polyrhythmClickMode === 'left-only') {
+              // Only play drum sounds for left-hand notes
+              if (hasLeftHand) {
+                if (playDrumSounds || metronomeOnlyMode === false) {
+                  // Add only the left-hand sounds
+                  sounds.push(...event.leftHandSounds);
+                }
+              }
+            } else if (polyrhythmClickMode === 'none') {
+              // No sound mode: don't play drum sounds
+              // Do nothing
+            } else {
+              // 'both' and 'metronome-only' modes: play drum sounds for all notes (if enabled)
+              if (playDrumSounds || metronomeOnlyMode === false) {
+                sounds.push(...event.sounds);
+              }
+            }
+            
             scheduledNotes.push({
               time,
               sounds,
-              isBeat,
+              isBeat: event.isBeat,
               noteIndex: currentGlobalNoteIndex++,
               patternIndex,
+              hand,
             });
           }
         }
-        currentCumulativeTime += polyrhythmPattern.repeat * cycleLength * noteDuration;
+        currentCumulativeTime += polyrhythmPattern.repeat * beatsPerBar * secondsPerBeat;
       }
     } else {
       // Normal playback: both rhythms together
       for (let repeat = 0; repeat < polyrhythmPattern.repeat; repeat++) {
         const repeatStartTime = currentCumulativeTime;
-        for (let i = 0; i < cycleLength; i++) {
-          const hasRight = polyrhythmPattern.rightRhythm.notes.includes(i);
-          const hasLeft = polyrhythmPattern.leftRhythm.notes.includes(i);
-          const timeInRepeat = repeatStartTime + (i * noteDuration);
-          const time = timeInRepeat / speed;
-
-          const noteInBeat = i % notesPerBeat;
-          const isBeat = noteInBeat === 0;
-
-          const sounds: string[] = [];
-          // Note: Click logic for polyrhythms in normal mode would need to be implemented here
-          // For now, clicks are only handled in the regular pattern section
-
-          if (playDrumSounds || metronomeOnlyMode === false) {
-            if (hasRight) {
-              sounds.push(rightSound);
+        
+        // Combine all note positions and sort by time
+        // Track which hand each sound belongs to
+        const allNoteEvents: Array<{
+          beatPosition: number, 
+          sounds: string[], 
+          isBeat: boolean,
+          rightHandSounds: string[], // Sounds from right hand
+          leftHandSounds: string[]   // Sounds from left hand
+        }> = [];
+        
+        // Add right voice notes
+        for (let i = 0; i < numerator; i++) {
+          const beatPosition = positions.rightPositions[i];
+          const isBeat = Math.abs(beatPosition - Math.round(beatPosition)) < 0.001;
+          allNoteEvents.push({
+            beatPosition,
+            sounds: [rightSound],
+            isBeat,
+            rightHandSounds: [rightSound],
+            leftHandSounds: [],
+          });
+        }
+        
+        // Add left voice notes
+        for (let j = 0; j < denominator; j++) {
+          const beatPosition = positions.leftPositions[j];
+          const isBeat = Math.abs(beatPosition - Math.round(beatPosition)) < 0.001;
+          
+          // Check if this position aligns with a right note
+          const alignment = positions.alignments.find(a => a.leftIndex === j);
+          if (alignment) {
+            // Find the existing event and add left sound to it
+            const existingEvent = allNoteEvents.find(e => 
+              Math.abs(e.beatPosition - beatPosition) < 0.001
+            );
+            if (existingEvent) {
+              existingEvent.sounds.push(leftSound);
+              existingEvent.leftHandSounds.push(leftSound);
+            } else {
+              allNoteEvents.push({
+                beatPosition,
+                sounds: [leftSound],
+                isBeat,
+                rightHandSounds: [],
+                leftHandSounds: [leftSound],
+              });
             }
-            if (hasLeft) {
-              sounds.push(leftSound);
+          } else {
+            // New event for left note only
+            allNoteEvents.push({
+              beatPosition,
+              sounds: [leftSound],
+              isBeat,
+              rightHandSounds: [],
+              leftHandSounds: [leftSound],
+            });
+          }
+        }
+        
+        // Sort by beat position and schedule
+        allNoteEvents.sort((a, b) => a.beatPosition - b.beatPosition);
+        
+        console.log(`[Polyrhythm Scheduling] Repeat ${repeat}: ${allNoteEvents.length} events after combining`);
+        
+        for (let eventIdx = 0; eventIdx < allNoteEvents.length; eventIdx++) {
+          const event = allNoteEvents[eventIdx];
+          const timeInRepeat = repeatStartTime + (event.beatPosition * secondsPerBeat);
+          const time = timeInRepeat / speed;
+          
+          // Determine which hand(s) this event belongs to based on which hands have sounds
+          const hasRightHand = event.rightHandSounds.length > 0;
+          const hasLeftHand = event.leftHandSounds.length > 0;
+          const hand: 'right' | 'left' | 'both' = hasRightHand && hasLeftHand ? 'both' 
+            : hasRightHand ? 'right' 
+            : 'left';
+          
+          const sounds: string[] = [];
+          
+          // For polyrhythms, ONLY use polyrhythmClickMode (ignore regular clickMode)
+          // Add click based on polyrhythmClickMode and which hand(s) are playing
+          if (!silentPracticeMode && polyrhythmClickMode !== 'none') {
+            if (polyrhythmClickMode === 'both') {
+              // Click on all notes (both hands)
+              sounds.push('click');
+            } else if (polyrhythmClickMode === 'right-only' && (hand === 'right' || hand === 'both')) {
+              // Click only on right-hand notes
+              sounds.push('click');
+            } else if (polyrhythmClickMode === 'left-only' && (hand === 'left' || hand === 'both')) {
+              // Click only on left-hand notes
+              sounds.push('click');
+            }
+            // metronome-only: don't add click to polyrhythm notes (metronome clicks added separately below)
+          }
+          
+          // Filter drum sounds based on polyrhythmClickMode and hand
+          // Use the hand-specific sound arrays to correctly identify which sounds to play
+          if (polyrhythmClickMode === 'right-only') {
+            // Only play drum sounds for right-hand notes
+            if (hasRightHand) {
+              if (playDrumSounds || metronomeOnlyMode === false) {
+                // Add only the right-hand sounds
+                sounds.push(...event.rightHandSounds);
+              }
+            }
+          } else if (polyrhythmClickMode === 'left-only') {
+            // Only play drum sounds for left-hand notes
+            if (hasLeftHand) {
+              if (playDrumSounds || metronomeOnlyMode === false) {
+                // Add only the left-hand sounds
+                sounds.push(...event.leftHandSounds);
+              }
+            }
+          } else if (polyrhythmClickMode === 'none') {
+            // No sound mode: don't play drum sounds
+            // Do nothing
+          } else {
+            // 'both' and 'metronome-only' modes: play drum sounds for all notes (if enabled)
+            if (playDrumSounds || metronomeOnlyMode === false) {
+              sounds.push(...event.sounds);
             }
           }
-
+          
+          const noteIndex = currentGlobalNoteIndex++;
+          console.log(`[Polyrhythm Scheduling] Event ${eventIdx}: beatPos=${event.beatPosition.toFixed(3)}, time=${time.toFixed(3)}s, hand=${hand}, noteIndex=${noteIndex}, sounds=[${sounds.join(',')}]`);
+          
           scheduledNotes.push({
             time,
             sounds,
-            isBeat,
-            noteIndex: currentGlobalNoteIndex++,
+            isBeat: event.isBeat,
+            noteIndex,
             patternIndex,
+            hand,
           });
         }
-        currentCumulativeTime += cycleLength * noteDuration;
+        
+        // If metronome-only mode, add separate metronome clicks on beats 1, 2, 3, 4
+        if (polyrhythmClickMode === 'metronome-only' && !silentPracticeMode) {
+          for (let beat = 0; beat < beatsPerBar; beat++) {
+            const beatTime = repeatStartTime + (beat * secondsPerBeat);
+            const time = beatTime / speed;
+            const isAccentClick = beat === 0; // Beat 1 is accent
+            
+            const noteIndex = currentGlobalNoteIndex++;
+            scheduledNotes.push({
+              time,
+              sounds: ['click'],
+              isBeat: true,
+              noteIndex,
+              patternIndex,
+              hand: undefined, // Metronome clicks don't have a hand
+            });
+            
+            // Mark the click as accent if it's beat 1
+            const lastNote = scheduledNotes[scheduledNotes.length - 1];
+            if (isAccentClick && lastNote.sounds.includes('click')) {
+              (lastNote.sounds as any).__isAccent = true;
+            }
+          }
+        }
+        
+        currentCumulativeTime += beatsPerBar * secondsPerBeat;
       }
     }
 
@@ -401,7 +801,7 @@ export function usePlayback() {
       nextGlobalNoteIndex: currentGlobalNoteIndex,
       nextCumulativeTime: currentCumulativeTime,
     };
-  }, [bpm, slowMotionEnabled, slowMotionSpeed, clickMode, metronomeOnlyMode, playDrumSounds, silentPracticeMode]);
+  }, [bpm, slowMotionEnabled, slowMotionSpeed, clickMode, metronomeOnlyMode, playDrumSounds, silentPracticeMode, polyrhythmClickMode]);
 
   /**
    * Calculate BPM for a given loop number (for tempo ramping)
@@ -870,6 +1270,10 @@ export function usePlayback() {
           }
 
           // Update playback position for visual feedback (always, even if no sounds)
+          // For polyrhythms, also log the hand and note info for debugging
+          if (note.hand !== undefined) {
+            console.log(`[Playback] Note ${idx}: noteIndex=${note.noteIndex}, hand=${note.hand}, sounds=[${note.sounds.join(',')}]`);
+          }
           setPlaybackPosition(note.noteIndex);
           
           // Update current beat for visual metronome (only on beat notes)
@@ -905,16 +1309,47 @@ export function usePlayback() {
           // IMPORTANT: Flams count as ONE note position, so only play one click per scheduled note
           if (note.sounds.length > 0) {
             let clickPlayed = false; // Track if click has been played for this note
+            
+            // Check if this is a polyrhythm note and filter clicks based on polyrhythmClickMode
+            // Read fresh from store to ensure we have the latest value
+            const currentPolyrhythmClickMode = useStore.getState().polyrhythmClickMode;
+            const isPolyrhythmNote = note.hand !== undefined;
+            let shouldPlayClick = true;
+            
+            if (isPolyrhythmNote) {
+              if (currentPolyrhythmClickMode === 'none') {
+                // No sound mode: don't play clicks for polyrhythm notes
+                shouldPlayClick = false;
+              } else if (currentPolyrhythmClickMode === 'metronome-only') {
+                // Metronome-only mode: don't play clicks for polyrhythm notes (metronome clicks are separate scheduled notes)
+                shouldPlayClick = false;
+              } else {
+                // Filter clicks based on selected hand(s)
+                if (currentPolyrhythmClickMode === 'right-only' && note.hand !== 'right' && note.hand !== 'both') {
+                  shouldPlayClick = false;
+                } else if (currentPolyrhythmClickMode === 'left-only' && note.hand !== 'left' && note.hand !== 'both') {
+                  shouldPlayClick = false;
+                } else if (currentPolyrhythmClickMode === 'both' && note.hand === undefined) {
+                  // 'both' mode: play clicks for all polyrhythm notes
+                  shouldPlayClick = true;
+                }
+              }
+            }
+            
+            // Note: Drum sounds are already filtered during scheduling based on polyrhythmClickMode,
+            // so we don't need to filter them again here. Just play all sounds in the array.
             for (const sound of note.sounds) {
               if (sound === 'click') {
                 // Only play click once per scheduled note (flams count as one note)
-                if (!clickPlayed) {
+                if (!clickPlayed && shouldPlayClick) {
                   // Use the accent info stored in the note
                   const isAccent = (sound as any).__isAccent || note.hasAccent || false;
                   playClick(isAccent);
                   clickPlayed = true; // Mark click as played
                 }
               } else {
+                // Play all drum sounds (they've already been filtered during scheduling)
+                console.log(`[Playback] Calling playDrumSound for sound: "${sound}"`);
                 playDrumSound(sound);
               }
             }

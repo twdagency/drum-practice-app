@@ -630,7 +630,7 @@ tspan.dpgen-annotation--active {
   transition: fill 0.15s ease;
 }
 
-/* Left hand annotations in polyrhythms - blue color */
+/* Left hand annotations in polyrhythms - green color */
 .dpgen-stave .vf-annotation.dpgen-annotation--active.dpgen-annotation--left text,
 .dpgen-stave .vf-annotation.dpgen-annotation--active.dpgen-annotation--left tspan,
 .dpgen-stave .dpgen-annotation--active.dpgen-annotation--left text,
@@ -644,10 +644,10 @@ tspan.dpgen-annotation--active {
 .vf-annotation.dpgen-annotation--active.dpgen-annotation--left tspan,
 text.dpgen-annotation--active.dpgen-annotation--left,
 tspan.dpgen-annotation--active.dpgen-annotation--left {
-  fill: #3b82f6 !important; /* Blue for left hand */
+  fill: #10b981 !important; /* Green for left hand */
 }
 
-/* Right hand annotations in polyrhythms - orange color (default) */
+/* Right hand annotations in polyrhythms - blue color */
 .dpgen-stave .vf-annotation.dpgen-annotation--active.dpgen-annotation--right text,
 .dpgen-stave .vf-annotation.dpgen-annotation--active.dpgen-annotation--right tspan,
 .dpgen-stave .dpgen-annotation--active.dpgen-annotation--right text,
@@ -661,7 +661,7 @@ tspan.dpgen-annotation--active.dpgen-annotation--left {
 .vf-annotation.dpgen-annotation--active.dpgen-annotation--right tspan,
 text.dpgen-annotation--active.dpgen-annotation--right,
 tspan.dpgen-annotation--active.dpgen-annotation--right {
-  fill: #f97316 !important; /* Orange for right hand */
+  fill: #3b82f6 !important; /* Blue for right hand */
 }
 
 /* Dark mode highlighting */

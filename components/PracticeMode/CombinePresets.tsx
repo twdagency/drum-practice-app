@@ -111,6 +111,7 @@ export const CombinePresets: React.FC<CombinePresetsProps> = ({ onClose }) => {
 
       // Create pattern from preset
       const pattern = {
+        id: 0, // Will be replaced by addPattern
         timeSignature: preset.timeSignature,
         beats,
         beatType,

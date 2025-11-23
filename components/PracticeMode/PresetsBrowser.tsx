@@ -90,6 +90,7 @@ export const PresetsBrowser: React.FC<PresetsBrowserProps> = ({ onClose }) => {
 
     // Create pattern from preset
     const pattern = {
+      id: 0, // Will be replaced by addPattern
       timeSignature: preset.timeSignature,
       beats,
       beatType,

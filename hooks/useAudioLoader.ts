@@ -35,6 +35,15 @@ export function useAudioLoader() {
           setAudioBuffers(buffers);
           setAudioBuffersLoaded(true);
           console.log('Audio buffers loaded successfully:', Object.keys(buffers));
+          // Log detailed buffer status
+          console.log('Buffer status:', {
+            snare: buffers.snare ? `loaded (${buffers.snare.duration.toFixed(2)}s)` : 'null',
+            kick: buffers.kick ? `loaded (${buffers.kick.duration.toFixed(2)}s)` : 'null',
+            floor: buffers.floor ? `loaded (${buffers.floor.duration.toFixed(2)}s)` : 'null',
+            highTom: buffers.highTom ? `loaded (${buffers.highTom.duration.toFixed(2)}s)` : 'null',
+            midTom: buffers.midTom ? `loaded (${buffers.midTom.duration.toFixed(2)}s)` : 'null',
+            hiHat: buffers.hiHat ? `loaded (${buffers.hiHat.duration.toFixed(2)}s)` : 'null',
+          });
         }
       } catch (error) {
         console.error('Failed to load audio buffers:', error);

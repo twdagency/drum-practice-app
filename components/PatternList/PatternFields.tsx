@@ -218,7 +218,7 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
       newPattern = formatList(patternTokens);
     } else {
       const random = randomSets.drumPatterns[Math.floor(Math.random() * randomSets.drumPatterns.length)];
-      newPattern = formatList(random);
+      newPattern = formatList([...random]); // Spread to convert readonly array to mutable
     }
     const newSticking = syncStickingToVoicing(newPattern);
     updatePattern(pattern.id, { 

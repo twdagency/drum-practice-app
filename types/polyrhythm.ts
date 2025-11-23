@@ -44,7 +44,7 @@ export interface PolyrhythmPattern {
   repeat: number; // Number of cycles to repeat in normal playback
   
   // Display preferences (can be overridden by global settings)
-  displayMode?: 'separate-positions' | 'stacked' | 'two-staves';
+  displayMode?: 'stacked' | 'two-staves';
   
   _expanded?: boolean; // UI state - whether pattern is expanded
 }

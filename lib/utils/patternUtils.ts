@@ -81,7 +81,7 @@ export function calculateNotesPerBar(timeSignature: string, subdivision: number)
 /**
  * Get a random item from an array
  */
-export function getRandomItem<T>(list: T[]): T {
+export function getRandomItem<T>(list: readonly T[] | T[]): T {
   return list[Math.floor(Math.random() * list.length)];
 }
 
@@ -273,7 +273,7 @@ export function generateRandomPattern(practicePadMode: boolean = false): Pattern
   if (practicePadMode) {
     drumPattern = Array(notesPerBar).fill('S').join(' ');
   } else {
-    const drumPatternArray = getRandomItem(randomSets.drumPatterns);
+    const drumPatternArray = getRandomItem([...randomSets.drumPatterns]) as readonly string[];
     // Repeat pattern to match notes per bar
     const drumPatternTokens: string[] = [];
     for (let i = 0; i < notesPerBar; i++) {
@@ -362,7 +362,7 @@ export function randomizePattern(pattern: Pattern, practicePadMode: boolean = fa
   if (practicePadMode) {
     drumPattern = Array(notesPerBar).fill('S').join(' ');
   } else {
-    const drumPatternArray = getRandomItem(randomSets.drumPatterns);
+    const drumPatternArray = getRandomItem([...randomSets.drumPatterns]) as readonly string[];
     // Repeat pattern to match notes per bar
     const drumPatternTokens: string[] = [];
     for (let i = 0; i < notesPerBar; i++) {

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:polyrhythms": "node scripts/test-polyrhythms.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.10",

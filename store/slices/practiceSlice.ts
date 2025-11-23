@@ -60,6 +60,15 @@ export interface PracticeSlice {
   setMIDIRecordingEnabled: (enabled: boolean) => void;
   setMIDIRecordingInput: (input: MIDIInput | null) => void;
   setMIDIRecordingLatencyAdjustment: (adjustment: number) => void;
+  setMIDIRecordingStartTime: (time: number | null) => void;
+  addMIDIRecordingNote: (note: { time: number; note: number; velocity: number }) => void;
+  clearMIDIRecordingNotes: () => void;
+  setMIDIRecordingTimeSignature: (timeSignature: string) => void;
+  setMIDIRecordingSubdivision: (subdivision: number) => void;
+  setMIDIRecordingCountInEnabled: (enabled: boolean) => void;
+  setMIDIRecordingMetronomeEnabled: (enabled: boolean) => void;
+  setMIDIRecordingCountInActive: (active: boolean) => void;
+  setMIDIRecordingCountInBeats: (beats: number) => void;
   resetMIDIRecording: () => void;
 
   // Practice Stats Actions
@@ -599,6 +608,54 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => ({
           Math.min(CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MAX, adjustment)
         ),
       },
+    })),
+
+  setMIDIRecordingStartTime: (time) =>
+    set((state) => ({
+      midiRecording: { ...state.midiRecording, startTime: time },
+    })),
+
+  addMIDIRecordingNote: (note) =>
+    set((state) => ({
+      midiRecording: {
+        ...state.midiRecording,
+        notes: [...state.midiRecording.notes, note],
+      },
+    })),
+
+  clearMIDIRecordingNotes: () =>
+    set((state) => ({
+      midiRecording: { ...state.midiRecording, notes: [] },
+    })),
+
+  setMIDIRecordingTimeSignature: (timeSignature) =>
+    set((state) => ({
+      midiRecording: { ...state.midiRecording, timeSignature },
+    })),
+
+  setMIDIRecordingSubdivision: (subdivision) =>
+    set((state) => ({
+      midiRecording: { ...state.midiRecording, subdivision },
+    })),
+
+  setMIDIRecordingCountInEnabled: (enabled) =>
+    set((state) => ({
+      midiRecording: { ...state.midiRecording, countInEnabled: enabled },
+    })),
+
+  setMIDIRecordingMetronomeEnabled: (enabled) =>
+    set((state) => ({
+      midiRecording: { ...state.midiRecording, metronomeEnabled: enabled },
+    })),
+
+  setMIDIRecordingCountInActive: (active) =>
+    set((state) => ({
+      midiRecording: { ...state.midiRecording, countInActive: active },
+    })),
+
+  setMIDIRecordingCountInBeats: (beats) =>
+    set((state) => ({
+      midiRecording: { ...state.midiRecording, countInBeats: beats },
     })),
 
   resetMIDIRecording: () =>

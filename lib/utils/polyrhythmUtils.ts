@@ -3,6 +3,8 @@
  */
 
 import { PolyrhythmPattern } from '@/types/polyrhythm';
+import { calculatePolyrhythmPositions } from './polyrhythmPositionCalculator';
+import { parseTimeSignature } from './patternUtils';
 
 /**
  * Calculate the least common multiple (LCM) of two numbers
@@ -27,11 +29,12 @@ function gcd(a: number, b: number): number {
 
 /**
  * Calculate note positions for a polyrhythm within a measure
- * Notes are evenly spaced across the measure length
  * 
- * @param numNotes Number of notes in this rhythm (e.g., 3 for "3 against 2")
- * @param measureLength Total subdivisions in one measure (e.g., 16 for 16th notes in 4/4)
- * @returns Array of indices where notes occur (0-based, within the measure)
+ * @deprecated This function uses subdivision indices which is incorrect.
+ * Use calculatePolyrhythmPositions from polyrhythmPositionCalculator.ts instead,
+ * which calculates positions in beats for accuracy.
+ * 
+ * This function is kept for backward compatibility but should not be used for new code.
  */
 export function calculatePolyrhythmNotes(
   numNotes: number,
@@ -127,14 +130,27 @@ export function generatePolyrhythmPattern(
     description,
   } = options;
 
-  // Calculate measure length from time signature only
-  // The ratio defines the subdivision - we don't need to specify it
+  // Calculate measure length from time signature (for subdivision-based compatibility)
   const measureLength = calculateMeasureLength(timeSignature);
   
-  // Calculate note positions within the measure
-  // Each rhythm is evenly spaced across the same measure
-  const rightNotes = calculatePolyrhythmNotes(numerator, measureLength);
-  const leftNotes = calculatePolyrhythmNotes(denominator, measureLength);
+  // Calculate note positions using the new beat-based calculator
+  const [beatsPerBar] = parseTimeSignature(timeSignature);
+  const positions = calculatePolyrhythmPositions(numerator, denominator, beatsPerBar);
+  
+  // Convert beat positions to subdivision indices for storage
+  // This maintains backward compatibility with the existing data structure
+  // The rendering code will recalculate using beat positions for accuracy
+  const rightNotes = positions.rightPositions.map(pos => {
+    // Convert beat position to subdivision index
+    // For 4/4 with 16th notes: beat 1 = index 4, beat 2 = index 8, etc.
+    const subdivisionsPerBeat = measureLength / beatsPerBar;
+    return Math.round(pos * subdivisionsPerBeat);
+  });
+  
+  const leftNotes = positions.leftPositions.map(pos => {
+    const subdivisionsPerBeat = measureLength / beatsPerBar;
+    return Math.round(pos * subdivisionsPerBeat);
+  });
   
   // For polyrhythm purposes, the "cycle length" is the measure length
   // Both rhythms fit within one measure and repeat every measure
@@ -219,8 +235,8 @@ export function polyrhythmToCombinedPattern(
 ): {
   drumPattern: string;
   stickingPattern: string;
-  phrase: string;
   subdivision: number;
+  notesPerBar: number;
 } {
   const cycleLength = polyrhythm.cycleLength;
   const drumPattern: string[] = [];
@@ -269,10 +285,9 @@ export function polyrhythmToCombinedPattern(
     }
   }
   
-  // Generate phrase (all 1s for now, or could be based on accents)
+  // Calculate notes per bar from time signature and subdivision
   // Multiply by repeat count to get full pattern length
-  const totalLength = cycleLength * polyrhythm.repeat;
-  const phrase = Array(totalLength).fill(1);
+  const notesPerBar = cycleLength * polyrhythm.repeat;
   
   // Repeat the drum and sticking patterns for each repeat
   const fullDrumPattern: string[] = [];
@@ -286,8 +301,8 @@ export function polyrhythmToCombinedPattern(
   return {
     drumPattern: fullDrumPattern.join(' '),
     stickingPattern: fullStickingPattern.join(' '),
-    phrase: phrase.join(' '),
     subdivision: polyrhythm.subdivision,
+    notesPerBar,
   };
 }
 

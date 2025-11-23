@@ -23,6 +23,12 @@ export function AudioSettingsModal({ onClose }: AudioSettingsModalProps) {
   const setVolume = useStore((state) => state.setVolume);
   const setClickSoundType = useStore((state) => state.setClickSoundType);
   const setClickMode = useStore((state) => state.setClickMode);
+  
+  // Polyrhythm settings
+  const polyrhythmClickMode = useStore((state) => state.polyrhythmClickMode);
+  const polyrhythmDisplayMode = useStore((state) => state.polyrhythmDisplayMode);
+  const setPolyrhythmClickMode = useStore((state) => state.setPolyrhythmClickMode);
+  const setPolyrhythmDisplayMode = useStore((state) => state.setPolyrhythmDisplayMode);
 
   const handleVolumeChange = (key: keyof typeof volumes, value: number) => {
     setVolume(key, value / 100);
@@ -186,6 +192,106 @@ export function AudioSettingsModal({ onClose }: AudioSettingsModalProps) {
             <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
               Enable drum sound playback (snare, kick, tom, floor)
             </p>
+          </div>
+
+          {/* Polyrhythm Settings */}
+          <div style={{ marginBottom: '1.5rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--dpgen-border)' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Polyrhythm Settings</h3>
+            
+            {/* Polyrhythm Display Mode */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label className="dpgen-label" style={{ fontSize: '0.875rem', marginBottom: '0.75rem', display: 'block', fontWeight: 600 }}>
+                Display Mode
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="polyrhythmDisplayMode"
+                    value="stacked"
+                    checked={polyrhythmDisplayMode === 'stacked'}
+                    onChange={(e) => setPolyrhythmDisplayMode('stacked')}
+                  />
+                  <span style={{ fontSize: '0.875rem' }}>Stacked (Single Stave)</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginLeft: 'auto' }}>Both hands on one stave</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="polyrhythmDisplayMode"
+                    value="two-staves"
+                    checked={polyrhythmDisplayMode === 'two-staves'}
+                    onChange={(e) => setPolyrhythmDisplayMode('two-staves')}
+                  />
+                  <span style={{ fontSize: '0.875rem' }}>Two Staves</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginLeft: 'auto' }}>Separate stave for each hand</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Polyrhythm Click Mode */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label className="dpgen-label" style={{ fontSize: '0.875rem', marginBottom: '0.75rem', display: 'block', fontWeight: 600 }}>
+                Polyrhythm Click Mode
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="polyrhythmClickMode"
+                    value="both"
+                    checked={polyrhythmClickMode === 'both'}
+                    onChange={(e) => setPolyrhythmClickMode('both')}
+                  />
+                  <span style={{ fontSize: '0.875rem' }}>Both Hands</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginLeft: 'auto' }}>Clicks for all notes</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="polyrhythmClickMode"
+                    value="right-only"
+                    checked={polyrhythmClickMode === 'right-only'}
+                    onChange={(e) => setPolyrhythmClickMode('right-only')}
+                  />
+                  <span style={{ fontSize: '0.875rem' }}>Right Hand Only</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginLeft: 'auto' }}>Clicks only on right hand notes</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="polyrhythmClickMode"
+                    value="left-only"
+                    checked={polyrhythmClickMode === 'left-only'}
+                    onChange={(e) => setPolyrhythmClickMode('left-only')}
+                  />
+                  <span style={{ fontSize: '0.875rem' }}>Left Hand Only</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginLeft: 'auto' }}>Clicks only on left hand notes</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="polyrhythmClickMode"
+                    value="metronome-only"
+                    checked={polyrhythmClickMode === 'metronome-only'}
+                    onChange={(e) => setPolyrhythmClickMode('metronome-only')}
+                  />
+                  <span style={{ fontSize: '0.875rem' }}>Metronome Only</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginLeft: 'auto' }}>Metronome on beats 1, 2, 3, 4</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="polyrhythmClickMode"
+                    value="none"
+                    checked={polyrhythmClickMode === 'none'}
+                    onChange={(e) => setPolyrhythmClickMode('none')}
+                  />
+                  <span style={{ fontSize: '0.875rem' }}>No Sound</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginLeft: 'auto' }}>No clicks at all</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -104,6 +104,7 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
     }
 
     const pattern = {
+      id: 0, // Will be replaced by addPattern
       timeSignature: preset.timeSignature,
       beats,
       beatType,

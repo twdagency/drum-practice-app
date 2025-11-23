@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { Pattern } from '@/types';
 import { useStore } from '@/store/useStore';
-import { calculatePatternComplexity, parseNumberList, parseTokens, formatList } from '@/lib/utils/patternUtils';
+import { calculatePatternComplexity, parseTokens, formatList, calculateNotesPerBar } from '@/lib/utils/patternUtils';
 import { PatternFields } from './PatternFields';
 import { getSubdivisionText } from '@/lib/utils/subdivisionUtils';
 
@@ -31,35 +31,30 @@ export function PatternItem({ pattern, index }: PatternItemProps) {
   const patterns = useStore((state) => state.patterns);
 
   // Calculate pattern stats
-  const phrase = parseNumberList(pattern.phrase || '');
+  const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
   const drumPattern = parseTokens(pattern.drumPattern || '');
   let patternNotes = 0;
   let patternRests = 0;
   let patternAccents = 0;
 
-  phrase.forEach((groupLength) => {
-    for (let i = 0; i < groupLength; i++) {
-      const token = drumPattern[i % drumPattern.length];
-      if (token && token.toUpperCase() === 'R') {
-        patternRests++;
-      } else {
-        patternNotes++;
-      }
+  // Count notes and rests based on actual notes per bar
+  for (let i = 0; i < notesPerBar; i++) {
+    const token = drumPattern[i % drumPattern.length];
+    if (token && token.toUpperCase() === 'R') {
+      patternRests++;
+    } else {
+      patternNotes++;
     }
-  });
-
-  // Count accents
-  if (pattern._presetAccents && pattern._presetAccents.length > 0) {
-    patternAccents = pattern._presetAccents.length;
-  } else {
-    patternAccents = phrase.length;
   }
+
+  // Count accents from _presetAccents
+  patternAccents = (pattern._presetAccents && pattern._presetAccents.length > 0) ? pattern._presetAccents.length : 0;
 
   const complexity = calculatePatternComplexity(pattern);
   const subdivisionText = getSubdivisionText(pattern.subdivision);
-  const phraseShort = pattern.phrase.replace(/\s+/g, '');
   const voicingShort = pattern.drumPattern.replace(/\s+/g, '').toUpperCase();
-  const patternSummary = pattern._presetName || `${pattern.timeSignature} ${subdivisionText} ${phraseShort} ${voicingShort}`;
+  const accentsText = patternAccents > 0 ? `${patternAccents}ac` : '';
+  const patternSummary = pattern._presetName || `${pattern.timeSignature} ${subdivisionText} ${voicingShort}${accentsText ? ' ' + accentsText : ''}`;
   const patternLabel = pattern._presetName ? pattern._presetName : `Pattern ${index + 1}`;
 
   const handleToggle = () => {

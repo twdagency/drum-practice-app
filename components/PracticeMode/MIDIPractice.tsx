@@ -101,11 +101,15 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
     }
     
     if (!access) {
-      const newAccess = await refreshDevices();
-      if (!newAccess) return;
-      const input = newAccess.inputs.get(deviceId);
-      if (input) {
-        setMIDIInput(input);
+      await refreshDevices();
+      // After refresh, access should be available via the hook
+      // Try to get the device from the updated access
+      const updatedAccess = await navigator.requestMIDIAccess?.({ sysex: false }).catch(() => null);
+      if (updatedAccess) {
+        const input = updatedAccess.inputs.get(deviceId);
+        if (input) {
+          setMIDIInput(input);
+        }
       }
     } else {
       const input = access.inputs.get(deviceId);
