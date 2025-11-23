@@ -8,7 +8,7 @@
 import React, { useEffect } from 'react';
 import { Pattern } from '@/types';
 import { useStore } from '@/store/useStore';
-import { buildAccentIndices, buildPhraseFromAccents, randomizeAccents, formatList, calculateNotesPerBar } from '@/lib/utils/patternUtils';
+import { buildAccentIndices, buildPhraseFromAccents, randomizeAccents, formatList, getNotesPerBarForPattern } from '@/lib/utils/patternUtils';
 
 interface AccentEditorProps {
   pattern: Pattern;
@@ -18,8 +18,8 @@ export function AccentEditor({ pattern }: AccentEditorProps) {
   const updatePattern = useStore((state) => state.updatePattern);
   const saveToHistory = useStore((state) => state.saveToHistory);
 
-  // Calculate actual notes per bar from time signature and subdivision
-  const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
+  // Calculate actual notes per bar (handles both normal and advanced modes)
+  const notesPerBar = getNotesPerBarForPattern(pattern);
 
   // Get accent indices: use _presetAccents if set, allow empty array for no accents
   let accentIndices: number[] = [];

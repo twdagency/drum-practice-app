@@ -8,10 +8,11 @@
 import React, { useState } from 'react';
 import { Pattern } from '@/types';
 import { useStore } from '@/store/useStore';
-import { parseNumberList, formatList, parseTimeSignature, parseTokens, randomizeAccents, calculateNotesPerBar } from '@/lib/utils/patternUtils';
+import { parseNumberList, formatList, parseTimeSignature, parseTokens, randomizeAccents, calculateNotesPerBar, randomizePerBeatSubdivisions, getNotesPerBarForPattern } from '@/lib/utils/patternUtils';
 import { randomSets } from '@/lib/utils/randomSets';
 import { commonStickingPatterns, type StickingPattern } from '@/lib/utils/commonStickingPatterns';
 import { AccentEditor } from './AccentEditor';
+import { PerBeatSubdivisionEditor } from './PerBeatSubdivisionEditor';
 
 interface PatternFieldsProps {
   pattern: Pattern;
@@ -90,12 +91,43 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
     // TODO: Generate pattern
   };
 
+  const handleAdvancedModeToggle = () => {
+    const enabled = !pattern._advancedMode;
+    
+    if (enabled) {
+      // Initialize per-beat subdivisions from current subdivision
+      // Number of beats = numerator of time signature
+      const [numerator] = parseTimeSignature(pattern.timeSignature || '4/4');
+      const perBeatSubdivisions = Array(numerator).fill(pattern.subdivision);
+      
+      updatePattern(pattern.id, {
+        _advancedMode: true,
+        _perBeatSubdivisions: perBeatSubdivisions,
+      });
+    } else {
+      // Disable advanced mode, keep current subdivision
+      updatePattern(pattern.id, {
+        _advancedMode: false,
+        _perBeatSubdivisions: undefined,
+      });
+    }
+    
+    saveToHistory();
+  };
+
+  const handlePerBeatSubdivisionsChange = (subdivisions: number[]) => {
+    updatePattern(pattern.id, {
+      _perBeatSubdivisions: subdivisions,
+    });
+    saveToHistory();
+  };
+
 
   // Sync sticking pattern to match K's in voicing pattern
   // In Practice Pad mode, never add K to sticking
   const syncStickingToVoicing = (newDrumPattern: string) => {
-    // Calculate actual notes per bar from time signature and subdivision
-    const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
+    // Calculate actual notes per bar (handles both normal and advanced modes)
+    const notesPerBar = getNotesPerBarForPattern(pattern);
     const drumPatternTokens = parseTokens(newDrumPattern);
     const currentSticking = parseTokens(pattern.stickingPattern || '');
     
@@ -134,7 +166,7 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
     
     // In Practice Pad mode, force all voicing to "S"
     if (practicePadMode) {
-      const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
+      const notesPerBar = getNotesPerBarForPattern(pattern);
       const tokens = parseTokens(newDrumPattern);
       // Replace all non-rest tokens with "S"
       const practicePadPattern = tokens.map((token, i) => {
@@ -196,10 +228,20 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
   };
 
   const randomizeSubdivision = () => {
-    const random = randomSets.subdivisions[Math.floor(Math.random() * randomSets.subdivisions.length)];
-    handleSubdivisionChange({
-      target: { value: random.toString() },
-    } as React.ChangeEvent<HTMLSelectElement>);
+    if (pattern._advancedMode) {
+      // Randomize per-beat subdivisions
+      const newPerBeatSubdivisions = randomizePerBeatSubdivisions(pattern.timeSignature || '4/4');
+      updatePattern(pattern.id, {
+        _perBeatSubdivisions: newPerBeatSubdivisions,
+      });
+      saveToHistory();
+    } else {
+      // Randomize single subdivision
+      const random = randomSets.subdivisions[Math.floor(Math.random() * randomSets.subdivisions.length)];
+      handleSubdivisionChange({
+        target: { value: random.toString() },
+      } as React.ChangeEvent<HTMLSelectElement>);
+    }
   };
 
 
@@ -230,10 +272,13 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
   };
 
   const randomizeStickingPattern = () => {
-    // Calculate actual notes per bar from time signature and subdivision
-    const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
+    // Calculate actual notes per bar (handles both normal and advanced modes)
+    const notesPerBar = getNotesPerBarForPattern(pattern);
     const drumPatternTokens = parseTokens(pattern.drumPattern);
-    const isTriplet = pattern.subdivision === 12 || pattern.subdivision === 24;
+    // Check if any subdivision is a triplet (for advanced mode) or if default subdivision is triplet
+    const isTriplet = pattern._advancedMode && pattern._perBeatSubdivisions
+      ? pattern._perBeatSubdivisions.some(sub => sub === 12 || sub === 24)
+      : (pattern.subdivision === 12 || pattern.subdivision === 24);
     
     // Determine pattern length (2-4, with preference for divisors of notesPerBar)
     const minLength = isTriplet ? 3 : 2;
@@ -321,24 +366,55 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
       {/* Subdivision */}
       <div className="dpgen-field">
         <label className="dpgen-label">Subdivision</label>
-        <div className="dpgen-input-group">
-          <select className="dpgen-pattern-subdivision" value={pattern.subdivision} onChange={handleSubdivisionChange}>
-            <option value={4}>Quarter Notes</option>
-            <option value={8}>Eighth Notes</option>
-            <option value={12}>Triplets</option>
-            <option value={16}>Sixteenth Notes</option>
-            <option value={24}>Sextuplets</option>
-            <option value={32}>32nd Notes</option>
-          </select>
+        
+        <div className="mb-3 flex items-center justify-between w-full">
+          <span className="text-sm text-gray-600 dark:text-gray-400">Per-beat subdivisions</span>
           <button
             type="button"
-            className="dpgen-icon-button dpgen-pattern-randomize-subdivision"
-            onClick={randomizeSubdivision}
-            aria-label="Randomise subdivision"
+            onClick={handleAdvancedModeToggle}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+              pattern._advancedMode
+                ? 'bg-blue-600 focus:ring-blue-500'
+                : 'bg-gray-300 dark:bg-gray-600 focus:ring-gray-500'
+            }`}
+            role="switch"
+            aria-checked={pattern._advancedMode || false}
+            aria-label="Toggle per-beat subdivisions"
           >
-            <i className="fas fa-dice" />
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                pattern._advancedMode ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
           </button>
         </div>
+        
+        {!pattern._advancedMode ? (
+          <div className="dpgen-input-group">
+            <select className="dpgen-pattern-subdivision" value={pattern.subdivision} onChange={handleSubdivisionChange}>
+              <option value={4}>Quarter Notes</option>
+              <option value={8}>Eighth Notes</option>
+              <option value={12}>Triplets</option>
+              <option value={16}>Sixteenth Notes</option>
+              <option value={24}>Sextuplets</option>
+              <option value={32}>32nd Notes</option>
+            </select>
+            <button
+              type="button"
+              className="dpgen-icon-button dpgen-pattern-randomize-subdivision"
+              onClick={randomizeSubdivision}
+              aria-label="Randomise subdivision"
+            >
+              <i className="fas fa-dice" />
+            </button>
+          </div>
+        ) : (
+          <PerBeatSubdivisionEditor
+            timeSignature={pattern.timeSignature || '4/4'}
+            perBeatSubdivisions={pattern._perBeatSubdivisions || [pattern.subdivision]}
+            onSubdivisionsChange={handlePerBeatSubdivisionsChange}
+          />
+        )}
       </div>
 
       {/* Accents */}
@@ -386,7 +462,7 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
               if (selectedPattern) {
                 // Calculate notes per bar to repeat the pattern
                 // Note: Each token (including flams like Rl, Lr) counts as one note position
-                const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
+                const notesPerBar = getNotesPerBarForPattern(pattern);
                 const patternTokens = parseTokens(selectedPattern.pattern);
                 const repeatedPattern: string[] = [];
                 for (let i = 0; i < notesPerBar; i++) {

@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { Pattern } from '@/types';
 import { useStore } from '@/store/useStore';
-import { calculatePatternComplexity, parseTokens, formatList, calculateNotesPerBar } from '@/lib/utils/patternUtils';
+import { calculatePatternComplexity, parseTokens, formatList, getNotesPerBarForPattern } from '@/lib/utils/patternUtils';
 import { PatternFields } from './PatternFields';
 import { getSubdivisionText } from '@/lib/utils/subdivisionUtils';
 
@@ -30,8 +30,8 @@ export function PatternItem({ pattern, index }: PatternItemProps) {
   const saveToHistory = useStore((state) => state.saveToHistory);
   const patterns = useStore((state) => state.patterns);
 
-  // Calculate pattern stats
-  const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
+  // Calculate pattern stats (handles both normal and advanced modes)
+  const notesPerBar = getNotesPerBarForPattern(pattern);
   const drumPattern = parseTokens(pattern.drumPattern || '');
   let patternNotes = 0;
   let patternRests = 0;

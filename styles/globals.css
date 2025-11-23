@@ -435,9 +435,11 @@ body {
   }
 }
 
-/* Make accent editor and foot controls span full width */
+/* Make accent editor, subdivision field, and foot controls span full width */
 .dpgen-pattern-fields .dpgen-field:has(.dpgen-accent-editor),
-.dpgen-pattern-fields .dpgen-field:has(.dpgen-toggle-switch) {
+.dpgen-pattern-fields .dpgen-field:has(.dpgen-toggle-switch),
+.dpgen-pattern-fields .dpgen-field:has([class*="per-beat-subdivision"]),
+.dpgen-pattern-fields .dpgen-field:has(.dpgen-pattern-subdivision) {
   grid-column: 1 / -1;
 }
 

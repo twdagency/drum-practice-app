@@ -7,7 +7,7 @@ import { useStore } from '@/store/useStore';
 import { Pattern } from '@/types';
 import { PolyrhythmPattern } from '@/types/polyrhythm';
 import { getAudioContext, resumeAudioContext } from '@/lib/audio/audioLoader';
-import { parseTokens, parseNumberList, parseTimeSignature, calculateNotesPerBar, buildAccentIndices } from '@/lib/utils/patternUtils';
+import { parseTokens, parseNumberList, parseTimeSignature, calculateNotesPerBar, buildAccentIndices, getNotesPerBarForPattern, calculateNotePositionsFromPerBeatSubdivisions, calculateNotesPerBarFromPerBeatSubdivisions } from '@/lib/utils/patternUtils';
 import { polyrhythmToCombinedPattern } from '@/lib/utils/polyrhythmUtils';
 import { calculatePolyrhythmPositions } from '@/lib/utils/polyrhythmPositionCalculator';
 
@@ -363,6 +363,8 @@ export function usePlayback() {
 
     const rightSound = voiceToSound[polyrhythmPattern.rightRhythm.voice] || 'S';
     const leftSound = voiceToSound[polyrhythmPattern.leftRhythm.voice] || 'K';
+    
+    console.log(`[Polyrhythm Scheduling] Voice mapping: rightRhythm.voice="${polyrhythmPattern.rightRhythm.voice}" -> rightSound="${rightSound}", leftRhythm.voice="${polyrhythmPattern.leftRhythm.voice}" -> leftSound="${leftSound}"`);
 
     // Learning mode handling
     if (polyrhythmPattern.learningMode.enabled) {
@@ -409,7 +411,7 @@ export function usePlayback() {
               shouldPlayDrumSounds = false;
             }
             
-            if (shouldPlayDrumSounds && (playDrumSounds || metronomeOnlyMode === false)) {
+            if (shouldPlayDrumSounds && playDrumSounds && !metronomeOnlyMode && !silentPracticeMode) {
               sounds.push(rightSound);
             }
             
@@ -467,7 +469,7 @@ export function usePlayback() {
               shouldPlayDrumSounds = false;
             }
             
-            if (shouldPlayDrumSounds && (playDrumSounds || metronomeOnlyMode === false)) {
+            if (shouldPlayDrumSounds && playDrumSounds && !metronomeOnlyMode && !silentPracticeMode) {
               sounds.push(leftSound);
             }
             
@@ -589,10 +591,11 @@ export function usePlayback() {
             
             // Filter drum sounds based on polyrhythmClickMode and hand
             // Use the hand-specific sound arrays to correctly identify which sounds to play
+            // Use the same condition as normal patterns: playDrumSounds && !metronomeOnlyMode
             if (polyrhythmClickMode === 'right-only') {
               // Only play drum sounds for right-hand notes
               if (hasRightHand) {
-                if (playDrumSounds || metronomeOnlyMode === false) {
+                if (playDrumSounds && !metronomeOnlyMode && !silentPracticeMode) {
                   // Add only the right-hand sounds
                   sounds.push(...event.rightHandSounds);
                 }
@@ -600,7 +603,7 @@ export function usePlayback() {
             } else if (polyrhythmClickMode === 'left-only') {
               // Only play drum sounds for left-hand notes
               if (hasLeftHand) {
-                if (playDrumSounds || metronomeOnlyMode === false) {
+                if (playDrumSounds && !metronomeOnlyMode && !silentPracticeMode) {
                   // Add only the left-hand sounds
                   sounds.push(...event.leftHandSounds);
                 }
@@ -610,7 +613,7 @@ export function usePlayback() {
               // Do nothing
             } else {
               // 'both' and 'metronome-only' modes: play drum sounds for all notes (if enabled)
-              if (playDrumSounds || metronomeOnlyMode === false) {
+              if (playDrumSounds && !metronomeOnlyMode && !silentPracticeMode) {
                 sounds.push(...event.sounds);
               }
             }
@@ -728,10 +731,11 @@ export function usePlayback() {
           
           // Filter drum sounds based on polyrhythmClickMode and hand
           // Use the hand-specific sound arrays to correctly identify which sounds to play
+          // Use the same condition as normal patterns: playDrumSounds && !metronomeOnlyMode
           if (polyrhythmClickMode === 'right-only') {
             // Only play drum sounds for right-hand notes
             if (hasRightHand) {
-              if (playDrumSounds || metronomeOnlyMode === false) {
+              if (playDrumSounds && !metronomeOnlyMode && !silentPracticeMode) {
                 // Add only the right-hand sounds
                 sounds.push(...event.rightHandSounds);
               }
@@ -739,7 +743,7 @@ export function usePlayback() {
           } else if (polyrhythmClickMode === 'left-only') {
             // Only play drum sounds for left-hand notes
             if (hasLeftHand) {
-              if (playDrumSounds || metronomeOnlyMode === false) {
+              if (playDrumSounds && !metronomeOnlyMode && !silentPracticeMode) {
                 // Add only the left-hand sounds
                 sounds.push(...event.leftHandSounds);
               }
@@ -749,13 +753,13 @@ export function usePlayback() {
             // Do nothing
           } else {
             // 'both' and 'metronome-only' modes: play drum sounds for all notes (if enabled)
-            if (playDrumSounds || metronomeOnlyMode === false) {
+            if (playDrumSounds && !metronomeOnlyMode && !silentPracticeMode) {
               sounds.push(...event.sounds);
             }
           }
           
           const noteIndex = currentGlobalNoteIndex++;
-          console.log(`[Polyrhythm Scheduling] Event ${eventIdx}: beatPos=${event.beatPosition.toFixed(3)}, time=${time.toFixed(3)}s, hand=${hand}, noteIndex=${noteIndex}, sounds=[${sounds.join(',')}]`);
+          console.log(`[Polyrhythm Scheduling] Event ${eventIdx}: beatPos=${event.beatPosition.toFixed(3)}, time=${time.toFixed(3)}s, hand=${hand}, noteIndex=${noteIndex}, sounds=[${sounds.join(',')}], rightHandSounds=[${event.rightHandSounds.join(',')}], leftHandSounds=[${event.leftHandSounds.join(',')}], playDrumSounds=${playDrumSounds}, metronomeOnlyMode=${metronomeOnlyMode}, silentPracticeMode=${silentPracticeMode}`);
           
           scheduledNotes.push({
             time,
@@ -855,8 +859,8 @@ export function usePlayback() {
       patternsToPlay = [];
       
       for (const pattern of patterns) {
-        // Calculate actual notes per bar from time signature and subdivision
-        const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
+        // Calculate actual notes per bar (handles both normal and advanced modes)
+        const notesPerBar = getNotesPerBarForPattern(pattern);
         const totalNotes = notesPerBar * pattern.repeat;
         const measureNumber = Math.floor(currentNote / notesPerBar);
         
@@ -902,18 +906,37 @@ export function usePlayback() {
         const timeSignature = parseTimeSignature(pattern.timeSignature);
         const [numerator, denominator] = timeSignature;
         
-        // Calculate actual notes per bar from time signature and subdivision
-        const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
+        // Calculate actual notes per bar (handles both normal and advanced modes)
+        const notesPerBar = getNotesPerBarForPattern(pattern);
         
-        // Calculate notes per beat for timing (based on denominator from time signature)
-        // For 4/4, denominator=4 means quarter note gets the beat
-        // For 7/8, denominator=8 means eighth note gets the beat
-        const notesPerBeat = Math.max(1, pattern.subdivision / denominator);
+        // Calculate note positions and durations (handles both normal and advanced modes)
+        let notePositions: number[] | undefined;
+        let notesPerBeatArray: number[] | undefined;
+        let notesPerBeat: number;
+        
+        if (pattern._advancedMode && pattern._perBeatSubdivisions) {
+          // Advanced mode: use per-beat subdivisions
+          const { calculateNotePositionsFromPerBeatSubdivisions, calculateNotesPerBarFromPerBeatSubdivisions } = require('@/lib/utils/patternUtils');
+          const timeSignatureStr = `${numerator}/${denominator}`;
+          notePositions = calculateNotePositionsFromPerBeatSubdivisions(timeSignatureStr, pattern._perBeatSubdivisions);
+          const result = calculateNotesPerBarFromPerBeatSubdivisions(timeSignatureStr, pattern._perBeatSubdivisions);
+          notesPerBeatArray = result.notesPerBeat;
+          notesPerBeat = 1; // Will be calculated per note based on position
+        } else {
+          // Normal mode: uniform subdivision
+          notesPerBeat = Math.max(1, pattern.subdivision / denominator);
+          notesPerBeatArray = undefined;
+          notePositions = undefined;
+        }
         
         // Calculate note duration for THIS pattern using current loop BPM
         const beatsPerMinute = loopBPM;
         const secondsPerBeat = 60.0 / beatsPerMinute;
-        const noteDuration = secondsPerBeat / notesPerBeat;
+        // For advanced mode, note duration will be calculated per note
+        const defaultNoteDuration = secondsPerBeat / notesPerBeat;
+        
+        // Calculate total duration of one bar (always numerator beats, regardless of subdivisions)
+        const barDuration = numerator * secondsPerBeat;
       
         // Calculate pattern start time (before processing repeats)
         // This will be used to track time within each repeat
@@ -922,7 +945,7 @@ export function usePlayback() {
 
         // Repeat pattern based on repeat value
         for (let repeat = 0; repeat < pattern.repeat; repeat++) {
-          const repeatStartTime = patternStartTime + (repeat * totalNotesPerRepeat * noteDuration);
+          const repeatStartTime = patternStartTime + (repeat * barDuration);
           
           for (let noteInPhrase = 0; noteInPhrase < totalNotesPerRepeat; noteInPhrase++) {
             // Skip if outside loop range
@@ -938,16 +961,31 @@ export function usePlayback() {
             // Rest is now "-" to match sticking pattern code (legacy "R" still supported)
             const isRest = voicingTokens.length === 0 || voicingTokens.every((token) => token === '-' || token === 'R');
 
-            // Calculate time for this note using repeat start time + offset within repeat
-            const timeInRepeat = repeatStartTime + (noteInPhrase * noteDuration);
+            // Calculate time for this note
+            let time: number;
+            let isBeat: boolean;
+            let currentBeat: number;
+            let currentNotesPerBeat: number;
             
-            // Calculate absolute time in seconds from start
-            const time = timeInRepeat / speed;
-            
-            // Calculate beat position for metronome clicks
-            // Note: noteInPhrase is relative to this repeat, but for beat detection we need note position within the beat
-            const noteInBeat = noteInPhrase % notesPerBeat;
-            const isBeat = noteInBeat === 0;
+            if (notePositions && notesPerBeatArray) {
+              // Advanced mode: use note positions to calculate timing
+              const notePosition = notePositions[noteInPhrase];
+              currentBeat = Math.floor(notePosition);
+              time = (repeatStartTime + (notePosition * secondsPerBeat)) / speed;
+              
+              // Check if this is the first note of a beat
+              const beatStartPosition = currentBeat;
+              isBeat = Math.abs(notePosition - beatStartPosition) < 0.001;
+              currentNotesPerBeat = notesPerBeatArray[currentBeat] || 1;
+            } else {
+              // Normal mode: uniform spacing
+              const timeInRepeat = repeatStartTime + (noteInPhrase * defaultNoteDuration);
+              time = timeInRepeat / speed;
+              const noteInBeat = noteInPhrase % notesPerBeat;
+              isBeat = noteInBeat === 0;
+              currentBeat = Math.floor(noteInPhrase / notesPerBeat);
+              currentNotesPerBeat = notesPerBeat;
+            }
             
             // Determine if this note has an accent
             // Use _presetAccents if available, otherwise derive from phrase
@@ -970,7 +1008,9 @@ export function usePlayback() {
                   if (isBeat) {
                     shouldPlayClick = true;
                     // Beat 1 is accent
-                    const beatNumber = Math.floor(localNoteIndex / notesPerBeat) + 1;
+                    const beatNumber = notePositions && notesPerBeatArray
+                      ? Math.floor(notePositions[localNoteIndex]) + 1
+                      : Math.floor(localNoteIndex / notesPerBeat) + 1;
                     isAccentClick = beatNumber === 1;
                   }
                   break;
@@ -1041,8 +1081,8 @@ export function usePlayback() {
         }
       
         // After completing all repeats of this pattern, update cumulative time for next pattern
-        const patternTotalNotes = notesPerBar * pattern.repeat;
-        cumulativeTime += patternTotalNotes * noteDuration;
+        // Total duration = number of bars * duration per bar
+        cumulativeTime += pattern.repeat * barDuration;
       }
 
       // Process polyrhythm patterns
@@ -1285,17 +1325,29 @@ export function usePlayback() {
             let notesPerBeat = 4; // default fallback
             
             for (const pattern of patterns) {
-              // Calculate actual notes per bar from time signature and subdivision
-              const notesPerBar = calculateNotesPerBar(pattern.timeSignature || '4/4', pattern.subdivision);
+              // Calculate actual notes per bar (handles both normal and advanced modes)
+              const notesPerBar = getNotesPerBarForPattern(pattern);
               const [numerator, denominator] = parseTimeSignature(pattern.timeSignature || '4/4');
               const totalNotes = notesPerBar * (pattern.repeat || 1);
               
               if (noteIndexInPattern < totalNotes) {
                 // This note belongs to this pattern
-                // Calculate notes per beat based on time signature denominator
-                notesPerBeat = Math.max(1, pattern.subdivision / denominator);
                 const localNoteIndex = noteIndexInPattern % notesPerBar;
-                const beatIndex = Math.floor(localNoteIndex / notesPerBeat);
+                
+                // Calculate beat index (handles both normal and advanced modes)
+                let beatIndex: number;
+                if (pattern._advancedMode && pattern._perBeatSubdivisions) {
+                  // Advanced mode: use note positions
+                  const timeSignatureStr = `${numerator}/${denominator}`;
+                  const notePositions = calculateNotePositionsFromPerBeatSubdivisions(timeSignatureStr, pattern._perBeatSubdivisions);
+                  const notePosition = notePositions[localNoteIndex];
+                  beatIndex = Math.floor(notePosition);
+                } else {
+                  // Normal mode: uniform subdivision
+                  notesPerBeat = Math.max(1, pattern.subdivision / denominator);
+                  beatIndex = Math.floor(localNoteIndex / notesPerBeat);
+                }
+                
                 const currentBeat = (beatIndex % numerator) + 1;
                 setCurrentBeat(currentBeat);
                 break;
