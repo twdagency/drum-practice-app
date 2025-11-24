@@ -24,8 +24,10 @@ import { LearningPathModal } from '../PracticeMode/LearningPathModal';
 import { PolyrhythmBuilder } from '../PracticeMode/PolyrhythmBuilder';
 import { AudioSettingsModal } from '../PracticeMode/AudioSettingsModal';
 import { PlaybackSettingsModal } from '../PracticeMode/PlaybackSettingsModal';
+import { ApiSyncSettingsModal } from '../PracticeMode/ApiSyncSettingsModal';
 import { MIDIRecording } from '../PracticeMode/MIDIRecording';
 import { MIDIMappingEditor } from '../PracticeMode/MIDIMappingEditor';
+import { AuthButton } from '../auth/AuthButton';
 import { usePresets } from '@/hooks/usePresets';
 import { parseTimeSignature, buildAccentIndices, parseNumberList } from '@/lib/utils/patternUtils';
 import { exportSVG, exportPNG, exportMIDI, sharePatternURL } from '@/lib/utils/exportUtils';
@@ -33,6 +35,7 @@ import { useMIDIRecording } from '@/hooks/useMIDIRecording';
 import { useMIDIDevices } from '@/hooks/useMIDIDevices';
 import { convertMIDIRecordingToPattern } from '@/lib/utils/midiRecordingUtils';
 import { startCountIn, stopCountIn, startMetronome, stopMetronome } from '@/lib/utils/midiRecordingManager';
+import { isApiSyncEnabled } from '@/lib/utils/patternSync';
 
 export function Toolbar() {
   const { showToast } = useToast();
@@ -46,15 +49,37 @@ export function Toolbar() {
   const [presetsDropdownOpen, setPresetsDropdownOpen] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showPlaybackSettings, setShowPlaybackSettings] = useState(false);
+  const [showApiSyncSettings, setShowApiSyncSettings] = useState(false);
   const [showMIDIMapping, setShowMIDIMapping] = useState(false);
   const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
   const [midiRecordingOpen, setMidiRecordingOpen] = useState(false);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [tapTempoMessage, setTapTempoMessage] = useState<string | null>(null);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [apiSyncEnabled, setApiSyncEnabled] = useState(false);
   
   // Load presets for the dropdown
   const { presets, loading: presetsLoading } = usePresets();
+  
+  // Check API sync status
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setApiSyncEnabled(isApiSyncEnabled());
+      // Listen for storage changes
+      const handleStorageChange = () => {
+        setApiSyncEnabled(isApiSyncEnabled());
+      };
+      window.addEventListener('storage', handleStorageChange);
+      // Also check periodically (for same-tab updates)
+      const interval = setInterval(() => {
+        setApiSyncEnabled(isApiSyncEnabled());
+      }, 1000);
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(interval);
+      };
+    }
+  }, []);
   
   // MIDI Recording
   const { devices: midiDevices, access: midiAccess } = useMIDIDevices();
@@ -62,10 +87,10 @@ export function Toolbar() {
   
   // Close settings dropdown when modals open
   useEffect(() => {
-    if (showAudioSettings || showPlaybackSettings || showMIDIMapping) {
+    if (showAudioSettings || showPlaybackSettings || showApiSyncSettings || showMIDIMapping) {
       setSettingsDropdownOpen(false);
     }
-  }, [showAudioSettings, showPlaybackSettings, showMIDIMapping]);
+  }, [showAudioSettings, showPlaybackSettings, showApiSyncSettings, showMIDIMapping]);
   
   // Store state and actions
   const bpm = useStore((state) => state.bpm);
@@ -895,6 +920,23 @@ export function Toolbar() {
             className="dpgen-toolbar__menu-item"
             onClick={() => {
               setSettingsDropdownOpen(false);
+              setShowApiSyncSettings(true);
+            }}
+            style={apiSyncEnabled ? { color: 'var(--dpgen-primary)' } : {}}
+          >
+            <i className={`fas fa-cloud${apiSyncEnabled ? '-check' : ''}`} /> 
+            Cloud Sync
+            {apiSyncEnabled && (
+              <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', opacity: 0.7 }}>
+                (Enabled)
+              </span>
+            )}
+          </button>
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item"
+            onClick={() => {
+              setSettingsDropdownOpen(false);
               setShowMIDIMapping(true);
             }}
           >
@@ -1016,6 +1058,11 @@ export function Toolbar() {
           />
         </Tooltip>
       </ToolbarGroup>
+
+      {/* Authentication */}
+      <ToolbarGroup>
+        <AuthButton />
+      </ToolbarGroup>
       
       {/* MIDI Practice Modal */}
       {midiPracticeOpen && (
@@ -1024,7 +1071,10 @@ export function Toolbar() {
 
       {/* Microphone Practice Modal */}
       {microphonePracticeOpen && (
-        <MicrophonePractice onClose={() => setMicrophonePracticeOpen(false)} />
+        <MicrophonePractice 
+          onClose={() => setMicrophonePracticeOpen(false)} 
+          isOpen={microphonePracticeOpen}
+        />
       )}
 
       {/* Presets Browser Modal */}
@@ -1060,6 +1110,10 @@ export function Toolbar() {
       {/* Playback Settings Modal */}
       {showPlaybackSettings && (
         <PlaybackSettingsModal onClose={() => setShowPlaybackSettings(false)} />
+      )}
+      {/* API Sync Settings Modal */}
+      {showApiSyncSettings && (
+        <ApiSyncSettingsModal onClose={() => setShowApiSyncSettings(false)} />
       )}
 
       {/* MIDI Mapping Editor Modal */}

@@ -115,6 +115,8 @@ const DEFAULT_MIDI_NOTE_MAP: MIDINoteMap = {
   H: 42,  // Hi-hat closed (F#1)
   'H+': 46, // Hi-hat open (A#1)
   T: 47,  // Low-Mid Tom (B1)
+  Ht: 48, // High Tom (C2)
+  Mt: 45, // Mid Tom (A1)
   F: 41,  // Low Tom (F1)
   R: 0,   // Rest (no note)
 };
@@ -360,6 +362,46 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => ({
           }));
         } catch (e) {
           console.error('Failed to save MIDI settings:', e);
+        }
+      }
+      return { midiPractice: updated };
+    }),
+
+  setMIDINoteMap: (noteMap) =>
+    set((state) => {
+      const updated = {
+        ...state.midiPractice,
+        noteMap,
+      };
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          const existing = window.localStorage.getItem('dpgen_midi_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
+          settings.noteMap = noteMap;
+          window.localStorage.setItem('dpgen_midi_practice_settings', JSON.stringify(settings));
+        } catch (e) {
+          console.error('Failed to save MIDI note map:', e);
+        }
+      }
+      return { midiPractice: updated };
+    }),
+
+  resetMIDINoteMap: () =>
+    set((state) => {
+      const updated = {
+        ...state.midiPractice,
+        noteMap: { ...DEFAULT_MIDI_NOTE_MAP },
+      };
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          const existing = window.localStorage.getItem('dpgen_midi_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
+          settings.noteMap = updated.noteMap;
+          window.localStorage.setItem('dpgen_midi_practice_settings', JSON.stringify(settings));
+        } catch (e) {
+          console.error('Failed to save MIDI note map:', e);
         }
       }
       return { midiPractice: updated };

@@ -19,6 +19,7 @@ export interface PatternSlice {
   updatePattern: (id: number, updates: Partial<Pattern>) => void;
   duplicatePattern: (id: number) => void;
   clearPatterns: () => void;
+  setPatterns: (patterns: Pattern[]) => void;
   setDraggedPatternId: (id: number | null) => void;
   reorderPatterns: (fromIndex: number, toIndex: number) => void;
   saveToHistory: () => void;
@@ -77,6 +78,8 @@ export const createPatternSlice: StateCreator<PatternSlice> = (set, get) => ({
   },
 
   clearPatterns: () => set({ patterns: [] }),
+
+  setPatterns: (patterns) => set({ patterns }),
 
   setDraggedPatternId: (id) => set({ draggedPatternId: id }),
 

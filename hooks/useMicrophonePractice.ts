@@ -37,6 +37,8 @@ export function useMicrophonePractice() {
   const lastHitTimeRef = useRef<number>(0);
   const hasResetRef = useRef<boolean>(false);
   const levelCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const previousVolumeRef = useRef<number>(0); // Track previous volume for transient detection
+  const peakVolumeAfterHitRef = useRef<number>(0); // Track peak volume after last hit to detect decay
 
   // Get current practice settings
   const expectedNotes = useStore((state) => state.microphonePractice.expectedNotes);
@@ -165,13 +167,6 @@ export function useMicrophonePractice() {
       return;
     }
 
-    // Check cooldown
-    const now = performance.now();
-    const timeSinceLastHit = now - lastHitTimeRef.current;
-    if (timeSinceLastHit < hitCooldown) {
-      return;
-    }
-
     // Get audio data - use time domain data for amplitude detection (better for drum hits)
     analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
     
@@ -188,8 +183,67 @@ export function useMicrophonePractice() {
     const sensitivityMultiplier = sensitivity / 100;
     const adjustedThreshold = threshold / sensitivityMultiplier;
     
-    // Detect hit if volume exceeds threshold
-    if (normalizedVolume > adjustedThreshold) {
+    // Check cooldown (after calculating volume so we can update previousVolumeRef during cooldown)
+    const now = performance.now();
+    const timeSinceLastHit = now - lastHitTimeRef.current;
+    
+    // For very rapid hits (16th notes at 120 BPM = ~125ms apart), use a shorter cooldown
+    // This allows detection of rapid consecutive notes
+    const rapidHitCooldown = Math.min(hitCooldown, 80); // Minimum 80ms cooldown for rapid hits
+    const effectiveCooldown = timeSinceLastHit < 200 ? rapidHitCooldown : hitCooldown; // Use shorter cooldown if recent hit
+    
+    if (timeSinceLastHit < effectiveCooldown) {
+      // Still update previous volume during cooldown to track changes
+      // For rapid hits, allow volume to reset faster so next hit can be detected
+      if (normalizedVolume < adjustedThreshold * 0.6) {
+        previousVolumeRef.current = Math.max(0, normalizedVolume);
+      } else if (timeSinceLastHit > rapidHitCooldown) {
+        // After rapid cooldown, start allowing volume to decay even if above threshold
+        // This helps detect rapid consecutive hits
+        previousVolumeRef.current = Math.max(previousVolumeRef.current * 0.9, normalizedVolume * 0.7);
+      }
+      return;
+    }
+    
+    // Transient detection: focus on volume spikes/increases rather than absolute volume
+    // This makes it more sensitive to drum hits even at lower volumes
+    const volumeIncrease = normalizedVolume - previousVolumeRef.current;
+    
+    // Focus on detecting volume spikes/increases - this is the key to detecting drum hits
+    // A spike is a sudden increase in volume, which distinguishes hits from continuous noise
+    
+    // Calculate transient threshold based on previous volume
+    // Use a percentage increase from previous volume - make it very sensitive to spikes at lower volumes
+    const relativeTransientThreshold = Math.max(
+      adjustedThreshold * 0.02, // Minimum 2% of threshold (lowered from 3%)
+      previousVolumeRef.current * 0.08 // 8% increase from previous volume (lowered from 12% for more sensitivity)
+    );
+    
+    // Absolute minimum transient threshold for very quiet hits - make it very sensitive
+    const absoluteTransientThreshold = adjustedThreshold * 0.01; // 1% of threshold as absolute minimum (lowered from 1.5%)
+    
+    // Detect if there's a clear volume spike/increase (transient)
+    // This is the primary detection method - a spike indicates a hit, not continuous noise
+    // Lower the volume requirement for spike detection to catch quieter hits
+    const isTransient = volumeIncrease > relativeTransientThreshold || 
+                       (volumeIncrease > absoluteTransientThreshold && normalizedVolume > adjustedThreshold * 0.25); // Lowered from 0.4 to 0.25
+    
+    // Also allow hits if volume crosses threshold from below (traditional threshold crossing)
+    const crossedThreshold = normalizedVolume > adjustedThreshold && previousVolumeRef.current <= adjustedThreshold * 0.9;
+    
+    // Allow hits if volume was below threshold and now above (new attack after silence)
+    const wasBelowThreshold = previousVolumeRef.current <= adjustedThreshold * 0.7 && normalizedVolume > adjustedThreshold;
+    
+    // Primary condition: volume spike (transient) - this works even at lower volumes
+    // Lower the absolute volume requirement significantly when there's a clear spike
+    const hasClearTransient = isTransient && volumeIncrease > absoluteTransientThreshold;
+    const minVolumeForHit = hasClearTransient ? adjustedThreshold * 0.25 : adjustedThreshold; // Lowered from 0.4 to 0.25 for quieter hits
+    
+    // Allow hit if: (spike detected AND volume above minimum) OR crossing threshold OR was below and now above
+    // The spike detection prevents continuous noise from registering as multiple hits
+    const shouldRegisterHit = (normalizedVolume > minVolumeForHit && (isTransient || crossedThreshold || wasBelowThreshold));
+    
+    if (shouldRegisterHit) {
       lastHitTimeRef.current = now;
       
       if (!startTimeRef.current) {
@@ -200,9 +254,25 @@ export function useMicrophonePractice() {
       const elapsedTime = now - startTimeRef.current;
       const adjustedElapsedTime = elapsedTime - latencyAdjustment;
 
+      // Update previous volume and peak volume after registering hit
+      // Set previousVolumeRef to a lower value to allow next hit to show an increase
+      // For rapid hits, set it even lower to allow very quick consecutive detection
+      const isRapidHit = timeSinceLastHit < 200;
+      if (isRapidHit) {
+        // For rapid hits, set previous volume much lower to allow immediate next hit detection
+        previousVolumeRef.current = Math.max(adjustedThreshold * 0.5, normalizedVolume * 0.6);
+      } else {
+        // For normal hits, use standard decay
+        previousVolumeRef.current = Math.max(adjustedThreshold * 0.7, normalizedVolume * 0.8);
+      }
+      peakVolumeAfterHitRef.current = normalizedVolume; // Track peak volume for decay detection
+      
       console.log('[Microphone Practice] Hit detected!', {
         normalizedVolume: normalizedVolume.toFixed(3),
         adjustedThreshold: adjustedThreshold.toFixed(3),
+        volumeIncrease: volumeIncrease.toFixed(3),
+        isTransient,
+        crossedThreshold,
         elapsedTime: elapsedTime.toFixed(2),
         adjustedElapsedTime: adjustedElapsedTime.toFixed(2),
         expectedNotesCount: expectedNotes.length
@@ -259,6 +329,34 @@ export function useMicrophonePractice() {
         // Don't record unmatched hits - they cause issues with color display
         // Only record hits that actually match an expected note
       }
+      
+      // Update previous volume after processing (even if no hit registered)
+      // This allows transient detection to work properly
+      if (!shouldRegisterHit) {
+        // Track peak volume after last hit for decay detection
+        if (peakVolumeAfterHitRef.current > 0 && normalizedVolume > peakVolumeAfterHitRef.current) {
+          peakVolumeAfterHitRef.current = normalizedVolume;
+        }
+        
+        // If volume drops significantly below threshold, reset previous volume and peak
+        // This allows new transients to be detected after silence
+        if (normalizedVolume < adjustedThreshold * 0.6) {
+          previousVolumeRef.current = Math.max(0, normalizedVolume);
+          if (normalizedVolume < adjustedThreshold * 0.3) {
+            peakVolumeAfterHitRef.current = 0; // Reset peak if volume drops very low
+          }
+        } else {
+          // Gradually decay previous volume if above threshold but no hit registered
+          // This prevents continuous noise from blocking future hits
+          // Decay faster to allow next hit to be detected sooner
+          previousVolumeRef.current = Math.max(previousVolumeRef.current * 0.95, normalizedVolume * 0.85);
+          
+          // Also decay peak volume to allow new hits after some time
+          if (peakVolumeAfterHitRef.current > 0) {
+            peakVolumeAfterHitRef.current = Math.max(peakVolumeAfterHitRef.current * 0.98, normalizedVolume);
+          }
+        }
+      }
     }
   }, [microphonePracticeEnabled, isPlaying, countInActive, hitCooldown, threshold, sensitivity, latencyAdjustment, accuracyWindow, findClosestExpectedNote, markMicrophoneNoteMatched, addMicrophoneHit]);
 
@@ -283,6 +381,8 @@ export function useMicrophonePractice() {
       }
       
       lastHitTimeRef.current = 0; // Reset last hit time
+      previousVolumeRef.current = 0; // Reset previous volume for transient detection
+      peakVolumeAfterHitRef.current = 0; // Reset peak volume tracking
       console.log('[Microphone Practice] Reset matched notes, cleared hits, and reset start time - playback starting');
     } else if (!isPlaying) {
       hasResetRef.current = false;

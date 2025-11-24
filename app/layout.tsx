@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import '../styles/globals.css'
 import { VexFlowLoader } from '@/components/VexFlowLoader'
+import { SessionProvider } from '@/components/providers/SessionProvider'
+import { ToastProvider } from '@/components/shared/Toast'
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 
 export const metadata: Metadata = {
   title: 'Drum Practice Generator',
@@ -31,10 +34,15 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <VexFlowLoader />
-        {children}
+        <ErrorBoundary>
+          <SessionProvider>
+            <ToastProvider>
+              <VexFlowLoader />
+              {children}
+            </ToastProvider>
+          </SessionProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )
 }
-

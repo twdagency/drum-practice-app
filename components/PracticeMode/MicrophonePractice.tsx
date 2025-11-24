@@ -15,9 +15,10 @@ import { ExpectedNote } from '@/types';
 
 interface MicrophonePracticeProps {
   onClose: () => void;
+  isOpen?: boolean;
 }
 
-export function MicrophonePractice({ onClose }: MicrophonePracticeProps) {
+export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePracticeProps) {
   const microphonePractice = useStore((state) => state.microphonePractice);
   const isPlaying = useStore((state) => state.isPlaying);
   const patterns = useStore((state) => state.patterns);
@@ -72,7 +73,7 @@ export function MicrophonePractice({ onClose }: MicrophonePracticeProps) {
   // Reload selectedDeviceId from localStorage when component mounts or modal reopens
   // This ensures the dropdown shows the selected device even after closing/reopening the modal
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isOpen && typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('dpgen_microphone_practice_settings');
         if (saved) {
@@ -86,7 +87,7 @@ export function MicrophonePractice({ onClose }: MicrophonePracticeProps) {
         console.error('Failed to load device from localStorage:', e);
       }
     }
-  }, []); // Run once on mount
+  }, [isOpen]); // Reload when modal opens
 
   // Request microphone access on mount
   useEffect(() => {

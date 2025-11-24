@@ -7,6 +7,9 @@ import { exportPatternCollection, sharePatternURL, importPatternCollection } fro
 import { useToast } from '@/components/shared/Toast';
 import { CollapsibleSection } from '@/components/shared/CollapsibleSection';
 import { calculateDifficultyRating, getDifficultyColor, getDifficultyLabel } from '@/lib/utils/difficultyUtils';
+import { usePatternsApi } from '@/hooks/usePatternsApi';
+import { isApiSyncEnabled } from '@/lib/utils/patternSync';
+import { useSession } from 'next-auth/react';
 
 interface LibraryPattern {
   id: string;
@@ -28,6 +31,19 @@ export function PatternLibrary() {
   const addPattern = useStore((state) => state.addPattern);
   const clearPatterns = useStore((state) => state.clearPatterns);
   const setBPM = useStore((state) => state.setBPM);
+  
+  // API integration (optional)
+  const { data: session } = useSession();
+  const apiSyncEnabled = typeof window !== 'undefined' && isApiSyncEnabled();
+  const userId = session?.user?.id;
+  const { savePattern, loading: apiLoading } = usePatternsApi({
+    onSuccess: (msg) => {
+      // Silent success for auto-sync
+    },
+    onError: (err) => {
+      console.error('API sync error:', err);
+    },
+  });
   
   const [library, setLibrary] = useState<LibraryPattern[]>(() => {
     if (typeof window !== 'undefined') {
@@ -111,6 +127,14 @@ export function PatternLibrary() {
     
     setLibrary(prev => [...prev, libraryItem]);
     showToast(`Pattern "${name}" saved to library`, 'success');
+    
+    // Optionally save to API if sync is enabled
+    if (apiSyncEnabled && userId) {
+      savePattern(libraryItem.pattern).catch((err) => {
+        console.error('Failed to sync pattern to API:', err);
+        // Don't show error to user - library save succeeded
+      });
+    }
   };
   
   const handleSaveAsTemplate = (pattern: Pattern) => {

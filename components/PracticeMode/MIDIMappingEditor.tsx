@@ -19,6 +19,8 @@ const DRUM_LABELS: Record<string, string> = {
   H: 'Hi-hat (Closed)',
   'H+': 'Hi-hat (Open)',
   T: 'Tom',
+  Ht: 'High Tom',
+  Mt: 'Mid Tom',
   F: 'Floor Tom',
   R: 'Rest',
 };
@@ -29,6 +31,8 @@ const DEFAULT_MAP: MIDINoteMap = {
   H: 42,
   'H+': 46,
   T: 47,
+  Ht: 48,  // High Tom (C2)
+  Mt: 45,  // Mid Tom (A1)
   F: 41,
   R: 0,
 };

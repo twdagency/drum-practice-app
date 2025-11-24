@@ -2636,13 +2636,17 @@ export function Stave() {
       if (!targetGroup) return;
 
       // Determine color based on timing error and tolerance window
-      // Use the timingError from the hit object (already absolute) for consistency
-      // But verify it matches rawTimingError
-      const absRawTimingError = Math.abs(hit.rawTimingError);
+      // The displayed timing shows rawTimingError (can be negative), so we use its absolute value
+      // to match what the user sees. This ensures the color matches the displayed number.
+      const rawTimingError = hit.rawTimingError;
+      const absTimingError = Math.abs(rawTimingError); // Absolute value of displayed timing
+      
+      // Verify timingError matches (should be the same)
       const timingError = hit.timingError; // This is already absolute from useMicrophonePractice
       
-      // Use the absolute value of rawTimingError for color to match what's displayed
-      const timingErrorForColor = absRawTimingError;
+      // Use absolute value of rawTimingError for color to match the displayed number
+      // This ensures -85ms displays as red (85ms > tolerance), not green
+      const timingErrorForColor = absTimingError;
       
       let color: string;
       if (timingErrorForColor <= toleranceWindow) {
@@ -2653,9 +2657,19 @@ export function Stave() {
         color = '#ef4444'; // Red - more than 20% outside tolerance
       }
       
-      // Debug logging for all notes to diagnose color issue
-      if (expectedNoteIndex === 0 || timingErrorForColor > toleranceWindow) {
-      }
+      // Debug logging for all hits to diagnose color issue
+      console.log('[Stave] Microphone hit color calculation:', {
+        expectedNoteIndex,
+        rawTimingError,
+        absTimingError,
+        timingError,
+        timingErrorForColor,
+        toleranceWindow,
+        color,
+        displayedText: `${rawTimingError >= 0 ? '+' : ''}${Math.round(rawTimingError)}ms`,
+        condition1: `${timingErrorForColor} <= ${toleranceWindow}`,
+        condition2: `${timingErrorForColor} <= ${toleranceWindow * 1.2}`,
+      });
       
       const isPerfect = timingError <= Math.min(10, toleranceWindow / 5);
 
@@ -2716,7 +2730,8 @@ export function Stave() {
         const sign = rawTimingError >= 0 ? '+' : '';
         const timingText = `${sign}${Math.round(rawTimingError)}ms`;
         
-        // Use rawTimingError for color calculation to match the note color logic
+        // Use absolute value of rawTimingError for color to match the displayed number
+        // This ensures the color matches what the user sees (-85ms = red, not green)
         const absTimingError = Math.abs(rawTimingError);
         let timingColor: string;
         if (absTimingError <= toleranceWindow) {

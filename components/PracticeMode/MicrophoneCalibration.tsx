@@ -39,6 +39,8 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
   const bpm = useStore((state) => state.bpm);
   const microphonePractice = useStore((state) => state.microphonePractice);
   const setMicrophoneLatencyAdjustment = useStore((state) => state.setMicrophoneLatencyAdjustment);
+  const setMicrophoneSensitivity = useStore((state) => state.setMicrophoneSensitivity);
+  const setMicrophoneThreshold = useStore((state) => state.setMicrophoneThreshold);
   
   const { devices } = useMicrophoneDevices();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
@@ -86,9 +88,28 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     calibrationRef.current = calibration;
   }, [latencyAdjustment, sensitivity, threshold, calibration]);
 
-  // Initialize selected device
+  // Initialize selected device from localStorage or first available
   useEffect(() => {
     if (devices.length > 0 && !selectedDeviceId) {
+      // Try to load from localStorage first
+      if (typeof window !== 'undefined') {
+        try {
+          const saved = localStorage.getItem('dpgen_microphone_practice_settings');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.deviceId) {
+              const deviceExists = devices.some(d => d.deviceId === parsed.deviceId);
+              if (deviceExists) {
+                setSelectedDeviceId(parsed.deviceId);
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load device from localStorage:', e);
+        }
+      }
+      // Fallback to first device
       setSelectedDeviceId(devices[0].deviceId);
     }
   }, [devices, selectedDeviceId]);
@@ -604,7 +625,10 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
 
   // Apply calibration
   const handleApply = () => {
+    // Save all calibration settings
     setMicrophoneLatencyAdjustment(latencyAdjustment);
+    setMicrophoneSensitivity(sensitivity);
+    setMicrophoneThreshold(threshold);
     if (onApply) {
       onApply(latencyAdjustment);
     }
@@ -673,7 +697,21 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
           </label>
           <select
             value={selectedDeviceId}
-            onChange={(e) => setSelectedDeviceId(e.target.value)}
+            onChange={(e) => {
+              const deviceId = e.target.value;
+              setSelectedDeviceId(deviceId);
+              // Save device selection to localStorage
+              if (typeof window !== 'undefined' && deviceId) {
+                try {
+                  const existing = localStorage.getItem('dpgen_microphone_practice_settings');
+                  const settings = existing ? JSON.parse(existing) : {};
+                  settings.deviceId = deviceId;
+                  localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
+                } catch (e) {
+                  console.error('Failed to save device selection:', e);
+                }
+              }
+            }}
             disabled={calibration.active}
             style={{
               width: '100%',

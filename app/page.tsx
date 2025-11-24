@@ -14,10 +14,11 @@ import { useMIDIPractice } from '@/hooks/useMIDIPractice';
 import { useMicrophonePractice } from '@/hooks/useMicrophonePractice';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { PlaybackProgress } from '@/components/shared/PlaybackProgress';
-import { ToastProvider } from '@/components/shared/Toast';
 import { useStore } from '@/store/useStore';
 import { PracticeStats } from '@/components/PracticeMode/PracticeStats';
 import { PatternLibrary } from '@/components/PracticeMode/PatternLibrary';
+import { AutoSyncWrapper } from '@/components/shared/AutoSyncWrapper';
+import { ProgressTrackingWrapper } from '@/components/shared/ProgressTrackingWrapper';
 
 export default function Home() {
   const darkMode = useStore((state) => state.darkMode);
@@ -175,14 +176,18 @@ export default function Home() {
   
   // Initialize microphone practice hook (must be in a component that stays mounted)
   useMicrophonePractice();
+  
+  // Initialize progress tracking (ToastProvider is now in root layout)
 
   return (
-    <ToastProvider>
+    <>
+      <AutoSyncWrapper />
+      <ProgressTrackingWrapper />
       <main className="min-h-screen">
         <div className="container mx-auto p-4">
         <h1 className="text-4xl font-bold mb-4">Drum Practice Generator</h1>
         <p className="text-lg text-gray-600 mb-6">
-          React migration in progress...
+          Generate and practice drumming patterns with real-time feedback
         </p>
         
         {/* Toolbar Component */}
@@ -220,17 +225,9 @@ export default function Home() {
           </div>
         </div>
         
-        <div className="mt-8 space-y-2">
-          <Link
-            href="/test-store"
-            className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Test Zustand Store →
-          </Link>
-        </div>
       </div>
     </main>
-    </ToastProvider>
+    </>
   )
 }
 

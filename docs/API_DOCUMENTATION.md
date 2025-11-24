@@ -1,348 +1,391 @@
-# Drum Practice Generator - API Documentation
+# API Documentation
 
-## Table of Contents
-1. [State Management](#state-management)
-2. [Utility Functions](#utility-functions)
-3. [Components](#components)
-4. [Hooks](#hooks)
-5. [Types](#types)
+## Overview
 
-## State Management
+The Drum Practice App API provides endpoints for managing patterns, collections, and tracking practice progress. All endpoints return JSON responses with a consistent structure.
 
-### Zustand Store (`store/useStore.ts`)
+## Base URL
 
-The application uses Zustand for global state management.
+All API endpoints are prefixed with `/api`.
 
-#### Pattern State
-```typescript
-patterns: Pattern[]
-addPattern(pattern: Pattern): void
-updatePattern(id: string, updates: Partial<Pattern>): void
-removePattern(id: string): void
-duplicatePattern(id: string): void
-reorderPatterns(fromIndex: number, toIndex: number): void
-```
+## Response Format
 
-#### Playback State
-```typescript
-isPlaying: boolean
-bpm: number
-playbackPosition: number | null
-setIsPlaying(playing: boolean): void
-setBPM(bpm: number): void
-setPlaybackPosition(position: number | null): void
-```
+All responses follow this structure:
 
-#### UI State
-```typescript
-darkMode: boolean
-showGridLines: boolean
-showMeasureNumbers: boolean
-polyrhythmDisplayMode: 'stacked' | 'two-staves'
-toggleDarkMode(): void
-setShowGridLines(show: boolean): void
-setShowMeasureNumbers(show: boolean): void
-setPolyrhythmDisplayMode(mode: 'stacked' | 'two-staves'): void
-```
-
-## Utility Functions
-
-### Pattern Utilities (`lib/utils/patternUtils.ts`)
-
-#### `parseTokens(value: string | string[]): string[]`
-Parses tokens from a string, handling space-separated and + notation.
-```typescript
-parseTokens('S K S K') // ['S', 'K', 'S', 'K']
-parseTokens('S+K H') // ['S+K', 'H']
-parseTokens('(S) S') // ['(S)', 'S'] (ghost notes)
-```
-
-#### `parseTimeSignature(value: string): [number, number]`
-Parses a time signature string into numerator and denominator.
-```typescript
-parseTimeSignature('4/4') // [4, 4]
-parseTimeSignature('3/4') // [3, 4]
-parseTimeSignature('7/8') // [7, 8]
-```
-
-#### `calculateNotesPerBar(numerator: number, denominator: number, subdivision: number): number`
-Calculates the number of notes per bar.
-```typescript
-calculateNotesPerBar(4, 4, 16) // 16
-calculateNotesPerBar(3, 4, 8) // 6
-```
-
-#### `getNotesPerBarForPattern(pattern: Pattern): number`
-Gets the number of notes per bar for a pattern, handling both standard and advanced modes.
-```typescript
-const pattern: Pattern = { /* ... */ };
-getNotesPerBarForPattern(pattern) // 16
-```
-
-#### `calculateNotesPerBarFromPerBeatSubdivisions(subdivisions: number[]): { totalNotes: number, notesPerBeat: number[] }`
-Calculates total notes and notes per beat from per-beat subdivisions.
-```typescript
-calculateNotesPerBarFromPerBeatSubdivisions([16, 8, 16, 8])
-// { totalNotes: 12, notesPerBeat: [4, 2, 4, 2] }
-```
-
-#### `calculateNotePositionsFromPerBeatSubdivisions(subdivisions: number[]): number[]`
-Calculates the beat position of each note when using per-beat subdivisions.
-```typescript
-calculateNotePositionsFromPerBeatSubdivisions([16, 8, 16, 8])
-// [0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 3]
-```
-
-#### `createDefaultPattern(): Pattern`
-Creates a new default pattern with sensible defaults.
-```typescript
-const pattern = createDefaultPattern();
-// Returns a Pattern with 4/4 time, 16th notes, basic voicing/sticking
-```
-
-#### `calculatePatternComplexity(pattern: Pattern): number`
-Calculates a complexity score (0-100) for a pattern.
-```typescript
-const complexity = calculatePatternComplexity(pattern);
-// Returns a number between 0 and 100
-```
-
-### Difficulty Utilities (`lib/utils/difficultyUtils.ts`)
-
-#### `calculateDifficultyRating(pattern: Pattern): { score: number, level: 'beginner' | 'intermediate' | 'advanced' | 'expert' }`
-Calculates difficulty rating for a pattern.
-```typescript
-const rating = calculateDifficultyRating(pattern);
-// { score: 45, level: 'intermediate' }
-```
-
-#### `generatePracticeRecommendations(pattern: Pattern, stats: PracticeStats): Array<{ title: string, description: string }>`
-Generates personalized practice recommendations.
-```typescript
-const recommendations = generatePracticeRecommendations(pattern, stats);
-// Returns array of recommendation objects
-```
-
-### Export Utilities (`lib/utils/exportUtils.ts`)
-
-#### `exportMIDI(patterns: Pattern[], bpm: number): Blob`
-Exports patterns as a MIDI file.
-```typescript
-const midiBlob = exportMIDI(patterns, 120);
-// Returns a Blob that can be downloaded
-```
-
-#### `exportSVG(element: HTMLElement): Blob`
-Exports an SVG element as an SVG file.
-```typescript
-const svgBlob = exportSVG(staveElement);
-// Returns a Blob that can be downloaded
-```
-
-#### `exportPNG(element: HTMLElement): Promise<Blob>`
-Exports an element as a PNG image.
-```typescript
-const pngBlob = await exportPNG(staveElement);
-// Returns a Promise<Blob> that can be downloaded
-```
-
-#### `exportPDF(): void`
-Exports the current notation as a PDF using browser print functionality.
-```typescript
-exportPDF();
-// Opens browser print dialog
-```
-
-#### `sharePatternURL(patterns: Pattern[]): string`
-Generates a shareable URL for patterns.
-```typescript
-const url = sharePatternURL(patterns);
-// Returns a base64-encoded URL
-```
-
-## Components
-
-### Stave Component (`components/Stave/Stave.tsx`)
-
-Renders musical notation using VexFlow.
-
-#### Props
-None (uses Zustand store for state)
-
-#### Features
-- Renders patterns with correct drum notation
-- Supports polyrhythms
-- Highlights notes during playback
-- Supports ghost notes, flams, drags, ruffs
-- Responsive layout
-
-### PatternList Component (`components/PatternList/PatternList.tsx`)
-
-Displays and manages patterns.
-
-#### Features
-- Search and filter patterns
-- Virtual scrolling for large lists
-- Drag-and-drop reordering
-- Keyboard navigation
-
-### PatternItem Component (`components/PatternList/PatternItem.tsx`)
-
-Displays a single pattern with editing capabilities.
-
-#### Props
-```typescript
-interface PatternItemProps {
-  pattern: Pattern;
-  index: number;
-}
-```
-
-### Toolbar Component (`components/Toolbar/Toolbar.tsx`)
-
-Main application toolbar with controls.
-
-#### Features
-- Playback controls
-- Pattern management
-- Export options
-- Settings toggles
-
-## Hooks
-
-### usePlayback (`hooks/usePlayback.ts`)
-
-Manages audio playback and scheduling.
-
-#### Returns
 ```typescript
 {
-  startPlayback: () => void;
-  stopPlayback: () => void;
-  isPlaying: boolean;
-  playbackPosition: number | null;
+  success: boolean;
+  data?: T;           // Response data (if successful)
+  error?: string;     // Error message (if failed)
+  message?: string;   // Success message (for some operations)
+  count?: number;     // Count of items (for list endpoints)
 }
 ```
 
-### useKeyboardShortcuts (`hooks/useKeyboardShortcuts.ts`)
+## Authentication
 
-Handles global keyboard shortcuts.
+Currently, authentication is not implemented. All endpoints accept an optional `userId` parameter. In production, this will be replaced with proper authentication (JWT tokens, session cookies, etc.).
 
-#### Shortcuts
-- Spacebar: Play/Pause
-- Escape: Stop
-- +/-: Adjust BPM
-- Ctrl/Cmd+Z: Undo
-- Ctrl/Cmd+Y: Redo
-- Ctrl/Cmd+N: New pattern
-- Ctrl/Cmd+Shift+N: Random pattern
-- Ctrl/Cmd+R: Randomize all
+## Endpoints
 
-### useMIDIPractice (`hooks/useMIDIPractice.ts`)
+### Patterns
 
-Manages MIDI practice mode.
+#### GET `/api/patterns`
 
-#### Returns
-```typescript
+Get all patterns.
+
+**Query Parameters:**
+- `userId` (optional): Filter patterns by user ID
+
+**Response:**
+```json
 {
-  enabled: boolean;
-  devices: MIDIDevice[];
-  selectedDevice: MIDIDevice | null;
-  actualHits: Hit[];
-  expectedNotes: ExpectedNote[];
-  accuracy: number;
-  startPractice: () => void;
-  stopPractice: () => void;
+  "success": true,
+  "data": [
+    {
+      "id": 1234567890,
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S K S",
+      "stickingPattern": "R L R L",
+      "leftFoot": false,
+      "rightFoot": false,
+      "repeat": 1,
+      "createdAt": 1234567890000,
+      "updatedAt": 1234567890000
+    }
+  ],
+  "count": 1
 }
 ```
 
-### useMicrophonePractice (`hooks/useMicrophonePractice.ts`)
+#### POST `/api/patterns`
 
-Manages microphone practice mode.
+Create a new pattern.
 
-#### Returns
-```typescript
+**Request Body:**
+```json
 {
-  enabled: boolean;
-  devices: MediaDeviceInfo[];
-  selectedDevice: MediaDeviceInfo | null;
-  actualHits: Hit[];
-  expectedNotes: ExpectedNote[];
-  accuracy: number;
-  startPractice: () => void;
-  stopPractice: () => void;
+  "pattern": {
+    "id": 1234567890,
+    "timeSignature": "4/4",
+    "subdivision": 16,
+    "phrase": "4 4 4 4",
+    "drumPattern": "S S K S",
+    "stickingPattern": "R L R L",
+    "leftFoot": false,
+    "rightFoot": false,
+    "repeat": 1
+  },
+  "userId": "user123" // optional
 }
 ```
 
-## Types
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1234567890,
+    "timeSignature": "4/4",
+    // ... pattern fields
+    "createdAt": 1234567890000,
+    "updatedAt": 1234567890000
+  }
+}
+```
 
-### Pattern (`types/pattern.ts`)
+#### GET `/api/patterns/[id]`
+
+Get a single pattern by ID.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1234567890,
+    // ... pattern fields
+    "createdAt": 1234567890000,
+    "updatedAt": 1234567890000
+  }
+}
+```
+
+#### PUT `/api/patterns/[id]`
+
+Update a pattern.
+
+**Request Body:**
+```json
+{
+  "pattern": {
+    "timeSignature": "3/4",
+    // ... updated fields
+  },
+  "userId": "user123" // optional, required for ownership check
+}
+```
+
+#### DELETE `/api/patterns/[id]`
+
+Delete a pattern.
+
+**Query Parameters:**
+- `userId` (optional): Required for ownership check
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Pattern deleted successfully"
+}
+```
+
+### Collections
+
+#### GET `/api/collections`
+
+Get all collections.
+
+**Query Parameters:**
+- `userId` (optional): Filter collections by user ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "col_1234567890_abc123",
+      "name": "My Practice Set",
+      "description": "A collection of patterns for practice",
+      "patternIds": [1234567890, 1234567891],
+      "tags": ["practice", "beginner"],
+      "userId": "user123",
+      "createdAt": 1234567890000,
+      "updatedAt": 1234567890000
+    }
+  ],
+  "count": 1
+}
+```
+
+#### POST `/api/collections`
+
+Create a new collection.
+
+**Request Body:**
+```json
+{
+  "name": "My Practice Set",
+  "description": "A collection of patterns",
+  "patternIds": [1234567890, 1234567891],
+  "tags": ["practice", "beginner"],
+  "userId": "user123" // optional
+}
+```
+
+#### GET `/api/collections/[id]`
+
+Get a single collection by ID.
+
+#### PUT `/api/collections/[id]`
+
+Update a collection.
+
+**Request Body:**
+```json
+{
+  "name": "Updated Name",
+  "description": "Updated description",
+  "patternIds": [1234567890],
+  "tags": ["updated"],
+  "userId": "user123" // optional, required for ownership check
+}
+```
+
+#### DELETE `/api/collections/[id]`
+
+Delete a collection.
+
+**Query Parameters:**
+- `userId` (optional): Required for ownership check
+
+### Progress
+
+#### GET `/api/progress`
+
+Get user practice progress.
+
+**Query Parameters:**
+- `userId` (required): User ID
+- `patternId` (optional): Filter by pattern ID
+- `practiceType` (optional): Filter by practice type (`midi`, `microphone`, `recording`)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "user123",
+    "progress": [
+      {
+        "userId": "user123",
+        "patternId": 1234567890,
+        "practiceType": "midi",
+        "accuracy": 85.5,
+        "timing": 92.3,
+        "attempts": 10,
+        "bestAccuracy": 95.0,
+        "bestTiming": 98.5,
+        "lastPracticed": 1234567890000,
+        "totalTime": 3600,
+        "notes": [
+          {
+            "noteIndex": 0,
+            "accuracy": 90.0,
+            "timing": 95.0,
+            "attempts": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### POST `/api/progress`
+
+Save or update practice progress.
+
+**Request Body:**
+```json
+{
+  "userId": "user123",
+  "patternId": 1234567890,
+  "practiceType": "midi",
+  "accuracy": 85.5,
+  "timing": 92.3,
+  "totalTime": 60,
+  "notes": [
+    {
+      "noteIndex": 0,
+      "accuracy": 90.0,
+      "timing": 95.0,
+      "attempts": 1
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "user123",
+    "patternId": 1234567890,
+    "practiceType": "midi",
+    "accuracy": 85.5,
+    "timing": 92.3,
+    "attempts": 11,
+    "bestAccuracy": 95.0,
+    "bestTiming": 98.5,
+    "lastPracticed": 1234567890000,
+    "totalTime": 3660
+  }
+}
+```
+
+## Error Responses
+
+All endpoints may return error responses:
+
+**400 Bad Request:**
+```json
+{
+  "success": false,
+  "error": "Pattern data is required"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "success": false,
+  "error": "Unauthorized"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "success": false,
+  "error": "Pattern not found"
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "success": false,
+  "error": "Failed to fetch patterns"
+}
+```
+
+## Usage Example
+
+Using the API client utilities:
 
 ```typescript
-interface Pattern {
-  id: string;
-  timeSignature: string;
-  subdivision: number;
-  phrase: string;
-  drumPattern: string;
-  stickingPattern: string;
-  bpm?: number;
-  repeat?: number;
-  _advancedMode?: boolean;
-  _perBeatSubdivisions?: number[];
-  _perBeatVoicing?: string[];
-  _perBeatSticking?: string[];
-  _presetAccents?: number[];
-  _presetName?: string;
-  _presetDescription?: string;
-}
+import { patternsApi, collectionsApi, progressApi } from '@/lib/utils/apiClient';
+
+// Get all patterns
+const patterns = await patternsApi.getAll();
+
+// Save a pattern
+const savedPattern = await patternsApi.save(pattern, 'user123');
+
+// Create a collection
+const collection = await collectionsApi.create({
+  name: 'My Practice Set',
+  patternIds: [pattern.id],
+  userId: 'user123'
+});
+
+// Save progress
+const progress = await progressApi.save({
+  userId: 'user123',
+  patternId: pattern.id,
+  practiceType: 'midi',
+  accuracy: 85.5,
+  timing: 92.3,
+  totalTime: 60
+});
 ```
 
-### PolyrhythmPattern (`types/polyrhythm.ts`)
+## Storage
 
-```typescript
-interface PolyrhythmPattern {
-  id: string;
-  timeSignature: string;
-  ratio: string; // e.g., "4:3"
-  rightHandPattern: string;
-  leftHandPattern: string;
-  repeat?: number;
-}
-```
+Currently, all data is stored in-memory using Map objects. This means:
+- Data is lost when the server restarts
+- Data is not shared across server instances
+- Suitable for development and testing only
 
-### PracticeStats (`types/practice.ts`)
+**For production**, replace the storage in `app/api/storage.ts` with a proper database:
+- PostgreSQL
+- MongoDB
+- SQLite (for smaller deployments)
+- Any other database of your choice
 
-```typescript
-interface PracticeStats {
-  totalPracticeTime: number; // milliseconds
-  totalSessions: number;
-  currentStreak: number;
-  averageAccuracy: number; // 0-100
-  averageTiming: number; // 0-100
-  sessions: PracticeSession[];
-}
-```
+## Future Enhancements
 
-## Testing
-
-### Running Tests
-```bash
-npm test              # Run tests
-npm run test:ui       # Run tests with UI
-npm run test:coverage  # Run tests with coverage
-```
-
-### Test Structure
-Tests are located in `lib/utils/__tests__/` and use Vitest.
-
-## Contributing
-
-When adding new features:
-1. Add types to appropriate type files
-2. Add utility functions if needed
-3. Update state management if needed
-4. Create components following existing patterns
-5. Add tests for new functionality
-6. Update documentation
-
+- [ ] User authentication (JWT, OAuth, etc.)
+- [ ] Database integration
+- [ ] Rate limiting
+- [ ] Input validation and sanitization
+- [ ] Pagination for list endpoints
+- [ ] Search and filtering
+- [ ] Export/import functionality
+- [ ] Analytics endpoints
