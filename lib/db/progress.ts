@@ -3,7 +3,7 @@
  */
 
 import { query } from './connection';
-import { PracticeProgress } from '../api/storage';
+import { PracticeProgress } from '@/types/database';
 
 /**
  * Convert database row to PracticeProgress

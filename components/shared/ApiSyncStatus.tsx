@@ -6,7 +6,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { isApiSyncEnabled, isAutoSyncEnabled, getStoredUserId } from '@/lib/utils/patternSync';
+import { useSession } from 'next-auth/react';
+import { isApiSyncEnabled, isAutoSyncEnabled } from '@/lib/utils/patternSync';
 
 interface ApiSyncStatusProps {
   compact?: boolean; // Show compact version
@@ -14,15 +15,15 @@ interface ApiSyncStatusProps {
 }
 
 export function ApiSyncStatus({ compact = false, onClick }: ApiSyncStatusProps) {
+  const { data: session } = useSession();
   const [enabled, setEnabled] = useState(false);
   const [autoSync, setAutoSync] = useState(false);
-  const [hasUserId, setHasUserId] = useState(false);
+  const hasUserId = !!session?.user;
 
   useEffect(() => {
     const updateStatus = () => {
       setEnabled(isApiSyncEnabled());
       setAutoSync(isAutoSyncEnabled());
-      setHasUserId(!!getStoredUserId());
     };
 
     updateStatus();
@@ -37,7 +38,7 @@ export function ApiSyncStatus({ compact = false, onClick }: ApiSyncStatusProps) 
         clearInterval(interval);
       };
     }
-  }, []);
+  }, [session]);
 
   if (!enabled) {
     return null; // Don't show anything if sync is disabled
@@ -57,7 +58,7 @@ export function ApiSyncStatus({ compact = false, onClick }: ApiSyncStatusProps) 
         }}
         title={hasUserId 
           ? (autoSync ? 'API Sync: Enabled (Auto-sync on)' : 'API Sync: Enabled')
-          : 'API Sync: Enabled (User ID required)'}
+          : 'API Sync: Enabled (Sign in required)'}
       >
         <i className={`fas fa-cloud${autoSync ? '-check' : ''}`} />
         {autoSync && <span>Auto</span>}
@@ -95,7 +96,7 @@ export function ApiSyncStatus({ compact = false, onClick }: ApiSyncStatusProps) 
         {hasUserId ? (
           autoSync ? 'Auto-sync enabled' : 'API sync enabled'
         ) : (
-          'User ID required'
+          'Sign in required'
         )}
       </span>
     </div>

@@ -18,6 +18,7 @@ interface UseAutoSyncOptions {
 export function useAutoSync(options: UseAutoSyncOptions = {}) {
   const { enabled: overrideEnabled, debounceMs = 2000, silent = false } = options;
   const { showToast } = useToast();
+  const { data: session } = useSession();
   const patterns = useStore((state) => state.patterns);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSyncedPatternsRef = useRef<string>('');
@@ -32,9 +33,9 @@ export function useAutoSync(options: UseAutoSyncOptions = {}) {
       return;
     }
 
-    const userId = getStoredUserId();
-    if (!userId) {
-      return; // No user ID, can't sync
+    // Check if user is authenticated
+    if (!session?.user) {
+      return; // Not authenticated, can't sync
     }
 
     // Create a hash of current patterns to detect changes
@@ -53,7 +54,7 @@ export function useAutoSync(options: UseAutoSyncOptions = {}) {
     // Debounce the sync
     syncTimeoutRef.current = setTimeout(async () => {
       try {
-        await syncToApi(patterns, userId);
+        await syncToApi(patterns);
         lastSyncedPatternsRef.current = patternsHash;
         
         if (!silent) {
@@ -73,7 +74,7 @@ export function useAutoSync(options: UseAutoSyncOptions = {}) {
         clearTimeout(syncTimeoutRef.current);
       }
     };
-  }, [patterns, overrideEnabled, debounceMs, silent, showToast]);
+  }, [patterns, overrideEnabled, debounceMs, silent, showToast, session]);
 
   // Manual sync function
   const syncNow = async () => {
@@ -85,13 +86,12 @@ export function useAutoSync(options: UseAutoSyncOptions = {}) {
       throw new Error('Auto-sync is not enabled');
     }
 
-    const userId = getStoredUserId();
-    if (!userId) {
-      throw new Error('User ID is not set');
+    if (!session?.user) {
+      throw new Error('User is not authenticated');
     }
 
     try {
-      await syncToApi(patterns, userId);
+      await syncToApi(patterns);
       const patternsHash = JSON.stringify(patterns.map(p => ({ id: p.id, timeSignature: p.timeSignature, phrase: p.phrase, drumPattern: p.drumPattern })));
       lastSyncedPatternsRef.current = patternsHash;
       

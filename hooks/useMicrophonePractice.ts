@@ -32,7 +32,7 @@ export function useMicrophonePractice() {
   const setMicrophoneLevelCheckInterval = useStore((state) => state.setMicrophoneLevelCheckInterval);
   
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const lastHitTimeRef = useRef<number>(0);
   const hasResetRef = useRef<boolean>(false);
@@ -468,7 +468,7 @@ export function useMicrophonePractice() {
     analyserRef.current = analyser;
     // For time-domain data, use fftSize (not frequencyBinCount)
     const bufferLength = analyser.fftSize;
-    dataArrayRef.current = new Uint8Array(bufferLength);
+    dataArrayRef.current = new Uint8Array(new ArrayBuffer(bufferLength));
 
     console.log('[Microphone Practice] Setting up audio analysis', { 
       bufferLength, 

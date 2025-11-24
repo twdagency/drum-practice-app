@@ -2,7 +2,7 @@
  * Server-side authentication utilities
  */
 
-import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/lib/auth';
 
 export async function getSession() {
   return await auth();

@@ -14,9 +14,13 @@
     "db:test": "node scripts/test-connection.js",
     "db:create": "node scripts/create-database.js",
     "db:setup": "node scripts/setup-database.js",
+    "db:setup-supabase": "node scripts/setup-supabase.js",
     "db:auth": "node scripts/setup-auth-tables.js",
     "db:auth-migrations": "node scripts/setup-auth-migrations.js",
-    "db:migrate": "tsx scripts/migrate-database.ts"
+    "db:migrate": "tsx scripts/migrate-database.ts",
+    "deploy:check": "node scripts/deploy-to-vercel.js",
+    "deploy:vercel": "npx vercel",
+    "deploy:vercel:prod": "npx vercel --prod"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.11.1",

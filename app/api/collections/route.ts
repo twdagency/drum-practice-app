@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import * as dbCollections from '@/lib/db/collections';
-import { Collection } from '../storage';
 import { requireAuth } from '@/lib/auth/auth';
 
 export async function GET(request: NextRequest) {

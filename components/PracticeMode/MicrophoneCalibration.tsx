@@ -69,7 +69,7 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
   const lastHitRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const isActiveRef = useRef<boolean>(false);
   const beatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const resetColorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -421,7 +421,7 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     analyserRef.current = analyser;
     // For time domain data, we need fftSize (not frequencyBinCount which is half)
     const bufferLength = analyser.fftSize;
-    const dataArray = new Uint8Array(bufferLength);
+    const dataArray = new Uint8Array(new ArrayBuffer(bufferLength));
     dataArrayRef.current = dataArray;
     
     console.log('[Microphone Calibration] Initialized analyser:', {
@@ -536,7 +536,7 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     // Start level checking - use time domain data for hit detection
     // Make sure we have the right buffer size for time domain data (need fftSize, not frequencyBinCount)
     if (!dataArrayRef.current || dataArrayRef.current.length !== analyser.fftSize) {
-      dataArrayRef.current = new Uint8Array(analyser.fftSize);
+      dataArrayRef.current = new Uint8Array(new ArrayBuffer(analyser.fftSize));
       console.log('[Microphone Calibration] Recreated dataArray with fftSize:', analyser.fftSize);
     }
     

@@ -62,7 +62,7 @@ export function useMIDIDevices() {
         id,
         name: input.name || 'Unnamed Device',
         manufacturer: input.manufacturer || '',
-        state: input.state === 'open' ? 'connected' : 'disconnected',
+        state: input.state === 'connected' ? 'connected' : 'disconnected',
       });
     });
     

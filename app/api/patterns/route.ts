@@ -6,7 +6,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pattern } from '@/types/pattern';
 import * as dbPatterns from '@/lib/db/patterns';
-import { StoredPattern } from '../storage';
 import { requireAuth } from '@/lib/auth/auth';
 
 export async function GET(request: NextRequest) {

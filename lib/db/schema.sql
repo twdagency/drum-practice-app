@@ -75,12 +75,15 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers to auto-update updated_at
+DROP TRIGGER IF EXISTS update_patterns_updated_at ON patterns;
 CREATE TRIGGER update_patterns_updated_at BEFORE UPDATE ON patterns
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_collections_updated_at ON collections;
 CREATE TRIGGER update_collections_updated_at BEFORE UPDATE ON collections
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_progress_updated_at ON progress;
 CREATE TRIGGER update_progress_updated_at BEFORE UPDATE ON progress
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

@@ -10,26 +10,24 @@ import { useStore } from '@/store/useStore';
 import { 
   isApiSyncEnabled, 
   setApiSyncEnabled, 
-  getStoredUserId, 
-  setStoredUserId,
   syncFromApi,
   syncToApi,
   syncBidirectional,
 } from '@/lib/utils/patternSync';
 import { usePatternsApi } from '@/hooks/usePatternsApi';
 import { useToast } from './Toast';
+import { useSession } from 'next-auth/react';
 
 export function ApiSyncSettings() {
   const { showToast } = useToast();
+  const { data: session } = useSession();
   const patterns = useStore((state) => state.patterns);
   const setPatterns = useStore((state) => state.setPatterns);
   
   const [enabled, setEnabled] = useState(false);
-  const [userId, setUserId] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
   
   const { loading: apiLoading, error: apiError } = usePatternsApi({
-    userId: userId || undefined,
     onError: (error) => {
       showToast(`API Error: ${error.message}`, 'error');
     },
@@ -37,7 +35,6 @@ export function ApiSyncSettings() {
 
   useEffect(() => {
     setEnabled(isApiSyncEnabled());
-    setUserId(getStoredUserId() || '');
   }, []);
 
   const handleToggleEnabled = async () => {
@@ -45,7 +42,7 @@ export function ApiSyncSettings() {
     setApiSyncEnabled(newEnabled);
     setEnabled(newEnabled);
     
-    if (newEnabled && userId) {
+    if (newEnabled && session?.user) {
       // Auto-sync when enabling
       try {
         await handleSync();
@@ -60,17 +57,9 @@ export function ApiSyncSettings() {
     );
   };
 
-  const handleUserIdChange = (newUserId: string) => {
-    setUserId(newUserId);
-    setStoredUserId(newUserId || null);
-    if (newUserId) {
-      showToast('User ID updated', 'success');
-    }
-  };
-
   const handleSync = async (direction: 'from' | 'to' | 'both' = 'both') => {
-    if (!enabled || !userId) {
-      showToast('Please enable API sync and set a user ID', 'warning');
+    if (!enabled) {
+      showToast('Please enable API sync', 'warning');
       return;
     }
 
@@ -79,14 +68,14 @@ export function ApiSyncSettings() {
       let syncedPatterns: any[] = [];
       
       if (direction === 'from') {
-        syncedPatterns = await syncFromApi(userId);
+        syncedPatterns = await syncFromApi();
         setPatterns(syncedPatterns);
         showToast('Synced from API', 'success');
       } else if (direction === 'to') {
-        await syncToApi(patterns, userId);
+        await syncToApi(patterns);
         showToast('Synced to API', 'success');
       } else {
-        syncedPatterns = await syncBidirectional(patterns, userId);
+        syncedPatterns = await syncBidirectional(patterns);
         setPatterns(syncedPatterns);
         showToast('Bidirectional sync complete', 'success');
       }
@@ -129,37 +118,35 @@ export function ApiSyncSettings() {
           </label>
         </div>
 
-        {/* User ID Input */}
+        {/* Authentication Status */}
         {enabled && (
           <div>
-            <label
-              htmlFor="api-user-id"
-              style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}
-            >
-              User ID (for API sync)
-            </label>
-            <input
-              id="api-user-id"
-              type="text"
-              value={userId}
-              onChange={(e) => handleUserIdChange(e.target.value)}
-              placeholder="Enter user ID (e.g., user123)"
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                border: '1px solid var(--dpgen-border)',
+            {session?.user ? (
+              <div style={{
+                padding: '0.75rem',
+                background: 'var(--dpgen-success-bg, rgba(16, 185, 129, 0.1))',
+                color: 'var(--dpgen-success-text, #10b981)',
                 borderRadius: '4px',
                 fontSize: '0.875rem',
-              }}
-            />
-            <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-              This will be replaced with authentication in the future
-            </div>
+              }}>
+                ✓ Signed in as {session.user.email || session.user.name || 'User'}
+              </div>
+            ) : (
+              <div style={{
+                padding: '0.75rem',
+                background: 'var(--dpgen-warning-bg, rgba(245, 158, 11, 0.1))',
+                color: 'var(--dpgen-warning-text, #f59e0b)',
+                borderRadius: '4px',
+                fontSize: '0.875rem',
+              }}>
+                ⚠️ Please sign in to use API sync
+              </div>
+            )}
           </div>
         )}
 
         {/* Sync Buttons */}
-        {enabled && userId && (
+        {enabled && (
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => handleSync('from')}

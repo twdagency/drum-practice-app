@@ -9,7 +9,7 @@ interface ToolbarButtonProps {
   onKeyDown?: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
   title?: string;
   icon?: string;
-  variant?: 'default' | 'primary' | 'small';
+  variant?: 'default' | 'primary' | 'small' | 'danger';
   disabled?: boolean;
   children?: React.ReactNode;
   className?: string;
@@ -30,6 +30,7 @@ function ToolbarButtonComponent({
     default: '',
     primary: 'dpgen-toolbar__button--primary',
     small: 'dpgen-toolbar__button--small',
+    danger: 'dpgen-toolbar__button--danger',
   };
 
   return (

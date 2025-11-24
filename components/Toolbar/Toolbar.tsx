@@ -30,7 +30,7 @@ import { MIDIMappingEditor } from '../PracticeMode/MIDIMappingEditor';
 import { AuthButton } from '../auth/AuthButton';
 import { usePresets } from '@/hooks/usePresets';
 import { parseTimeSignature, buildAccentIndices, parseNumberList } from '@/lib/utils/patternUtils';
-import { exportSVG, exportPNG, exportMIDI, sharePatternURL } from '@/lib/utils/exportUtils';
+import { exportPDF, exportPNG, exportSVG, exportMIDI, exportPatternCollection, importPatternCollection, sharePatternURL } from '@/lib/utils/exportUtils';
 import { useMIDIRecording } from '@/hooks/useMIDIRecording';
 import { useMIDIDevices } from '@/hooks/useMIDIDevices';
 import { convertMIDIRecordingToPattern } from '@/lib/utils/midiRecordingUtils';
@@ -974,7 +974,7 @@ export function Toolbar() {
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '0.25rem',
-                    color: expected > 0 && (accuracy >= 90 ? '#10b981' : accuracy >= 70 ? '#f59e0b' : '#ef4444')
+                    color: expected > 0 ? (accuracy >= 90 ? '#10b981' : accuracy >= 70 ? '#f59e0b' : '#ef4444') : undefined
                   }}>
                     <i className="fas fa-bullseye" />
                     <span style={{ fontWeight: 600 }}>{accuracy}%</span>
@@ -1023,7 +1023,7 @@ export function Toolbar() {
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '0.25rem',
-                    color: expected > 0 && (accuracy >= 90 ? '#10b981' : accuracy >= 70 ? '#f59e0b' : '#ef4444')
+                    color: expected > 0 ? (accuracy >= 90 ? '#10b981' : accuracy >= 70 ? '#f59e0b' : '#ef4444') : undefined
                   }}>
                     <i className="fas fa-bullseye" />
                     <span style={{ fontWeight: 600 }}>{accuracy}%</span>

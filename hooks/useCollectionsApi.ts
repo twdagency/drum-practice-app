@@ -7,13 +7,12 @@ import { useState, useCallback } from 'react';
 import { collectionsApi, Collection } from '@/lib/utils/apiClient';
 
 interface UseCollectionsApiOptions {
-  userId?: string;
   onError?: (error: Error) => void;
   onSuccess?: (message: string) => void;
 }
 
 export function useCollectionsApi(options: UseCollectionsApiOptions = {}) {
-  const { userId, onError, onSuccess } = options;
+  const { onError, onSuccess } = options;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -35,7 +34,7 @@ export function useCollectionsApi(options: UseCollectionsApiOptions = {}) {
     setLoading(true);
     setError(null);
     try {
-      const collections = await collectionsApi.getAll(userId);
+      const collections = await collectionsApi.getAll();
       handleSuccess('Collections loaded successfully');
       return collections;
     } catch (err) {
@@ -45,7 +44,7 @@ export function useCollectionsApi(options: UseCollectionsApiOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [userId, handleError, handleSuccess]);
+  }, [handleError, handleSuccess]);
 
   /**
    * Load a single collection by ID
@@ -78,10 +77,7 @@ export function useCollectionsApi(options: UseCollectionsApiOptions = {}) {
     setLoading(true);
     setError(null);
     try {
-      const collection = await collectionsApi.create({
-        ...data,
-        userId,
-      });
+      const collection = await collectionsApi.create(data);
       handleSuccess('Collection created successfully');
       return collection;
     } catch (err) {
@@ -91,7 +87,7 @@ export function useCollectionsApi(options: UseCollectionsApiOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [userId, handleError, handleSuccess]);
+  }, [handleError, handleSuccess]);
 
   /**
    * Update a collection
@@ -108,10 +104,7 @@ export function useCollectionsApi(options: UseCollectionsApiOptions = {}) {
     setLoading(true);
     setError(null);
     try {
-      const updated = await collectionsApi.update(id, {
-        ...updates,
-        userId,
-      });
+      const updated = await collectionsApi.update(id, updates);
       handleSuccess('Collection updated successfully');
       return updated;
     } catch (err) {
@@ -121,7 +114,7 @@ export function useCollectionsApi(options: UseCollectionsApiOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [userId, handleError, handleSuccess]);
+  }, [handleError, handleSuccess]);
 
   /**
    * Delete a collection
@@ -130,7 +123,7 @@ export function useCollectionsApi(options: UseCollectionsApiOptions = {}) {
     setLoading(true);
     setError(null);
     try {
-      await collectionsApi.delete(id, userId);
+      await collectionsApi.delete(id);
       handleSuccess('Collection deleted successfully');
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to delete collection');
@@ -139,7 +132,7 @@ export function useCollectionsApi(options: UseCollectionsApiOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [userId, handleError, handleSuccess]);
+  }, [handleError, handleSuccess]);
 
   return {
     loading,

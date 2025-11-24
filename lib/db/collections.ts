@@ -3,7 +3,7 @@
  */
 
 import { query } from './connection';
-import { Collection } from '../api/storage';
+import { Collection } from '@/types/database';
 
 /**
  * Convert database row to Collection

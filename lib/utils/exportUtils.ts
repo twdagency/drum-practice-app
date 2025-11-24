@@ -331,8 +331,11 @@ export function exportMIDI(patterns: Pattern[], bpm: number): void {
     // Create MIDI file
     const midiData = createMIDIFile(bpm, TICKS_PER_QUARTER, tracks);
     
-    // Download
-    const blob = new Blob([midiData], { type: 'audio/midi' });
+    // Download - create a new ArrayBuffer to ensure correct type for Blob
+    const buffer = new ArrayBuffer(midiData.length);
+    const view = new Uint8Array(buffer);
+    view.set(midiData);
+    const blob = new Blob([buffer], { type: 'audio/midi' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -358,7 +361,15 @@ function createMIDIFile(bpm: number, ticksPerQuarter: number, events: Array<{
   const headerChunk = createMIDIHeader(0, 1, ticksPerQuarter); // Format 0 (single track), 1 track, ticks per quarter
   const trackChunk = createMIDITrack(bpm, ticksPerQuarter, events);
   
-  return new Uint8Array([...headerChunk, ...trackChunk]);
+  // Combine arrays and create Uint8Array with explicit ArrayBuffer
+  // Convert Uint8Arrays to regular arrays first to avoid type inference issues
+  const headerArray = Array.from(headerChunk);
+  const trackArray = Array.from(trackChunk);
+  const combined = [...headerArray, ...trackArray];
+  const buffer = new ArrayBuffer(combined.length);
+  const result = new Uint8Array(buffer);
+  result.set(combined);
+  return result;
 }
 
 /**

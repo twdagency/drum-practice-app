@@ -4,7 +4,7 @@
 
 import { query } from './connection';
 import { Pattern } from '@/types/pattern';
-import { StoredPattern } from '../api/storage';
+import { StoredPattern } from '@/types/database';
 
 /**
  * Convert database row to Pattern

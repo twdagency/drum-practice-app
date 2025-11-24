@@ -1,33 +1,9 @@
 /**
  * NextAuth.js API Route Handler
+ * This route only exports HTTP handlers (GET, POST)
+ * The auth function is exported from lib/auth/index.ts
  */
 
-import NextAuth from 'next-auth';
-import { authConfig } from '@/lib/auth/config';
-import PostgresAdapter from '@auth/pg-adapter';
-import { Pool } from 'pg';
-
-// Create a pool for the adapter
-function getAdapterPool() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error('DATABASE_URL is not set');
-  }
-  return new Pool({ connectionString });
-}
-
-// Verify AUTH_SECRET is set
-const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-if (!authSecret) {
-  console.error('⚠️ AUTH_SECRET is not set in environment variables');
-  console.error('Please add AUTH_SECRET to your .env.local file');
-}
-
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...authConfig,
-  adapter: PostgresAdapter(getAdapterPool()),
-  secret: authSecret,
-  trustHost: true, // Required for NextAuth v5
-});
+import { handlers } from '@/lib/auth';
 
 export const { GET, POST } = handlers;
