@@ -15,9 +15,9 @@ export interface PolyrhythmSlice {
   // State
   polyrhythmPatterns: PolyrhythmPattern[];
   draggedPolyrhythmId: number | null;
-  history: PolyrhythmPatternHistoryEntry[];
-  historyIndex: number;
-  maxHistorySize: number;
+  polyrhythmHistory: PolyrhythmPatternHistoryEntry[];
+  polyrhythmHistoryIndex: number;
+  polyrhythmMaxHistorySize: number;
 
   // Actions
   addPolyrhythmPattern: (pattern: PolyrhythmPattern) => void;
@@ -36,9 +36,9 @@ export const createPolyrhythmSlice: StateCreator<PolyrhythmSlice> = (set, get) =
   // Initial state
   polyrhythmPatterns: [],
   draggedPolyrhythmId: null,
-  history: [],
-  historyIndex: -1,
-  maxHistorySize: 50,
+  polyrhythmHistory: [],
+  polyrhythmHistoryIndex: -1,
+  polyrhythmMaxHistorySize: 50,
 
   // Actions
   addPolyrhythmPattern: (pattern) => {
@@ -94,7 +94,7 @@ export const createPolyrhythmSlice: StateCreator<PolyrhythmSlice> = (set, get) =
     }),
 
   savePolyrhythmToHistory: () => {
-    const { polyrhythmPatterns, history, historyIndex, maxHistorySize } = get();
+    const { polyrhythmPatterns, polyrhythmHistory, polyrhythmHistoryIndex, polyrhythmMaxHistorySize } = get();
     
     // Create a deep copy of current patterns for history
     const historyEntry: PolyrhythmPatternHistoryEntry = {
@@ -103,38 +103,38 @@ export const createPolyrhythmSlice: StateCreator<PolyrhythmSlice> = (set, get) =
     };
 
     // Remove any history after current index (if we're not at the end)
-    const newHistory = history.slice(0, historyIndex + 1);
+    const newHistory = polyrhythmHistory.slice(0, polyrhythmHistoryIndex + 1);
     newHistory.push(historyEntry);
 
     // Limit history size
-    if (newHistory.length > maxHistorySize) {
+    if (newHistory.length > polyrhythmMaxHistorySize) {
       newHistory.shift();
     }
 
     set({
-      history: newHistory,
-      historyIndex: newHistory.length - 1,
+      polyrhythmHistory: newHistory,
+      polyrhythmHistoryIndex: newHistory.length - 1,
     });
   },
 
   undoPolyrhythm: () => {
-    const { history, historyIndex } = get();
-    if (historyIndex > 0) {
-      const previousEntry = history[historyIndex - 1];
+    const { polyrhythmHistory, polyrhythmHistoryIndex } = get();
+    if (polyrhythmHistoryIndex > 0) {
+      const previousEntry = polyrhythmHistory[polyrhythmHistoryIndex - 1];
       set({
         polyrhythmPatterns: JSON.parse(JSON.stringify(previousEntry.patterns)),
-        historyIndex: historyIndex - 1,
+        polyrhythmHistoryIndex: polyrhythmHistoryIndex - 1,
       });
     }
   },
 
   redoPolyrhythm: () => {
-    const { history, historyIndex } = get();
-    if (historyIndex < history.length - 1) {
-      const nextEntry = history[historyIndex + 1];
+    const { polyrhythmHistory, polyrhythmHistoryIndex } = get();
+    if (polyrhythmHistoryIndex < polyrhythmHistory.length - 1) {
+      const nextEntry = polyrhythmHistory[polyrhythmHistoryIndex + 1];
       set({
         polyrhythmPatterns: JSON.parse(JSON.stringify(nextEntry.patterns)),
-        historyIndex: historyIndex + 1,
+        polyrhythmHistoryIndex: polyrhythmHistoryIndex + 1,
       });
     }
   },
