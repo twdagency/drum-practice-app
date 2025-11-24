@@ -10,6 +10,8 @@ import {
   PracticeStats,
   PracticeGoals,
   MIDINoteMap,
+  ExpectedNote,
+  PracticeHit,
 } from '@/types';
 import { CONSTANTS } from '@/lib/utils/constants';
 
