@@ -5,11 +5,11 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/shared/Toast';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
@@ -164,6 +164,18 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div>Loading...</div>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
 

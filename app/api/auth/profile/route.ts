@@ -5,6 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
+// Mark this route as dynamic since it uses headers for authentication
+export const dynamic = 'force-dynamic';
 import { requireAuth } from '@/lib/auth/auth';
 import { query } from '@/lib/db/connection';
 import bcrypt from 'bcryptjs';
