@@ -69,7 +69,7 @@ export interface UISlice {
   setCurrentBeat: (beat: number) => void;
   setDarkMode: (enabled: boolean) => void;
   toggleDarkMode: () => void;
-  setPolyrhythmDisplayMode: (mode: 'stacked' | 'two-staves') => void;
+  setPolyrhythmDisplayMode: (mode: 'stacked' | 'two-staves' | 'separate-positions') => void;
   setPolyrhythmClickMode: (mode: 'both' | 'right-only' | 'left-only' | 'metronome-only' | 'none') => void;
   setPracticePadMode: (enabled: boolean) => void;
 }
