@@ -20,6 +20,8 @@ export interface Pattern {
   _polyrhythmLeftNotes?: number[]; // For polyrhythm patterns
   _advancedMode?: boolean; // If true, use per-beat subdivisions instead of single subdivision
   _perBeatSubdivisions?: number[]; // Array of subdivisions for each beat in the bar (e.g., [16, 8, 4, 4] means beat 1 has 16th notes, beat 2 has 8th notes, beats 3-4 have quarter notes)
+  _perBeatVoicing?: string[]; // Array of voicing patterns, one per beat (only used when _advancedMode is true)
+  _perBeatSticking?: string[]; // Array of sticking patterns, one per beat (only used when _advancedMode is true)
 }
 
 export interface PatternHistoryEntry {

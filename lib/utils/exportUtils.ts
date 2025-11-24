@@ -6,18 +6,34 @@
 import { Pattern } from '@/types';
 import { parseNumberList, parseTokens, buildAccentIndices } from './patternUtils';
 
+// Toast notification helper - will be set by the app
+let toastCallback: ((message: string, type?: 'success' | 'error' | 'warning' | 'info') => void) | null = null;
+
+export function setExportToastCallback(callback: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void) {
+  toastCallback = callback;
+}
+
+function showToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') {
+  if (toastCallback) {
+    toastCallback(message, type);
+  } else {
+    // Fallback to alert if toast not available
+    alert(message);
+  }
+}
+
 /**
  * Export SVG from stave element
  */
 export function exportSVG(staveElement: HTMLElement | null): void {
   if (!staveElement) {
-    alert('No pattern to export. Please generate a pattern first.');
+    showToast('No pattern to export. Please generate a pattern first.', 'warning');
     return;
   }
 
   const svg = staveElement.querySelector('svg');
   if (!svg) {
-    alert('No pattern to export. Please generate a pattern first.');
+    showToast('No pattern to export. Please generate a pattern first.', 'warning');
     return;
   }
 
@@ -39,7 +55,96 @@ export function exportSVG(staveElement: HTMLElement | null): void {
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('SVG export error:', error);
-    alert('Failed to export SVG: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    showToast('Failed to export SVG: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
+  }
+}
+
+/**
+ * Export PDF from stave element
+ * Uses browser's print functionality for PDF generation
+ */
+export function exportPDF(staveElement: HTMLElement | null): void {
+  if (!staveElement) {
+    showToast('No pattern to export. Please generate a pattern first.', 'warning');
+    return;
+  }
+
+  const svg = staveElement.querySelector('svg');
+  if (!svg) {
+    showToast('No pattern to export. Please generate a pattern first.', 'warning');
+    return;
+  }
+
+  try {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Please allow popups to export PDF', 'warning');
+      return;
+    }
+
+    // Clone SVG and prepare for printing
+    const clonedSvg = svg.cloneNode(true) as SVGElement;
+    const bbox = svg.getBBox();
+    const width = bbox.width + 80;
+    const height = bbox.height + 80;
+
+    // Set SVG attributes for print
+    clonedSvg.setAttribute('width', width.toString());
+    clonedSvg.setAttribute('height', height.toString());
+    clonedSvg.setAttribute('viewBox', `${bbox.x - 40} ${bbox.y - 40} ${width} ${height}`);
+
+    // Create print-friendly HTML
+    const printHTML = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Drum Pattern</title>
+          <style>
+            @media print {
+              @page {
+                margin: 20mm;
+                size: A4 landscape;
+              }
+              body {
+                margin: 0;
+                padding: 0;
+              }
+            }
+            body {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              margin: 0;
+              padding: 20px;
+              background: white;
+            }
+            svg {
+              max-width: 100%;
+              height: auto;
+            }
+          </style>
+        </head>
+        <body>
+          ${clonedSvg.outerHTML}
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+
+    // Wait for content to load, then trigger print
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        showToast('PDF export ready. Use your browser\'s print dialog to save as PDF.', 'info');
+      }, 250);
+    };
+  } catch (error) {
+    console.error('PDF export error:', error);
+    showToast('Failed to export PDF: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
   }
 }
 
@@ -48,13 +153,13 @@ export function exportSVG(staveElement: HTMLElement | null): void {
  */
 export function exportPNG(staveElement: HTMLElement | null): void {
   if (!staveElement) {
-    alert('No pattern to export. Please generate a pattern first.');
+    showToast('No pattern to export. Please generate a pattern first.', 'warning');
     return;
   }
 
   const svg = staveElement.querySelector('svg');
   if (!svg) {
-    alert('No pattern to export. Please generate a pattern first.');
+    showToast('No pattern to export. Please generate a pattern first.', 'warning');
     return;
   }
 
@@ -95,7 +200,7 @@ export function exportPNG(staveElement: HTMLElement | null): void {
         // Download PNG
         canvas.toBlob(function(blob) {
           if (!blob) {
-            alert('Failed to create PNG blob');
+            showToast('Failed to create PNG blob', 'error');
             return;
           }
           const pngUrl = URL.createObjectURL(blob);
@@ -112,13 +217,13 @@ export function exportPNG(staveElement: HTMLElement | null): void {
       }
     };
     img.onerror = function() {
-      alert('Failed to load SVG for PNG export');
+      showToast('Failed to load SVG for PNG export', 'error');
       URL.revokeObjectURL(url);
     };
     img.src = url;
   } catch (error) {
     console.error('PNG export error:', error);
-    alert('Failed to export PNG: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    showToast('Failed to export PNG: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
   }
 }
 
@@ -139,7 +244,7 @@ const MIDI_DRUM_MAP: Record<string, number> = {
  */
 export function exportMIDI(patterns: Pattern[], bpm: number): void {
   if (patterns.length === 0) {
-    alert('No patterns to export. Please add a pattern first.');
+    showToast('No patterns to export. Please add a pattern first.', 'warning');
     return;
   }
 
@@ -236,7 +341,7 @@ export function exportMIDI(patterns: Pattern[], bpm: number): void {
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('MIDI export error:', error);
-    alert('Failed to export MIDI file: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    showToast('Failed to export MIDI file: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
   }
 }
 
@@ -397,11 +502,111 @@ function createMIDITrack(bpm: number, ticksPerQuarter: number, events: Array<{
 }
 
 /**
+ * Export pattern collection to JSON file
+ */
+export function exportPatternCollection(patterns: Pattern[], bpm: number): void {
+  if (patterns.length === 0) {
+    showToast('No patterns to export. Please add a pattern first.', 'warning');
+    return;
+  }
+
+  try {
+    const collection = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      bpm,
+      patterns: patterns.map(p => {
+        // Remove UI-only properties for export
+        const { _expanded, ...exportPattern } = p;
+        return exportPattern;
+      }),
+    };
+
+    const jsonString = JSON.stringify(collection, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `drum-patterns-${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    showToast(`Exported ${patterns.length} pattern${patterns.length !== 1 ? 's' : ''} to JSON file`, 'success');
+  } catch (error) {
+    console.error('Pattern collection export error:', error);
+    showToast('Failed to export pattern collection: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
+  }
+}
+
+/**
+ * Import pattern collection from JSON file
+ */
+export function importPatternCollection(
+  file: File,
+  onImport: (patterns: Pattern[], bpm: number) => void
+): void {
+  const reader = new FileReader();
+  
+  reader.onload = (e) => {
+    try {
+      const text = e.target?.result as string;
+      const collection = JSON.parse(text);
+      
+      // Validate structure
+      if (!collection.patterns || !Array.isArray(collection.patterns)) {
+        showToast('Invalid pattern collection file format', 'error');
+        return;
+      }
+
+      // Validate and clean patterns
+      const importedPatterns: Pattern[] = collection.patterns.map((p: any, index: number) => {
+        // Ensure required fields
+        const pattern: Pattern = {
+          id: Date.now() + index, // Generate new IDs
+          timeSignature: p.timeSignature || '4/4',
+          subdivision: p.subdivision || 16,
+          phrase: p.phrase || '',
+          drumPattern: p.drumPattern || '',
+          stickingPattern: p.stickingPattern || '',
+          leftFoot: p.leftFoot || false,
+          rightFoot: p.rightFoot || false,
+          repeat: p.repeat || 1,
+          _presetName: p._presetName,
+          _presetDescription: p._presetDescription,
+          _presetAccents: p._presetAccents,
+          _polyrhythmRightNotes: p._polyrhythmRightNotes,
+          _polyrhythmLeftNotes: p._polyrhythmLeftNotes,
+          _advancedMode: p._advancedMode,
+          _perBeatSubdivisions: p._perBeatSubdivisions,
+          _perBeatVoicing: p._perBeatVoicing,
+          _perBeatSticking: p._perBeatSticking,
+        };
+        return pattern;
+      });
+
+      const importedBpm = collection.bpm || 120;
+      
+      onImport(importedPatterns, importedBpm);
+      showToast(`Imported ${importedPatterns.length} pattern${importedPatterns.length !== 1 ? 's' : ''} from file`, 'success');
+    } catch (error) {
+      console.error('Pattern collection import error:', error);
+      showToast('Failed to import pattern collection: ' + (error instanceof Error ? error.message : 'Invalid file format'), 'error');
+    }
+  };
+
+  reader.onerror = () => {
+    showToast('Failed to read file', 'error');
+  };
+
+  reader.readAsText(file);
+}
+
+/**
  * Share pattern URL
  */
 export function sharePatternURL(patterns: Pattern[], bpm: number): void {
   if (patterns.length === 0) {
-    alert('No patterns to share. Please add a pattern first.');
+    showToast('No patterns to share. Please add a pattern first.', 'warning');
     return;
   }
   
@@ -425,10 +630,13 @@ export function sharePatternURL(patterns: Pattern[], bpm: number): void {
   const shareUrl = `${window.location.origin}${window.location.pathname}#pattern=${encoded}`;
   
   navigator.clipboard.writeText(shareUrl).then(() => {
-    alert('Shareable URL copied to clipboard!');
+    showToast('Shareable URL copied to clipboard!', 'success');
   }).catch(() => {
     // Fallback: show URL in prompt
-    prompt('Copy this URL to share:', shareUrl);
+    const copied = prompt('Copy this URL to share:', shareUrl);
+    if (copied) {
+      showToast('URL ready to share', 'info');
+    }
   });
 }
 

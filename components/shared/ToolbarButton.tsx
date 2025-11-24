@@ -15,7 +15,7 @@ interface ToolbarButtonProps {
   className?: string;
 }
 
-export function ToolbarButton({
+function ToolbarButtonComponent({
   onClick,
   onKeyDown,
   title,
@@ -46,4 +46,7 @@ export function ToolbarButton({
     </button>
   );
 }
+
+// Memoize to prevent unnecessary re-renders
+export const ToolbarButton = React.memo(ToolbarButtonComponent);
 

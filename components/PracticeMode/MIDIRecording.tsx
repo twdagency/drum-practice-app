@@ -11,12 +11,16 @@ import { useMIDIDevices } from '@/hooks/useMIDIDevices';
 import { useMIDIRecording } from '@/hooks/useMIDIRecording';
 import { convertMIDIRecordingToPattern } from '@/lib/utils/midiRecordingUtils';
 import { startCountIn, stopCountIn, startMetronome, stopMetronome } from '@/lib/utils/midiRecordingManager';
+import { MIDICalibration } from './MIDICalibration';
+import { CONSTANTS } from '@/lib/utils/constants';
+import { useToast } from '@/components/shared/Toast';
 
 interface MIDIRecordingProps {
   onClose: () => void;
 }
 
 export function MIDIRecording({ onClose }: MIDIRecordingProps) {
+  const { showToast } = useToast();
   const midiRecording = useStore((state) => state.midiRecording);
   const bpm = useStore((state) => state.bpm);
   const addPattern = useStore((state) => state.addPattern);
@@ -39,6 +43,7 @@ export function MIDIRecording({ onClose }: MIDIRecordingProps) {
   const [recordingTime, setRecordingTime] = useState<string>('00:00');
   const [countInActive, setCountInActive] = useState<boolean>(false);
   const [currentCountInBeat, setCurrentCountInBeat] = useState<number>(4);
+  const [showCalibration, setShowCalibration] = useState<boolean>(false);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -120,7 +125,7 @@ export function MIDIRecording({ onClose }: MIDIRecordingProps) {
   // Start recording
   const handleStartRecording = async () => {
     if (!selectedDeviceId) {
-      alert('Please select a MIDI device first.');
+      showToast('Please select a MIDI device first.', 'error');
       return;
     }
 
@@ -130,12 +135,12 @@ export function MIDIRecording({ onClose }: MIDIRecordingProps) {
       // Try to get the device from the updated access
       const updatedAccess = await navigator.requestMIDIAccess?.({ sysex: false }).catch(() => null);
       if (!updatedAccess) {
-        alert('Failed to access MIDI devices.');
+        showToast('Failed to access MIDI devices.', 'error');
         return;
       }
       const input = updatedAccess.inputs.get(selectedDeviceId);
       if (!input) {
-        alert('MIDI device not found. Please refresh the device list.');
+        showToast('MIDI device not found. Please refresh the device list.', 'error');
         return;
       }
       // Don't start yet - we'll handle count-in first
@@ -143,7 +148,7 @@ export function MIDIRecording({ onClose }: MIDIRecordingProps) {
     } else {
       const input = access.inputs.get(selectedDeviceId);
       if (!input) {
-        alert('MIDI device not found. Please refresh the device list.');
+        showToast('MIDI device not found. Please refresh the device list.', 'error');
         return;
       }
       // Don't start yet - we'll handle count-in first
@@ -248,12 +253,12 @@ export function MIDIRecording({ onClose }: MIDIRecordingProps) {
         });
         saveToHistory();
         
-        alert(`${patterns.length} pattern${patterns.length > 1 ? 's' : ''} created from ${recordedNotes.length} MIDI notes!`);
+        showToast(`${patterns.length} pattern${patterns.length > 1 ? 's' : ''} created from ${recordedNotes.length} MIDI notes!`, 'success');
       } else {
-        alert('No patterns could be created from the recording.');
+        showToast('No patterns could be created from the recording.', 'error');
       }
     } else {
-      alert('No notes recorded.');
+      showToast('No notes recorded.', 'error');
     }
 
     // Reset UI
@@ -451,18 +456,42 @@ export function MIDIRecording({ onClose }: MIDIRecordingProps) {
           </div>
 
           <div className="dpgen-form-group" style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-label" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block', fontWeight: 600 }}>
-              Latency Adjustment: {latencyAdjustment}ms
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <label className="dpgen-label" style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                Latency Adjustment: {latencyAdjustment}ms
+              </label>
+              <button
+                onClick={() => setShowCalibration(true)}
+                disabled={isRecording}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--dpgen-border)',
+                  background: 'var(--dpgen-bg)',
+                  color: 'var(--dpgen-text)',
+                  cursor: isRecording ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem',
+                  opacity: isRecording ? 0.5 : 1,
+                }}
+                title="Open calibration tool"
+              >
+                <i className="fas fa-sliders-h" style={{ marginRight: '0.5rem' }} />
+                Calibrate
+              </button>
+            </div>
             <input
               type="range"
-              min="-200"
-              max="200"
+              min={CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MIN}
+              max={CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MAX}
               value={latencyAdjustment}
               onChange={(e) => setLatencyAdjustment(parseInt(e.target.value, 10))}
               disabled={isRecording}
               className="dpgen-slider"
             />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
+              <span>{CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MIN}ms</span>
+              <span>{CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MAX}ms</span>
+            </div>
           </div>
 
           {/* Recording Status */}
@@ -535,6 +564,18 @@ export function MIDIRecording({ onClose }: MIDIRecordingProps) {
             </button>
           </div>
         </div>
+        
+        {/* Calibration Modal */}
+        {showCalibration && (
+          <MIDICalibration 
+            mode="recording"
+            onClose={() => {
+              setShowCalibration(false);
+              // Reload latency adjustment from store after calibration
+              setLatencyAdjustment(midiRecording.latencyAdjustment);
+            }}
+          />
+        )}
       </div>
   );
 }

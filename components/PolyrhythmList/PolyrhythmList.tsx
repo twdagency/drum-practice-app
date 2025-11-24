@@ -25,16 +25,22 @@ export function PolyrhythmList() {
 
   if (polyrhythmPatterns.length === 0) {
     return (
-      <div style={{
-        padding: '2rem',
-        textAlign: 'center',
-        color: 'var(--dpgen-text-secondary)',
-        fontSize: '0.875rem',
+      <div className="dpgen-empty-state" style={{ 
+        padding: '3rem 2rem', 
+        textAlign: 'center', 
+        color: 'var(--dpgen-muted)',
+        background: 'var(--dpgen-bg)',
+        borderRadius: 'var(--dpgen-radius)',
+        border: '2px dashed var(--dpgen-border)',
       }}>
-        <i className="fas fa-layer-group" style={{ fontSize: '2rem', marginBottom: '0.5rem', opacity: 0.5 }} />
-        <p>No polyrhythm patterns yet.</p>
-        <p style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
-          Click "Polyrhythm Builder" in the toolbar to create one.
+        <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>
+          <i className="fas fa-layer-group" />
+        </div>
+        <p style={{ fontSize: '1rem', fontWeight: 500, marginBottom: '0.5rem' }}>
+          No polyrhythm patterns yet
+        </p>
+        <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+          Click "Polyrhythm Builder" in the toolbar to create one
         </p>
       </div>
     );

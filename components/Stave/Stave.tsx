@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
 import { Pattern } from '@/types';
 import { PolyrhythmPattern } from '@/types/polyrhythm';
@@ -73,90 +73,115 @@ export function Stave() {
   const microphonePractice = useStore((state) => state.microphonePractice);
   const isPlaying = useStore((state) => state.isPlaying);
 
+  // Memoize pattern data to avoid unnecessary recalculations
+  const processedPatterns = useMemo(() => {
+    const allBars: Pattern[] = [];
+    patterns.forEach((pattern) => {
+      const repeat = pattern.repeat || 1;
+      for (let r = 0; r < repeat; r++) {
+        allBars.push(pattern);
+      }
+    });
+    return allBars;
+  }, [patterns]);
+
+  const processedPolyrhythmPatterns = useMemo(() => {
+    const allPolyrhythmBars: PolyrhythmPattern[] = [];
+    polyrhythmPatterns.forEach((pattern) => {
+      const repeat = pattern.repeat || 1;
+      for (let r = 0; r < repeat; r++) {
+        allPolyrhythmBars.push(pattern);
+      }
+    });
+    return allPolyrhythmBars;
+  }, [polyrhythmPatterns]);
+
+  // Memoize render key to detect when full re-render is needed
+  const renderKey = useMemo(() => {
+    return JSON.stringify({
+      patterns: patterns.map(p => ({
+        id: p.id,
+        timeSignature: p.timeSignature,
+        subdivision: p.subdivision,
+        phrase: p.phrase,
+        drumPattern: p.drumPattern,
+        stickingPattern: p.stickingPattern,
+        repeat: p.repeat,
+        _advancedMode: p._advancedMode,
+        _perBeatSubdivisions: p._perBeatSubdivisions,
+        _perBeatVoicing: p._perBeatVoicing,
+        _perBeatSticking: p._perBeatSticking,
+        _presetAccents: p._presetAccents,
+      })),
+      polyrhythmPatterns: polyrhythmPatterns.map(p => ({
+        id: p.id,
+        timeSignature: p.timeSignature,
+        ratio: p.ratio,
+        repeat: p.repeat,
+      })),
+      polyrhythmDisplayMode,
+      darkMode,
+      showGridLines,
+      showMeasureNumbers,
+    });
+  }, [patterns, polyrhythmPatterns, polyrhythmDisplayMode, darkMode, showGridLines, showMeasureNumbers]);
+
+  const prevRenderKeyRef = useRef<string>('');
+
+  // Debounce rendering for rapid changes
+  const renderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (!staveRef.current) {
       return;
     }
 
-    // Wait for VexFlow to load
-    let retryCount = 0;
-    const maxRetries = 50;
-    const checkVexFlow = () => {
-      if (typeof window !== 'undefined') {
-        // Try multiple ways VexFlow might be exposed
-        let VF: any = null;
-        if ((window as any).VF) {
-          VF = (window as any).VF;
-          // console.log('Found VF directly');
-        } else if ((window as any).Vex && (window as any).Vex.Flow) {
-          VF = (window as any).Vex.Flow;
-          // console.log('Found Vex.Flow');
-        } else if ((window as any).VexFlow) {
-          VF = (window as any).VexFlow;
-          // console.log('Found VexFlow');
+    // Skip if render key hasn't changed
+    if (renderKey === prevRenderKeyRef.current) {
+      return;
+    }
+
+    // Clear any pending render
+    if (renderTimeoutRef.current) {
+      clearTimeout(renderTimeoutRef.current);
+    }
+
+    // Debounce rapid changes (e.g., when typing in pattern fields)
+    renderTimeoutRef.current = setTimeout(() => {
+      prevRenderKeyRef.current = renderKey;
+      
+      // Define renderStave function inside the timeout to access processed patterns
+      const renderStave = (VF: any) => {
+        if (!staveRef.current) {
+          return;
         }
         
-        if (VF && VF.Renderer && VF.Stave && VF.StaveNote) {
-          // console.log('VexFlow found, rendering stave with', patterns.length, 'patterns and', polyrhythmPatterns.length, 'polyrhythm patterns');
-          try {
-            renderStave(VF);
-          } catch (error) {
-            console.error('Error rendering stave:', error);
-          }
-          return;
-        } else {
-          // console.log('VexFlow not ready yet. VF:', !!VF, 'Renderer:', !!(VF && VF.Renderer), 'Stave:', !!(VF && VF.Stave));
+        // Clear previous rendering
+        if (staveRef.current) {
+          staveRef.current.innerHTML = '';
         }
-      }
-      // Retry after a short delay (max 50 retries = 5 seconds)
-      if (retryCount < maxRetries) {
-        retryCount++;
-        setTimeout(checkVexFlow, 100);
-      } else {
-        console.error('VexFlow failed to load after 5 seconds. Available:', {
-          Vex: (window as any).Vex,
-          VexFlow: (window as any).VexFlow,
-          VF: (window as any).VF,
-          windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('vex') || k.toLowerCase().includes('flow')),
-        });
-      }
-    };
 
-    const renderStave = (VF: any) => {
-      if (!staveRef.current) {
-        console.warn('staveRef.current is null');
-        return;
-      }
-    
-      // console.log('Rendering stave with', patterns.length, 'patterns and', polyrhythmPatterns.length, 'polyrhythm patterns');
-      
-      // Clear previous rendering
-      if (staveRef.current) {
-        staveRef.current.innerHTML = '';
-      }
+        // Use memoized processed patterns
+        const allBars = processedPatterns;
+        const allPolyrhythmBars = processedPolyrhythmPatterns;
 
-      // Build all bars from regular patterns (with repeats)
-      const allBars: Pattern[] = [];
-      patterns.forEach((pattern) => {
-        const repeat = pattern.repeat || 1;
-        for (let r = 0; r < repeat; r++) {
-          allBars.push(pattern);
-        }
-      });
-
-      // Build all bars from polyrhythm patterns
-      // Each polyrhythm pattern can repeat, creating multiple bars
-      const allPolyrhythmBars: PolyrhythmPattern[] = [];
-      polyrhythmPatterns.forEach((pattern) => {
-        const repeat = pattern.repeat || 1;
-        for (let r = 0; r < repeat; r++) {
-          allPolyrhythmBars.push(pattern);
-        }
-      });
-
-      // If no patterns at all, return
+      // If no patterns at all, show empty state
       if (allBars.length === 0 && allPolyrhythmBars.length === 0) {
-        // console.log('No patterns to render');
+        if (staveRef.current) {
+          staveRef.current.innerHTML = `
+            <div style="padding: 3rem 2rem; text-align: center; color: var(--dpgen-muted);">
+              <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">
+                <i class="fas fa-music"></i>
+              </div>
+              <p style="font-size: 1rem; font-weight: 500; margin-bottom: 0.5rem;">
+                No patterns to display
+              </p>
+              <p style="font-size: 0.875rem; opacity: 0.8;">
+                Add a pattern to see the musical notation
+              </p>
+            </div>
+          `;
+        }
         return;
       }
 
@@ -211,7 +236,7 @@ export function Stave() {
         // Use global sticking index offset to allow patterns to span multiple bars
         // If this pattern's sticking pattern is different from the previous, reset the offset
         // Otherwise, continue accumulating the offset
-        const { tickables, beams } = buildNotes({
+        const { tickables, beams, ghostNoteIndices, ghostNoteDurations } = buildNotes({
           subdivision: pattern.subdivision,
           notesPerBar: totalNotesInBar,
           drumPatternTokens,
@@ -240,6 +265,8 @@ export function Stave() {
           timeSignature,
           totalNotesInBar,
           isPolyrhythm: false,
+          ghostNoteIndices: ghostNoteIndices || [], // Store ghost note indices for this bar
+          ghostNoteDurations: ghostNoteDurations || {}, // Store ghost note durations for this bar
         });
 
         cumulativeNoteIndex += totalNotesInBar;
@@ -402,7 +429,6 @@ export function Stave() {
           return;
         }
         context.setFont('Inter', 13, '');
-        // console.log('Renderer created successfully, context:', !!context);
       } catch (error) {
         console.error('Error creating renderer:', error);
         return;
@@ -518,7 +544,7 @@ export function Stave() {
                 // Insert the TimeSigNote at the start of the right voice (first voice)
                 (rightVoiceNotes as any[]).unshift(timeSigNote);
               } catch (error) {
-                console.warn('Could not create TimeSigNote for polyrhythm time signature change:', error);
+                console.error('[Stave] Could not create TimeSigNote for polyrhythm time signature change:', error);
                 // Fallback: try adding as modifier to first note if TimeSigNote fails
                 if (rightVoiceNotes.length > 0) {
                   try {
@@ -528,7 +554,7 @@ export function Stave() {
                       firstNote.addModifier(timeSig, 0);
                     }
                   } catch (modifierError) {
-                    console.warn('Could not add time signature modifier as fallback:', modifierError);
+                    console.error('[Stave] Could not add time signature modifier as fallback:', modifierError);
                   }
                 }
               }
@@ -616,10 +642,8 @@ export function Stave() {
                 // positions is already calculated above
                 
               setTimeout(() => {
-                  console.log(`[Two-Staves Rendering] setTimeout callback running for two-staves mode`);
                 const svgEl = staveRef.current?.querySelector('svg');
-                  console.log(`[Two-Staves Rendering] svgEl=${!!svgEl}, rightVoiceNotes=${!!rightVoiceNotes}, leftVoiceNotes=${!!leftVoiceNotes}, positions=${!!positions}`);
-                  if (svgEl && rightVoiceNotes && leftVoiceNotes && positions) {
+                if (svgEl && rightVoiceNotes && leftVoiceNotes && positions) {
                     // First, clear all existing polyrhythm attributes to avoid conflicts
                   const allNotes = Array.from(svgEl.querySelectorAll('.vf-stavenote')) as SVGElement[];
                     allNotes.forEach((noteEl) => {
@@ -699,7 +723,6 @@ export function Stave() {
                             const voice = alignment ? 'both' : hand;
                             noteEl.setAttribute('data-voice', voice);
                             noteEl.setAttribute('data-polyrhythm-note-index', scheduledIndex.toString());
-                            console.log(`[Two-Staves Rendering] Set attributes on right note: scheduledIndex=${scheduledIndex}, voice=${voice}, annotation=${text}, i=${i}`);
                             rightNoteIndex++;
                             break;
                           }
@@ -737,7 +760,6 @@ export function Stave() {
                             const voice = alignment ? 'both' : hand;
                             noteEl.setAttribute('data-voice', voice);
                             noteEl.setAttribute('data-polyrhythm-note-index', scheduledIndex.toString());
-                            console.log(`[Two-Staves Rendering] Set attributes on left note: scheduledIndex=${scheduledIndex}, voice=${voice}, annotation=${text}, j=${j}, alignment=${!!alignment}`);
                             leftNoteIndex++;
                             break;
                           }
@@ -778,8 +800,6 @@ export function Stave() {
                   rightVoice.draw(context, stave);
                   leftVoice.draw(context, stave);
                   
-                  console.log(`[Polyrhythm Rendering] Stacked mode: drawing ${rightVoiceNotes.length} right + ${leftVoiceNotes.length} left notes on same stave`);
-                  
                   // After drawing, rearrange SVG note groups to be in chronological order
                   // Then set data attributes based on beat positions
                   // This ensures playback and highlighting work correctly
@@ -807,7 +827,6 @@ export function Stave() {
                             parentGroup.appendChild(element);
                           });
                           
-                          console.log(`[Polyrhythm Rendering] Rearranged ${allNoteGroups.length} notes into chronological order`);
                           
                           // Now set data attributes based on beat positions (after rearrangement)
                           // First, clear all existing polyrhythm attributes
@@ -885,7 +904,6 @@ export function Stave() {
                             if (scheduledIndex !== undefined) {
                               noteEl.setAttribute('data-voice', event.hand);
                               noteEl.setAttribute('data-polyrhythm-note-index', scheduledIndex.toString());
-                              console.log(`[Rendering] Set attributes: scheduledIndex=${scheduledIndex}, voice=${event.hand}, annotation="${text}", x=${x.toFixed(1)}, beatPos=${event.beatPos.toFixed(3)}`);
                             }
                           }
                         }
@@ -1080,7 +1098,7 @@ export function Stave() {
                   lineTickables.push(new VF.BarNote());
                 }
               } catch (error) {
-                console.warn('Could not create bar line before time signature change:', error);
+                console.error('[Stave] Could not create bar line before time signature change:', error);
               }
             }
             
@@ -1094,7 +1112,7 @@ export function Stave() {
                 // Insert the TimeSigNote at the start of this bar (after bar line if present)
                 lineTickables.push(timeSigNote);
               } catch (error) {
-                console.warn('Could not create TimeSigNote for time signature change:', error);
+                console.error('[Stave] Could not create TimeSigNote for time signature change:', error);
                 // Fallback: try adding as modifier to first note if TimeSigNote fails
                 if (barData.tickables.length > 0) {
                   try {
@@ -1104,7 +1122,7 @@ export function Stave() {
                       firstNote.addModifier(timeSig, 0);
                     }
                   } catch (modifierError) {
-                    console.warn('Could not add time signature modifier as fallback:', modifierError);
+                    console.error('[Stave] Could not add time signature modifier as fallback:', modifierError);
                   }
                 }
               }
@@ -1161,6 +1179,83 @@ export function Stave() {
                 console.warn('Error drawing beam:', error);
               }
             });
+            
+            // Mark ghost notes in the DOM after rendering and add parentheses as SVG text
+            if (staveRef.current) {
+              const svgElement = staveRef.current.querySelector('svg');
+              if (svgElement) {
+                // Find all note groups and mark ghost notes, then add parentheses
+                const noteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+                let noteIndexInLine = 0;
+                lineBars.forEach((barData) => {
+                  const ghostIndices = (barData as any).ghostNoteIndices || [];
+                  const ghostDurations = (barData as any).ghostNoteDurations || {};
+                  for (let i = 0; i < barData.tickables.length && noteIndexInLine < noteGroups.length; i++) {
+                    if (ghostIndices.includes(i)) {
+                      const noteGroup = noteGroups[noteIndexInLine];
+                      if (noteGroup) {
+                        noteGroup.setAttribute('data-ghost-note', 'true');
+                        
+                        // Add parentheses as SVG text elements directly
+                        try {
+                          // Get the notehead position for X coordinate
+                          const notehead = noteGroup.querySelector('path[data-name="notehead"]') || 
+                                         noteGroup.querySelector('circle') ||
+                                         noteGroup.querySelector('ellipse') ||
+                                         noteGroup.querySelector('path');
+                          
+                          if (notehead) {
+                            const bbox = (notehead as SVGGElement).getBBox();
+                            const x = bbox.x;
+                            
+                            // Calculate Y position - keep fixed at 96 for all notes
+                            const y = 96;
+                            
+                            // Check if this is a quarter note - they need more X spacing
+                            const noteDuration = ghostDurations[i] || '';
+                            const isQuarterNote = noteDuration === 'q' || noteDuration === 'qr';
+                            
+                            // Calculate spacing based on notehead size
+                            // Quarter notes have larger noteheads, so use notehead width to calculate spacing
+                            const noteheadWidth = bbox.width;
+                            // For quarter notes, use much more aggressive spacing to properly wrap around the larger notehead
+                            const leftXOffset = isQuarterNote ? -(noteheadWidth * 0.85 + 12) : -8;  // A bit more space for quarter notes
+                            const rightXOffset = isQuarterNote ? (noteheadWidth * 0.65 + 10) : 2;  // A bit more space for quarter notes
+                            
+                            // Create left parenthesis
+                            const leftParenText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            leftParenText.textContent = '(';
+                            leftParenText.setAttribute('x', (x + leftXOffset).toString());
+                            leftParenText.setAttribute('y', y.toString());
+                            leftParenText.setAttribute('font-family', 'Arial');
+                            leftParenText.setAttribute('font-size', '20');
+                            leftParenText.setAttribute('font-weight', 'bold');
+                            leftParenText.setAttribute('fill', darkMode ? '#ffffff' : '#000000');
+                            leftParenText.setAttribute('class', 'dpgen-ghost-note-paren');
+                            noteGroup.appendChild(leftParenText);
+                            
+                            // Create right parenthesis
+                            const rightParenText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            rightParenText.textContent = ')';
+                            rightParenText.setAttribute('x', (x + bbox.width + rightXOffset).toString());
+                            rightParenText.setAttribute('y', y.toString());
+                            rightParenText.setAttribute('font-family', 'Arial');
+                            rightParenText.setAttribute('font-size', '20');
+                            rightParenText.setAttribute('font-weight', 'bold');
+                            rightParenText.setAttribute('fill', darkMode ? '#ffffff' : '#000000');
+                            rightParenText.setAttribute('class', 'dpgen-ghost-note-paren');
+                            noteGroup.appendChild(rightParenText);
+                          }
+                        } catch (e) {
+                          console.error('[Ghost Note] Failed to add SVG text parentheses:', e);
+                        }
+                      }
+                    }
+                    noteIndexInLine++;
+                  }
+                });
+              }
+            }
           } catch (error) {
             console.error('Error formatting/drawing voice:', error);
           }
@@ -1242,21 +1337,75 @@ export function Stave() {
         }
       }
 
-    };
+      }; // End of renderStave function
 
-    checkVexFlow();
+      // Wait for VexFlow to load
+      let retryCount = 0;
+      const maxRetries = 50;
+      const checkVexFlow = () => {
+        if (typeof window !== 'undefined') {
+          // Try multiple ways VexFlow might be exposed
+          let VF: any = null;
+          if ((window as any).VF) {
+            VF = (window as any).VF;
+          } else if ((window as any).Vex && (window as any).Vex.Flow) {
+            VF = (window as any).Vex.Flow;
+          } else if ((window as any).VexFlow) {
+            VF = (window as any).VexFlow;
+          }
+          
+          if (VF && VF.Renderer && VF.Stave && VF.StaveNote) {
+            try {
+              renderStave(VF);
+            } catch (error) {
+              console.error('[Stave] Error rendering stave:', error);
+              // Show user-friendly error message
+              if (staveRef.current) {
+                staveRef.current.innerHTML = `
+                  <div style="padding: 2rem; text-align: center; color: var(--dpgen-muted);">
+                    <p style="margin-bottom: 0.5rem; font-weight: 600;">Unable to render notation</p>
+                    <p style="font-size: 0.875rem;">Please refresh the page to try again.</p>
+                  </div>
+                `;
+              }
+            }
+            return;
+          }
+        }
+        // Retry after a short delay (max 50 retries = 5 seconds)
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(checkVexFlow, 100);
+        } else {
+          console.error('VexFlow failed to load after 5 seconds. Available:', {
+            Vex: (window as any).Vex,
+            VexFlow: (window as any).VexFlow,
+            VF: (window as any).VF,
+            windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('vex') || k.toLowerCase().includes('flow')),
+          });
+        }
+      };
 
-    // Cleanup function
+      checkVexFlow();
+    }, 150); // 150ms debounce
+
     return () => {
+      if (renderTimeoutRef.current) {
+        clearTimeout(renderTimeoutRef.current);
+      }
       if (rendererRef.current) {
         rendererRef.current = null;
       }
     };
-    }, [patterns, polyrhythmPatterns, polyrhythmDisplayMode, darkMode, showGridLines, showMeasureNumbers]);
+  }, [renderKey, processedPatterns, processedPolyrhythmPatterns, polyrhythmDisplayMode, darkMode, showGridLines, showMeasureNumbers]);
 
   // Track previous playback position to detect when playback starts/stops
   const prevPlaybackPositionRef = useRef<number | null>(null);
   const prevIsPlayingRefHighlight = useRef<boolean>(false);
+  
+  // Cache note groups to avoid re-querying DOM on every playback position change
+  const noteGroupsCacheRef = useRef<SVGElement[] | null>(null);
+  const noteGroupsCacheKeyRef = useRef<string>('');
 
   // Highlight active notes based on playback position
   useEffect(() => {
@@ -1407,18 +1556,26 @@ export function Stave() {
       return;
     }
 
-    // Find all note groups in the SVG using VexFlow's classes
-    // VexFlow uses .vf-stavenote class for all stave notes (quarter, eighth, sixteenth, etc.)
-    // This is more reliable than heuristic detection, especially for quarter notes which aren't beamed
-    // Get all note elements, excluding grace notes (flams count as ONE note position)
-    // Grace notes are part of the main note and shouldn't be counted separately
-    const allNoteEls = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+    // Check if we need to refresh note groups cache
+    // Use a simpler cache key that doesn't depend on renderKey (which changes frequently)
+    const currentCacheKey = `${patterns.length}-${polyrhythmPatterns.length}`;
+    let noteGroups: SVGElement[];
     
-    // Filter out grace notes and invisible spacer notes (same as WordPress plugin)
-    // This ensures flams count as 1 note, not 2 (grace notes are modifiers, not separate notes)
-    // VexFlow renders grace notes as separate stavenote elements - we need to identify them
-    // Also filter out nested .vf-stavenote elements to avoid counting duplicates
-    let noteGroups = allNoteEls.filter((noteEl) => {
+    if (noteGroupsCacheKeyRef.current !== currentCacheKey || !noteGroupsCacheRef.current) {
+      // Cache is stale or missing, rebuild it
+      
+      // Find all note groups in the SVG using VexFlow's classes
+      // VexFlow uses .vf-stavenote class for all stave notes (quarter, eighth, sixteenth, etc.)
+      // This is more reliable than heuristic detection, especially for quarter notes which aren't beamed
+      // Get all note elements, excluding grace notes (flams count as ONE note position)
+      // Grace notes are part of the main note and shouldn't be counted separately
+      const allNoteEls = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+      
+      // Filter out grace notes and invisible spacer notes (same as WordPress plugin)
+      // This ensures flams count as 1 note, not 2 (grace notes are modifiers, not separate notes)
+      // VexFlow renders grace notes as separate stavenote elements - we need to identify them
+      // Also filter out nested .vf-stavenote elements to avoid counting duplicates
+      noteGroups = allNoteEls.filter((noteEl) => {
       // Check if this is a grace note by looking at parent structure
       // Grace notes are typically children of grace note groups or have specific attributes
       // IMPORTANT: Grace notes are nested INSIDE the main note's .vf-stavenote element
@@ -1578,14 +1735,20 @@ export function Stave() {
         return hasContent;
       });
       
-      // console.log(`Fallback found ${fallbackGroups.length} potential note groups`);
       
       // Combine both approaches, preferring .vf-stavenote but adding fallback if needed
       if (fallbackGroups.length > noteGroups.length) {
         // Use fallback if it found more notes
         noteGroups = fallbackGroups;
-        // console.log(`Using fallback groups (${fallbackGroups.length} groups)`);
       }
+      
+      // Cache the note groups
+      noteGroupsCacheRef.current = noteGroups;
+      noteGroupsCacheKeyRef.current = currentCacheKey;
+      }
+    } else {
+      // Use cached note groups
+      noteGroups = noteGroupsCacheRef.current || [];
     }
 
     // Count notes up to the target bar
@@ -1634,7 +1797,6 @@ export function Stave() {
       // The playbackPosition is a global note index, but for polyrhythms in stacked mode,
       // aligned notes are combined into one visual note
       // We need to find which polyrhythm pattern this belongs to and map correctly
-      console.log(`[Highlighting] Polyrhythm bar: playbackPosition=${playbackPosition}, noteIndexInBar=${noteIndexInBar}, notesBeforeTargetBar=${notesBeforeTargetBar}, totalNoteGroups=${noteGroups.length}`);
       
       // Find which polyrhythm pattern this note belongs to
       let polyrhythmPattern: PolyrhythmPattern | null = null;
@@ -1668,10 +1830,7 @@ export function Stave() {
         // The scheduled notes are: 0=both, 1=right, 2=left, 3=right (for 3:2)
         const scheduledNoteIndex = noteIndexInBar;
         
-        console.log(`[Highlighting] Polyrhythm pattern found: ${polyrhythmPattern.ratio.numerator}:${polyrhythmPattern.ratio.denominator}, scheduledNoteIndex=${scheduledNoteIndex}`);
-        
         // Try to find note by data-polyrhythm-note-index attribute (which should match scheduled note index)
-        // Log all notes with this index to debug
         const matchingNotes: Array<{ group: SVGElement; polyIndex: string; voice: string | null }> = [];
         const allPolyIndices: Array<{ group: SVGElement; polyIndex: string | null; voice: string | null }> = [];
         for (const group of noteGroups) {
@@ -1685,15 +1844,6 @@ export function Stave() {
             }
           }
         }
-        console.log(`[Highlighting] All notes with polyrhythm attributes:`, allPolyIndices.map((n, idx) => ({ 
-          index: idx, 
-          polyIndex: n.polyIndex, 
-          voice: n.voice,
-          hasPolyIndex: n.polyIndex !== null,
-          annotation: n.group.querySelector('.vf-annotation text')?.textContent?.trim() || 'none'
-        })));
-        console.log(`[Highlighting] Looking for scheduledNoteIndex=${scheduledNoteIndex}, found ${matchingNotes.length} matching notes`);
-        
         // If multiple notes match, prefer the one with the correct voice based on scheduled note
         // Use the data-voice attribute from the notes to determine which hand(s) should be highlighted
         // Filter based on polyrhythmClickMode to only highlight the selected hand(s)
@@ -1800,14 +1950,10 @@ export function Stave() {
             targetGroup = notesToHighlight[0].group;
             alreadyHighlighted = true;
             
-            console.log(`[Highlighting] Found ${matchingNotes.length} notes with polyIndex=${scheduledNoteIndex}, filtered to ${notesToHighlight.length} based on polyrhythmClickMode="${polyrhythmClickMode}":`, 
-              notesToHighlight.map(n => `voice=${n.voice}`).join(', '));
-            
             // Skip the single-note highlighting code below since we've already highlighted all notes
             // We'll still use targetGroup for scrolling if enabled
           } else {
             // No notes match the filter - don't highlight anything
-            console.log(`[Highlighting] Found ${matchingNotes.length} notes with polyIndex=${scheduledNoteIndex}, but none match polyrhythmClickMode="${polyrhythmClickMode}"`);
           }
         }
         
@@ -1829,18 +1975,14 @@ export function Stave() {
           
           if (shouldUseFallback) {
             targetGroup = fallbackGroup;
-            console.log(`[Highlighting] Using fallback array index: ${notesBeforeTargetBar + noteIndexInBar}, voice=${fallbackVoice}`);
-          } else {
-            console.log(`[Highlighting] Fallback skipped: voice=${fallbackVoice} doesn't match filter=${polyrhythmClickMode}`);
           }
         }
       }
     } else {
       // Regular pattern: use array index
       const targetNoteIndex = notesBeforeTargetBar + noteIndexInBar;
-      console.log(`[Highlighting] Regular pattern: playbackPosition=${playbackPosition}, noteIndexInBar=${noteIndexInBar}, targetNoteIndex=${targetNoteIndex}, totalNoteGroups=${noteGroups.length}`);
       
-    if (targetNoteIndex >= 0 && targetNoteIndex < noteGroups.length) {
+      if (targetNoteIndex >= 0 && targetNoteIndex < noteGroups.length) {
         targetGroup = noteGroups[targetNoteIndex];
       }
     }
@@ -1923,7 +2065,6 @@ export function Stave() {
       const annotationGroup = targetGroup.querySelector('.vf-annotation');
       if (annotationGroup) {
         // Debug: Log what we're using for annotation color
-        console.log(`[Annotation Highlight] voice=${voice}, highlightColor=${highlightColor}, isPolyrhythmNote=${isPolyrhythmNote}`);
         
         const isLeftVoice = voice === 'left';
         const isRightVoice = voice === 'right';
@@ -1967,27 +2108,19 @@ export function Stave() {
         console.warn(`No annotation group found for note (playbackPosition=${playbackPosition}, noteIndexInBar=${noteIndexInBar}, totalGroups=${noteGroups.length})`);
       }
       
-      // Match WordPress plugin: ONLY use CSS classes, NO inline styles
-      // Add data-accented attribute for stronger glow on accented notes
-      if (isAccented) {
-        targetGroup.setAttribute('data-accented', 'true');
-      } else {
-        targetGroup.removeAttribute('data-accented');
-      }
-      
       // Scroll to current note if animation is enabled
       if (scrollAnimationEnabled) {
         scrollToCurrentNote(targetGroup);
       }
-      } else if (targetGroup && alreadyHighlighted) {
+    } else if (targetGroup && alreadyHighlighted) {
       // Already highlighted all notes above, just scroll if needed
       if (scrollAnimationEnabled) {
         scrollToCurrentNote(targetGroup);
       }
     } else {
-        console.warn(`[Highlighting] Could not find note group for playbackPosition ${playbackPosition} (isPolyrhythmBar=${isPolyrhythmBar}, noteIndexInBar=${noteIndexInBar}, notesBeforeTargetBar=${notesBeforeTargetBar}, totalNoteGroups=${noteGroups.length})`);
+      console.warn(`[Highlighting] Could not find note group for playbackPosition ${playbackPosition} (isPolyrhythmBar=${isPolyrhythmBar}, noteIndexInBar=${noteIndexInBar}, notesBeforeTargetBar=${notesBeforeTargetBar}, totalNoteGroups=${noteGroups.length})`);
     }
-  }, [playbackPosition, patterns, polyrhythmPatterns, scrollAnimationEnabled]);
+  }, [playbackPosition, patterns, polyrhythmPatterns, scrollAnimationEnabled, isPlaying]);
 
   // Clear practice visual feedback when playback starts (MIDI and Microphone)
   // This should clear all colors from the previous session, including the last note
@@ -2151,7 +2284,6 @@ export function Stave() {
     const toleranceWindow = midiPractice.accuracyWindow;
     
     // Debug logging
-    console.log(`[Stave] Color calculation: timingError=${timingError.toFixed(1)}ms, toleranceWindow=${toleranceWindow}ms`);
     
     // Color logic:
     // Green: within tolerance (e.g., ±50ms)
@@ -2160,13 +2292,10 @@ export function Stave() {
     let color: string;
     if (timingError <= toleranceWindow) {
       color = '#10b981'; // Green - within tolerance
-      console.log(`[Stave] Color: GREEN (${timingError.toFixed(1)} <= ${toleranceWindow})`);
     } else if (timingError <= toleranceWindow * 1.2) {
       color = '#f59e0b'; // Yellow - within 20% outside tolerance
-      console.log(`[Stave] Color: YELLOW (${toleranceWindow} < ${timingError.toFixed(1)} <= ${(toleranceWindow * 1.2).toFixed(1)})`);
     } else {
       color = '#ef4444'; // Red - more than 20% outside tolerance
-      console.log(`[Stave] Color: RED (${timingError.toFixed(1)} > ${(toleranceWindow * 1.2).toFixed(1)})`);
     }
     
     // Also determine if perfect for animation (use a stricter threshold)
@@ -2334,10 +2463,8 @@ export function Stave() {
       // This ensures the last note's color persists when timing measurements are visible
       const shouldKeepColors = midiPractice.showTimingErrors && isStillLastHit;
       
-      console.log(`[Stave] Clear timeout: showTimingErrors=${midiPractice.showTimingErrors}, isStillLastHit=${isStillLastHit}, shouldKeepColors=${shouldKeepColors}`);
       
       if (!shouldKeepColors) {
-        console.log('[Stave] Clearing colors for note (not last hit or timing not shown)');
         noteEls.forEach((el) => {
           const svgEl = el as SVGElement;
           const pathEl = el as SVGPathElement;
@@ -2361,7 +2488,6 @@ export function Stave() {
           }
         });
       } else {
-        console.log('[Stave] Keeping colors for last note (timing measurements shown)');
       }
 
       if (annotationGroup) {
@@ -2529,7 +2655,6 @@ export function Stave() {
       
       // Debug logging for all notes to diagnose color issue
       if (expectedNoteIndex === 0 || timingErrorForColor > toleranceWindow) {
-        console.log(`[Stave] Note ${expectedNoteIndex} (${hit.note}) color: timingErrorForColor=${timingErrorForColor.toFixed(1)}ms, hit.timingError=${hit.timingError.toFixed(1)}ms, rawTimingError=${hit.rawTimingError.toFixed(1)}ms, absRaw=${absRawTimingError.toFixed(1)}ms, toleranceWindow=${toleranceWindow}ms, color=${color}`);
       }
       
       const isPerfect = timingError <= Math.min(10, toleranceWindow / 5);
@@ -2839,6 +2964,8 @@ function buildNotes({
   const rawNotes: any[] = [];
   const noteDurations: string[] = []; // Track duration for each note for beaming
   const noteBeats: number[] = []; // Track which beat each note belongs to for beaming
+  const ghostNoteIndices: Set<number> = new Set(); // Track which note indices are ghost notes
+  const ghostNoteDurations: Map<number, string> = new Map(); // Track duration for each ghost note
 
   // Build notes - notesPerBar represents the entire bar
   for (let i = 0; i < notesPerBar; i++) {
@@ -2867,6 +2994,40 @@ function buildNotes({
     const drumToken = drumPatternTokens[i % drumPatternTokens.length];
     const normalizedToken = drumToken.replace(/\+/g, ' ');
     let voicingTokens = normalizedToken.split(/\s+/).filter(Boolean);
+    
+    // Detect ghost notes (parentheses notation, e.g., "(S)", "(K)")
+    // Check if the token or any part of it is in parentheses
+    // Note: drumPatternTokens are already uppercase, so we check for "(S)", "(K)", etc.
+    let isGhostNote = false;
+    const processedTokens: string[] = [];
+    
+    // Check the original drumToken (before splitting) for parentheses
+    // This handles cases like "(S)" as a single token
+    if (drumToken.includes('(') && drumToken.includes(')')) {
+      isGhostNote = true;
+    }
+    
+    for (const token of voicingTokens) {
+      // Check if token is wrapped in parentheses (ghost note)
+      const ghostMatch = token.match(/^\((.*?)\)$/);
+      if (ghostMatch) {
+        isGhostNote = true;
+        processedTokens.push(ghostMatch[1].toUpperCase()); // Extract the note without parentheses, ensure uppercase
+      } else {
+        processedTokens.push(token);
+        // Also check if token contains parentheses (e.g., "(S)+K")
+        if (token.includes('(') || token.includes(')')) {
+          isGhostNote = true;
+          // Extract non-parenthesized parts
+          const cleaned = token.replace(/\([^)]*\)/g, '').trim();
+          if (cleaned) {
+            processedTokens[processedTokens.length - 1] = cleaned.toUpperCase();
+          }
+        }
+      }
+    }
+    
+    voicingTokens = processedTokens;
     
     // Practice Pad Mode: override voicing to always show "S" (snare) regardless of actual pattern
     if (practicePadMode && voicingTokens.length > 0) {
@@ -2939,6 +3100,15 @@ function buildNotes({
       stem_direction: -1,
     });
 
+    // Apply ghost note styling if detected
+    // Track ghost note indices - parentheses will be added as SVG text after rendering
+    if (isGhostNote) {
+      (staveNote as any).isGhostNote = true;
+      const noteIndex = rawNotes.length;
+      ghostNoteIndices.add(noteIndex); // Track this note index as a ghost note
+      ghostNoteDurations.set(noteIndex, noteDuration); // Store duration for this ghost note
+    }
+
     // For percussion clef, VexFlow may not respect key positions for vertical placement
     // Instead, we'll try using note properties to force different positions
     // Check if the note has methods to set position manually
@@ -3007,58 +3177,77 @@ function buildNotes({
     const globalStickingIndex = stickingIndexOffset + i;
     const sticking = stickingTokens.length > 0 ? stickingTokens[globalStickingIndex % stickingTokens.length] : '';
     
-    // Check for flam notation (lowercase letter followed by uppercase, e.g., "lR" or "rL")
-    // Match patterns like "lR", "rL", "lK", "rK" (case-sensitive for first letter, uppercase for second)
-    // WordPress plugin format: lowercase grace note letter + uppercase main note letter
-    const flamMatch = sticking && typeof sticking === 'string' ? sticking.match(/^([lr])([RLK])$/) : null;
-    let hasFlam = false;
-    let graceNoteSticking = '';
+    // Check for flam, drag, or ruff notation
+    // Flam: "lR" or "rL" (one lowercase grace note + uppercase main note)
+    // Drag: "llR" or "rrL" (two lowercase grace notes + uppercase main note)
+    // Ruff: "lllR" or "rrrL" (three lowercase grace notes + uppercase main note)
+    // Match patterns like "lR", "rL", "llR", "rrL", "lllR", "rrrL", etc.
+    const ornamentMatch = sticking && typeof sticking === 'string' ? sticking.match(/^([lr]+)([RLK])$/) : null;
+    let hasOrnament = false;
+    let graceNoteStickings: string[] = [];
     let mainNoteSticking = sticking;
+    let ornamentType: 'flam' | 'drag' | 'ruff' | null = null;
     
-    if (flamMatch) {
-      hasFlam = true;
-      graceNoteSticking = flamMatch[1].toUpperCase(); // Grace note letter (L or R)
-      mainNoteSticking = flamMatch[2]; // Main note letter (R, L, or K)
+    if (ornamentMatch) {
+      const graceNotes = ornamentMatch[1]; // e.g., "l", "ll", "lll"
+      const mainNote = ornamentMatch[2]; // e.g., "R", "L", "K"
+      
+      if (graceNotes.length === 1) {
+        ornamentType = 'flam';
+      } else if (graceNotes.length === 2) {
+        ornamentType = 'drag';
+      } else if (graceNotes.length >= 3) {
+        ornamentType = 'ruff';
+      }
+      
+      hasOrnament = true;
+      graceNoteStickings = graceNotes.split('').map(g => g.toUpperCase()); // Convert to array of uppercase letters
+      mainNoteSticking = mainNote;
       
       try {
-        // Create grace note (small note before main note) for flam
-        // Grace note uses same position as main note (typically snare)
+        // Create grace notes (small notes before main note) for flam/drag/ruff
+        // Grace notes use same position as main note (typically snare)
         const graceNotePosition = keys.length > 0 ? keys[0] : keyMap.S;
         
-        // Create grace note (small note before main note)
-        // Grace notes in VexFlow use a slashed notehead for flams (acciaccatura)
-        const graceNote = new VF.GraceNote({
-          keys: [graceNotePosition],
-          duration: '8', // Grace note duration (8th note)
-          slash: true, // Slash through notehead for flam (acciaccatura)
-          stem_direction: -1,
-        });
-        
-        // Mark the grace note so we can identify it later (for filtering in collectNoteRefs)
-        // This helps ensure flams are treated as single note positions
-        if ((graceNote as any).setAttribute) {
-          (graceNote as any).setAttribute('data-grace-note', 'true');
+        // Create multiple grace notes for drags/ruffs, single for flams
+        const graceNotesArray: any[] = [];
+        for (let j = 0; j < graceNotes.length; j++) {
+          const graceNote = new VF.GraceNote({
+            keys: [graceNotePosition],
+            duration: '16', // Use 16th note duration for grace notes (shorter for drags/ruffs)
+            slash: true, // Slash through notehead for all ornaments
+            stem_direction: -1,
+          });
+          
+          // Mark the grace note so we can identify it later (for filtering in collectNoteRefs)
+          if ((graceNote as any).setAttribute) {
+            (graceNote as any).setAttribute('data-grace-note', 'true');
+            (graceNote as any).setAttribute('data-ornament-type', ornamentType || 'flam');
+          }
+          
+          graceNotesArray.push(graceNote);
         }
         
         // Create a grace note group and associate it with the main note
-        // The 'true' parameter adds a slur between grace note and main note
-        const graceNoteGroup = new VF.GraceNoteGroup([graceNote], true);
+        // The 'true' parameter adds a slur between grace notes and main note
+        const graceNoteGroup = new VF.GraceNoteGroup(graceNotesArray, true);
         
         // Mark the grace note group as well
         if ((graceNoteGroup as any).setAttribute) {
           (graceNoteGroup as any).setAttribute('data-grace-note-group', 'true');
+          (graceNoteGroup as any).setAttribute('data-ornament-type', ornamentType || 'flam');
         }
         
         // Add the grace note group as a modifier to the main note
         staveNote.addModifier(graceNoteGroup, 0);
       } catch (e: any) {
-        console.error('Failed to add flam grace note:', e, e?.stack);
-        // Continue without grace note if it fails
+        console.error(`Failed to add ${ornamentType} grace notes:`, e, e?.stack);
+        // Continue without grace notes if it fails
       }
     }
     
     // Add sticking annotation (use base sticking for display)
-    if (sticking && sticking !== '-' && !hasFlam) {
+    if (sticking && sticking !== '-' && !hasOrnament) {
       try {
         // Display the sticking notation (R, L, K, etc.)
         const annotation = new VF.Annotation(sticking);
@@ -3074,20 +3263,20 @@ function buildNotes({
       } catch (e) {
         console.error('Failed to create annotation:', e);
       }
-    } else if (hasFlam && mainNoteSticking) {
-      // Add annotation showing full flam pattern (e.g., "lR" or "rL") for flam
-      // Format: lowercase grace note letter + uppercase main note letter
+    } else if (hasOrnament && mainNoteSticking) {
+      // Add annotation showing full ornament pattern (e.g., "lR", "llR", "lllR") for flam/drag/ruff
+      // Format: lowercase grace note letter(s) + uppercase main note letter
       try {
-        // Show the full flam pattern (e.g., "lR") so users can see both letters
-        const flamAnnotation = new VF.Annotation(sticking); // Use original sticking pattern
-        flamAnnotation.setFont('Inter', 16, 'bold');
+        // Show the full ornament pattern (e.g., "lR", "llR", "lllR") so users can see all letters
+        const ornamentAnnotation = new VF.Annotation(sticking); // Use original sticking pattern
+        ornamentAnnotation.setFont('Inter', 16, 'bold');
         if (darkMode) {
-          flamAnnotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
+          ornamentAnnotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
         }
-        flamAnnotation.setJustification(1); // CENTER
-        flamAnnotation.setVerticalJustification(2); // BOTTOM
-        flamAnnotation.setYShift(140); // Position annotation below the stave
-        staveNote.addModifier(flamAnnotation, 0);
+        ornamentAnnotation.setJustification(1); // CENTER
+        ornamentAnnotation.setVerticalJustification(2); // BOTTOM
+        ornamentAnnotation.setYShift(140); // Position annotation below the stave
+        staveNote.addModifier(ornamentAnnotation, 0);
       } catch (e) {
         console.error('Failed to create flam annotation:', e);
       }
@@ -3106,6 +3295,7 @@ function buildNotes({
   if (perBeatSubdivisions) {
     // Advanced mode: group notes by their actual duration AND beat
     // Only beam consecutive notes with the same duration that are in the SAME BEAT and shorter than quarter notes
+    // Rests should be included in beam groups if they're within the same beat and duration
     let currentBeamGroup: any[] = [];
     let currentBeamDuration: string | null = null;
     let currentBeamBeat: number | null = null;
@@ -3118,29 +3308,26 @@ function buildNotes({
       
       // Only beam notes shorter than quarter note (8, 16, 32, etc.)
       // Quarter note duration is 'q'
-      const canBeam = noteDuration && noteDuration !== 'q' && noteDuration !== 'qr' && !isRest;
+      const canBeam = noteDuration && noteDuration !== 'q' && noteDuration !== 'qr';
       
-      if (canBeam) {
-        // Check if this note can join the current beam group
-        // Must have same duration AND be in the same beat
-        if (currentBeamDuration === noteDuration && currentBeamBeat === noteBeat) {
-          // Same duration and same beat as current group, add to group
-          currentBeamGroup.push(note);
-        } else {
-          // Different duration or different beat, finish current group and start new one
-          if (currentBeamGroup.length > 1) {
-            try {
-              beams.push(new VF.Beam(currentBeamGroup));
-            } catch (e) {
-              console.warn('Failed to create beam:', e);
-            }
+      if (canBeam && currentBeamBeat === noteBeat && currentBeamDuration === noteDuration) {
+        // Same beat and duration - add to current group (including rests)
+        currentBeamGroup.push(note);
+      } else if (canBeam) {
+        // Different beat or duration - finish current group and start new one
+        if (currentBeamGroup.length > 1) {
+          try {
+            beams.push(new VF.Beam(currentBeamGroup));
+          } catch (e) {
+            console.warn('Failed to create beam:', e);
           }
-          currentBeamGroup = [note];
-          currentBeamDuration = noteDuration;
-          currentBeamBeat = noteBeat;
         }
+        // Start new group (even if it's a rest, we'll add notes to it)
+        currentBeamGroup = [note];
+        currentBeamDuration = noteDuration;
+        currentBeamBeat = noteBeat;
       } else {
-        // Can't beam this note, finish current group
+        // Can't beam this note (quarter note) - finish current group
         if (currentBeamGroup.length > 1) {
           try {
             beams.push(new VF.Beam(currentBeamGroup));
@@ -3184,7 +3371,12 @@ function buildNotes({
     }
   }
 
-  return { tickables: rawNotes, beams };
+  return { 
+    tickables: rawNotes, 
+    beams, 
+    ghostNoteIndices: Array.from(ghostNoteIndices),
+    ghostNoteDurations: Object.fromEntries(ghostNoteDurations) // Convert Map to object for easier access
+  };
 }
 
 /**

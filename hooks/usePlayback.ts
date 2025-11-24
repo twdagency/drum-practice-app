@@ -1153,20 +1153,15 @@ export function usePlayback() {
     }
     
     // Progressive mode logic: Adjust difficulty based on performance
-    // For now, this is a foundation that can be enhanced with actual difficulty adjustments
-    console.log(`[Progressive Mode] Performance: ${(accuracy * 100).toFixed(1)}% accuracy (${matchedNotes}/${totalNotes} notes matched)`);
-    
-    // TODO: Implement difficulty adjustment logic:
+    // Future enhancement: Implement automatic difficulty adjustment:
     // - If accuracy is high (>90%), suggest increasing subdivision or tempo
     // - If accuracy is low (<70%), suggest decreasing difficulty
     // - Gradually increase complexity over successful loops
     // - Track difficulty level and adjust patterns dynamically
     
     if (accuracy >= 0.9 && totalNotes > 0) {
-      console.log('[Progressive Mode] High accuracy detected. Consider increasing difficulty in future loops.');
       // Future: Automatically increase subdivision, tempo, or complexity
     } else if (accuracy < 0.7 && totalNotes > 0) {
-      console.log('[Progressive Mode] Lower accuracy detected. Consider maintaining current difficulty or decreasing.');
       // Future: Automatically decrease difficulty or maintain current level
     }
   }, [progressiveMode]);

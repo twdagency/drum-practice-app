@@ -9,6 +9,7 @@ import {
   MIDIRecordingState,
   PracticeStats,
   PracticeGoals,
+  MIDINoteMap,
 } from '@/types';
 import { CONSTANTS } from '@/lib/utils/constants';
 
@@ -33,6 +34,8 @@ export interface PracticeSlice {
   setMIDICountInActive: (active: boolean) => void;
   setMIDIVisualFeedback: (enabled: boolean) => void;
   setMIDIShowTimingErrors: (enabled: boolean) => void;
+  setMIDINoteMap: (noteMap: MIDINoteMap) => void;
+  resetMIDINoteMap: () => void;
   resetMIDIPractice: () => void;
 
   // Microphone Practice Actions
@@ -105,6 +108,17 @@ const loadPersistedSettings = () => {
 
 const persisted = loadPersistedSettings();
 
+// Default General MIDI drum map (channel 10, note numbers)
+const DEFAULT_MIDI_NOTE_MAP: MIDINoteMap = {
+  K: 36,  // Kick (C1)
+  S: 38,  // Snare (D1)
+  H: 42,  // Hi-hat closed (F#1)
+  'H+': 46, // Hi-hat open (A#1)
+  T: 47,  // Low-Mid Tom (B1)
+  F: 41,  // Low Tom (F1)
+  R: 0,   // Rest (no note)
+};
+
 const initialMIDIPractice: MIDIPracticeState = {
   enabled: false,
   input: null,
@@ -124,6 +138,7 @@ const initialMIDIPractice: MIDIPracticeState = {
   showMissedNotes: true,
   latencyTestActive: false,
   latencyTestTimes: [],
+  noteMap: persisted.midi?.noteMap ?? { ...DEFAULT_MIDI_NOTE_MAP },
 };
 
 const initialMicrophonePractice: MicrophonePracticeState = {

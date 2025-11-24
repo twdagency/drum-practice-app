@@ -6,24 +6,9 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
-import { ExpectedNote, PracticeHit } from '@/types';
+import { ExpectedNote, PracticeHit, MIDINoteMap } from '@/types';
 import { CONSTANTS } from '@/lib/utils/constants';
 import { parseNumberList } from '@/lib/utils/patternUtils';
-
-interface MIDINoteMap {
-  [key: string]: number; // Drum token -> MIDI note number
-}
-
-// Standard General MIDI drum map (channel 10, note numbers)
-const DRUM_MIDI_MAP: MIDINoteMap = {
-  K: 36,  // Kick (C1)
-  S: 38,  // Snare (D1)
-  H: 42,  // Hi-hat closed (F#1)
-  'H+': 46, // Hi-hat open (A#1)
-  T: 47,  // Low-Mid Tom (B1)
-  F: 41,  // Low Tom (F1)
-  R: 0,   // Rest (no note)
-};
 
 export function useMIDIPractice() {
   const isPlaying = useStore((state) => state.isPlaying);
@@ -31,6 +16,7 @@ export function useMIDIPractice() {
   const midiPracticeEnabled = useStore((state) => state.midiPractice.enabled); // Subscribe to enabled separately
   const patterns = useStore((state) => state.patterns);
   const bpm = useStore((state) => state.bpm);
+  const noteMap = useStore((state) => state.midiPractice.noteMap); // Get custom note map from store
   const setMIDIPracticeEnabled = useStore((state) => state.setMIDIPracticeEnabled);
   const setMIDIInput = useStore((state) => state.setMIDIInput);
   const setMIDIExpectedNotes = useStore((state) => state.setMIDIExpectedNotes);
@@ -86,7 +72,7 @@ export function useMIDIPractice() {
           
           for (let i = 0; i < notesInThisPhrase; i++) {
             const drumToken = drumTokens[noteIndexInPattern % drumTokens.length];
-            const midiNote = DRUM_MIDI_MAP[drumToken] || 0;
+            const midiNote = noteMap[drumToken] || 0;
             
             if (midiNote > 0) {
               // Use globalTimeOffset + patternTimeOffset for absolute time
@@ -235,13 +221,8 @@ export function useMIDIPractice() {
         // Add hit to actual hits (regardless of whether it's within window)
         addMIDIHit(hit);
         
-        // Log for debugging
-        const status = isWithinWindow ? 'within window' : 'outside window';
-        console.log(`MIDI Hit: note=${note}, error=${timingError.toFixed(1)}ms, ${status}, perfect=${isPerfect}, early=${isEarly}`);
       } else {
         // No matching note found
-        console.log(`MIDI Hit with no match: note=${note}, time=${adjustedElapsedTime.toFixed(1)}ms`);
-        console.log(`Expected notes:`, expectedNotes.map(n => ({ note: n.note, time: n.time.toFixed(1) })));
         
         // Still record the hit even if no match (for debugging)
         const hit: PracticeHit = {

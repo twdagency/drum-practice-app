@@ -1,10 +1,17 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import '../styles/globals.css'
 import { VexFlowLoader } from '@/components/VexFlowLoader'
 
 export const metadata: Metadata = {
   title: 'Drum Practice Generator',
   description: 'Generate and practice drumming patterns with real-time feedback',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
 }
 
 export default function RootLayout({

@@ -152,9 +152,23 @@ export const PresetsBrowser: React.FC<PresetsBrowserProps> = ({ onClose }) => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', marginBottom: '1rem' }} />
-            <p>Loading presets...</p>
+          <div style={{ padding: '2rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+              <div style={{ width: '60%', height: '24px', background: 'var(--dpgen-border)', borderRadius: '4px', animation: 'skeleton-loading 1.5s ease-in-out infinite', backgroundSize: '200% 100%' }} />
+              <div style={{ width: '40%', height: '20px', background: 'var(--dpgen-border)', borderRadius: '4px', animation: 'skeleton-loading 1.5s ease-in-out infinite', backgroundSize: '200% 100%' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} style={{ display: 'flex', gap: '1rem', padding: '1rem', background: 'var(--dpgen-card)', borderRadius: '8px', border: '1px solid var(--dpgen-border)' }}>
+                  <div style={{ width: '80px', height: '80px', background: 'var(--dpgen-border)', borderRadius: '8px', animation: 'skeleton-loading 1.5s ease-in-out infinite', backgroundSize: '200% 100%' }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ width: '70%', height: '20px', background: 'var(--dpgen-border)', borderRadius: '4px', animation: 'skeleton-loading 1.5s ease-in-out infinite', backgroundSize: '200% 100%' }} />
+                    <div style={{ width: '50%', height: '16px', background: 'var(--dpgen-border)', borderRadius: '4px', animation: 'skeleton-loading 1.5s ease-in-out infinite', backgroundSize: '200% 100%' }} />
+                    <div style={{ width: '60%', height: '16px', background: 'var(--dpgen-border)', borderRadius: '4px', animation: 'skeleton-loading 1.5s ease-in-out infinite', backgroundSize: '200% 100%' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

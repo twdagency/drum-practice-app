@@ -7,6 +7,7 @@ import { randomSets } from './randomSets';
 
 /**
  * Parse tokens from a string (handles space-separated and + notation)
+ * Also handles ghost notes in parentheses notation (e.g., "(S)", "(K)")
  */
 export function parseTokens(value: string | string[]): string[] {
   if (!value) return [];
@@ -15,6 +16,7 @@ export function parseTokens(value: string | string[]): string[] {
     value = String(value);
   }
   // Support both space-separated and + notation (e.g., "S K" or "S+K")
+  // Also preserve parentheses for ghost notes (e.g., "(S)", "(K)")
   return value
     .trim()
     .split(/\s+/)
@@ -167,30 +169,89 @@ export function getRandomItem<T>(list: readonly T[] | T[]): T {
 
 /**
  * Calculate pattern complexity
+ * Uses the same difficulty rating system for consistency
  */
 export function calculatePatternComplexity(pattern: Pattern): 'easy' | 'medium' | 'hard' {
-  const phrase = parseNumberList(pattern.phrase);
-  const totalNotes = phrase.reduce((sum, val) => sum + val, 0);
-  const [numerator] = parseTimeSignature(pattern.timeSignature);
-  const subdivision = pattern.subdivision;
-
-  // Simple complexity calculation
-  let complexity = 0;
+  // Import the difficulty rating function to use the same calculation
+  // We'll calculate a simplified version inline to avoid circular dependencies
+  const notesPerBar = getNotesPerBarForPattern(pattern);
+  const [numerator] = parseTimeSignature(pattern.timeSignature || '4/4');
+  const drumPattern = parseTokens(pattern.drumPattern || '');
+  const stickingPattern = parseTokens(pattern.stickingPattern || '');
   
-  // More notes = more complex
-  complexity += totalNotes * 0.5;
+  // Count accents
+  const accentCount = (pattern._presetAccents || []).length;
   
-  // Higher subdivision = more complex
-  complexity += subdivision * 0.3;
+  // Count rests
+  const restCount = drumPattern.filter(token => 
+    token.toUpperCase() === 'R' || token === '-'
+  ).length;
   
-  // More phrase groups = more complex
-  complexity += phrase.length * 2;
+  // Check for advanced mode (per-beat subdivisions)
+  const hasAdvancedMode = pattern._advancedMode || false;
+  const advancedModeComplexity = hasAdvancedMode 
+    ? (pattern._perBeatSubdivisions?.length || 0) * 2 
+    : 0;
   
-  // Non-standard time signatures = more complex
-  if (numerator !== 4) complexity += 5;
-
-  if (complexity < 20) return 'easy';
-  if (complexity < 40) return 'medium';
+  // Check for polyrhythm
+  const hasPolyrhythm = !!(pattern._polyrhythmRightNotes || pattern._polyrhythmLeftNotes);
+  const polyrhythmComplexity = hasPolyrhythm ? 15 : 0;
+  
+  // Count ghost notes (tokens in parentheses)
+  const ghostNoteCount = drumPattern.filter(token => 
+    token.startsWith('(') && token.endsWith(')')
+  ).length;
+  
+  // Count ornaments (flams, drags, ruffs - lowercase letters before main note)
+  const ornamentCount = stickingPattern.filter(token => 
+    /^[a-z]+[A-Z]/.test(token)
+  ).length;
+  
+  // Calculate factors (same as difficulty rating)
+  const subdivisionFactor = Math.min(pattern.subdivision / 4, 8);
+  const timeSignatureFactor = numerator === 4 ? 1 : (numerator > 4 ? 2 : 1.5);
+  const notesPerBarFactor = Math.min(notesPerBar / 16, 4);
+  
+  // Use same calculation as difficulty rating (recalibrated)
+  // Base difficulty from subdivision
+  let baseDifficulty = 1;
+  if (pattern.subdivision <= 4) {
+    baseDifficulty = 1;
+  } else if (pattern.subdivision <= 8) {
+    baseDifficulty = 2;
+  } else if (pattern.subdivision <= 16) {
+    baseDifficulty = 3;
+  } else if (pattern.subdivision <= 24) {
+    baseDifficulty = 5;
+  } else {
+    baseDifficulty = 7;
+  }
+  
+  // Adjust for time signature
+  if (numerator !== 4) {
+    baseDifficulty += numerator === 3 ? 0.5 : 1;
+  }
+  
+  // Adjust for notes per bar
+  if (notesPerBar > 32) {
+    baseDifficulty += 1;
+  } else if (notesPerBar > 16) {
+    baseDifficulty += 0.5;
+  }
+  
+  // Add complexity from other factors
+  if (accentCount > 0) baseDifficulty += Math.min(accentCount * 0.3, 1.5);
+  if (restCount > 0) baseDifficulty += Math.min(restCount * 0.1, 0.5);
+  if (hasAdvancedMode) baseDifficulty += Math.min(advancedModeComplexity * 0.5, 2);
+  if (hasPolyrhythm) baseDifficulty += 2;
+  if (ghostNoteCount > 0) baseDifficulty += Math.min(ghostNoteCount * 0.4, 1.5);
+  if (ornamentCount > 0) baseDifficulty += Math.min(ornamentCount * 0.8, 2.5);
+  
+  const difficultyScore = Math.max(1, Math.min(10, Math.round(baseDifficulty * 10) / 10));
+  
+  // Map to easy/medium/hard (matching 1-10 scale: 1-3=easy, 4-6=medium, 7-10=hard)
+  if (difficultyScore <= 3) return 'easy';
+  if (difficultyScore <= 6) return 'medium';
   return 'hard';
 }
 
@@ -299,18 +360,21 @@ export function createDefaultPattern(): Pattern {
   const phraseArray = buildPhraseFromAccents(accents, notesPerBar);
   const phrase = formatList(phraseArray);
   
-  // Generate drum and sticking patterns to match notesPerBar
+  // Calculate notes per beat (e.g., 16th notes in 4/4 = 4 notes per beat)
+  const [numerator, denominator] = parseTimeSignature(timeSignature);
+  const beatValue = denominator; // Typically 4 for quarter notes
+  const notesPerBeat = subdivision / beatValue;
+  
+  // Generate voicing pattern for one beat (not full bar)
   const drumPatternTokens: string[] = [];
-  for (let i = 0; i < notesPerBar; i++) {
-    drumPatternTokens.push(i % 4 === 0 ? 'S' : 'S'); // Simple pattern
+  for (let i = 0; i < notesPerBeat; i++) {
+    drumPatternTokens.push('S'); // Simple pattern: all snare
   }
   const drumPattern = formatList(drumPatternTokens);
   
-  const stickingTokens: string[] = [];
-  for (let i = 0; i < notesPerBar; i++) {
-    stickingTokens.push(i % 2 === 0 ? 'R' : 'L');
-  }
-  const stickingPattern = formatList(stickingTokens);
+  // Generate sticking pattern (2-4 notes, matching voicing pattern)
+  // Use generateStickingForDrumPattern to get a shorter pattern
+  const stickingPattern = generateStickingForDrumPattern(drumPattern, notesPerBeat, false);
   
   return {
     id: Date.now(),
@@ -378,20 +442,67 @@ export function generateRandomPattern(practicePadMode: boolean = false, useAdvan
   // Generate drum pattern that matches notes per bar
   // In Practice Pad mode, always use "S" for voicing
   let drumPattern: string;
-  if (practicePadMode) {
-    drumPattern = Array(notesPerBar).fill('S').join(' ');
-  } else {
-    const drumPatternArray = getRandomItem([...randomSets.drumPatterns]) as readonly string[];
-    // Repeat pattern to match notes per bar
-    const drumPatternTokens: string[] = [];
-    for (let i = 0; i < notesPerBar; i++) {
-      drumPatternTokens.push(drumPatternArray[i % drumPatternArray.length]);
-    }
-    drumPattern = formatList(drumPatternTokens);
-  }
+  let perBeatVoicing: string[] | undefined;
+  let perBeatSticking: string[] | undefined;
+  let stickingPattern: string;
   
-  // Generate sticking pattern that matches drum pattern and notes per bar
-  const stickingPattern = generateStickingForDrumPattern(drumPattern, notesPerBar, practicePadMode);
+  if (useAdvancedMode && perBeatSubdivisions) {
+    // Generate per-beat voicing and sticking
+    const [numerator] = parseTimeSignature(timeSignature);
+    const { notesPerBeat } = calculateNotesPerBarFromPerBeatSubdivisions(timeSignature, perBeatSubdivisions);
+    perBeatVoicing = [];
+    perBeatSticking = [];
+    
+    for (let i = 0; i < numerator; i++) {
+      const notesInBeat = notesPerBeat[i] || 1;
+      let beatVoicing: string;
+      
+      if (practicePadMode) {
+        beatVoicing = Array(notesInBeat).fill('S').join(' ');
+      } else {
+        const drumPatternArray = getRandomItem([...randomSets.drumPatterns]) as readonly string[];
+        const beatTokens: string[] = [];
+        for (let j = 0; j < notesInBeat; j++) {
+          beatTokens.push(drumPatternArray[j % drumPatternArray.length]);
+        }
+        beatVoicing = formatList(beatTokens);
+      }
+      
+      const beatSticking = generateStickingForDrumPattern(beatVoicing, notesInBeat, practicePadMode);
+      perBeatVoicing.push(beatVoicing);
+      perBeatSticking.push(beatSticking);
+    }
+    
+    drumPattern = perBeatVoicing.join(' ');
+    stickingPattern = perBeatSticking.join(' ');
+  } else {
+    // Standard mode
+    // Calculate notes per beat (e.g., 16th notes in 4/4 = 4 notes per beat)
+    const [numerator, denominator] = parseTimeSignature(timeSignature);
+    const beatValue = denominator; // Typically 4 for quarter notes
+    const notesPerBeat = subdivision / beatValue;
+    
+    if (practicePadMode) {
+      // Generate pattern for one beat, will repeat automatically
+      const beatTokens: string[] = [];
+      for (let i = 0; i < notesPerBeat; i++) {
+        // 80% chance of S, 20% chance of rest
+        beatTokens.push(Math.random() < 0.8 ? 'S' : '-');
+      }
+      drumPattern = formatList(beatTokens);
+    } else {
+      // Generate voicing pattern for one beat (not full bar)
+      const drumPatternArray = getRandomItem([...randomSets.drumPatterns]) as readonly string[];
+      const beatTokens: string[] = [];
+      for (let i = 0; i < notesPerBeat; i++) {
+        beatTokens.push(drumPatternArray[i % drumPatternArray.length]);
+      }
+      drumPattern = formatList(beatTokens);
+    }
+    
+    // Generate sticking pattern (2-4 notes, matching voicing pattern)
+    stickingPattern = generateStickingForDrumPattern(drumPattern, notesPerBeat, practicePadMode);
+  }
   
   // Random repeat (1-4 bars)
   const repeat = Math.floor(Math.random() * 4) + 1;
@@ -410,40 +521,105 @@ export function generateRandomPattern(practicePadMode: boolean = false, useAdvan
     _presetAccents: accents,
     _advancedMode: useAdvancedMode,
     _perBeatSubdivisions: perBeatSubdivisions,
+    _perBeatVoicing: perBeatVoicing,
+    _perBeatSticking: perBeatSticking,
   };
 }
 
 /**
  * Generate a sticking pattern that matches a drum pattern
  * Handles K (kick) notes and generates alternating R/L for others
+ * The sticking pattern can be shorter than notesPerBar (minimum 2)
+ * If voicing has K, sticking must be divisible by voicing length
  * 
  * @param drumPattern The drum pattern string
  * @param notesPerBar Total number of notes per bar (from time signature + subdivision)
  * @param practicePadMode If true, never add K to sticking pattern
  */
-function generateStickingForDrumPattern(drumPattern: string, notesPerBar: number, practicePadMode: boolean = false): string {
+export function generateStickingForDrumPattern(drumPattern: string, notesPerBar: number, practicePadMode: boolean = false): string {
   const drumTokens = parseTokens(drumPattern);
-  const sticking: string[] = [];
+  
+  // Find the base pattern length by detecting repetition
+  // If the pattern repeats, use the shortest repeating unit
+  let baseVoicingLength = drumTokens.length;
+  for (let len = 1; len <= drumTokens.length / 2; len++) {
+    if (drumTokens.length % len === 0) {
+      const isRepeating = true;
+      for (let i = 0; i < drumTokens.length; i++) {
+        if (drumTokens[i] !== drumTokens[i % len]) {
+          // Not a perfect repeat at this length
+          break;
+        }
+        if (i === drumTokens.length - 1) {
+          // Found a repeating pattern
+          baseVoicingLength = len;
+          len = drumTokens.length; // Exit outer loop
+          break;
+        }
+      }
+    }
+  }
+  
+  // Use just the base pattern tokens
+  const baseVoicingTokens = drumTokens.slice(0, baseVoicingLength);
+  
+  // Check if voicing has K
+  const hasKick = baseVoicingTokens.some(token => {
+    const normalized = token.replace(/\+/g, ' ').toUpperCase();
+    return normalized.includes('K');
+  });
+  
+  // Determine sticking pattern length
+  let stickingLength: number;
+  
+  if (hasKick && !practicePadMode) {
+    // If voicing has K, sticking must be at least as long as voicing and divisible by it
+    // Minimum is voicing length, but can be multiples of it
+    const minLength = baseVoicingLength;
+    const maxLength = Math.min(baseVoicingLength * 4, 8); // Up to 4x voicing length, max 8
+    const validLengths: number[] = [];
+    
+    for (let len = minLength; len <= maxLength; len++) {
+      if (len % baseVoicingLength === 0 && len >= 2) {
+        validLengths.push(len);
+      }
+    }
+    
+    stickingLength = validLengths.length > 0
+      ? validLengths[Math.floor(Math.random() * validLengths.length)]
+      : baseVoicingLength;
+  } else {
+    // No K in voicing - can be as short as 2, up to base voicing length or 4 (max)
+    const minLength = 2;
+    const maxLength = Math.min(baseVoicingLength, 4);
+    stickingLength = Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
+  }
+  
+  // Generate base sticking pattern - match the voicing pattern length, not the full bar
+  // The pattern will be repeated automatically when needed
+  const baseSticking: string[] = [];
   let currentHand = Math.random() > 0.5 ? 'R' : 'L';
   
-  for (let i = 0; i < notesPerBar; i++) {
-    const drumToken = drumTokens[i % drumTokens.length];
+  // Generate sticking pattern based on base voicing pattern
+  for (let i = 0; i < stickingLength; i++) {
+    const drumToken = baseVoicingTokens[i % baseVoicingLength];
     const normalizedToken = drumToken.replace(/\+/g, ' ').toUpperCase();
     
     if (normalizedToken.includes('K') && !practicePadMode) {
       // Kick drum = K in sticking (only if not in practice pad mode)
-      sticking.push('K');
+      baseSticking.push('K');
     } else if (normalizedToken === '' || normalizedToken === '-') {
-      // Rest = use R or L randomly
-      sticking.push(Math.random() > 0.5 ? 'R' : 'L');
+      // Rest = keep rest in sticking pattern
+      baseSticking.push('-');
     } else {
       // Regular note = alternate hands
-      sticking.push(currentHand);
+      baseSticking.push(currentHand);
       currentHand = currentHand === 'R' ? 'L' : 'R';
     }
   }
   
-  return formatList(sticking);
+  // Return just the base pattern - it will be repeated automatically when rendering/playing
+  return formatList(baseSticking);
 }
 
 /**
@@ -482,20 +658,67 @@ export function randomizePattern(pattern: Pattern, practicePadMode: boolean = fa
   // Generate drum pattern that matches notes per bar
   // In Practice Pad mode, always use "S" for voicing
   let drumPattern: string;
-  if (practicePadMode) {
-    drumPattern = Array(notesPerBar).fill('S').join(' ');
-  } else {
-    const drumPatternArray = getRandomItem([...randomSets.drumPatterns]) as readonly string[];
-    // Repeat pattern to match notes per bar
-    const drumPatternTokens: string[] = [];
-    for (let i = 0; i < notesPerBar; i++) {
-      drumPatternTokens.push(drumPatternArray[i % drumPatternArray.length]);
-    }
-    drumPattern = formatList(drumPatternTokens);
-  }
+  let perBeatVoicing: string[] | undefined;
+  let perBeatSticking: string[] | undefined;
+  let stickingPattern: string;
   
-  // Generate sticking pattern that matches drum pattern and notes per bar
-  const stickingPattern = generateStickingForDrumPattern(drumPattern, notesPerBar, practicePadMode);
+  if (useAdvancedMode && perBeatSubdivisions) {
+    // Generate per-beat voicing and sticking
+    const [numerator] = parseTimeSignature(timeSignature);
+    const { notesPerBeat } = calculateNotesPerBarFromPerBeatSubdivisions(timeSignature, perBeatSubdivisions);
+    perBeatVoicing = [];
+    perBeatSticking = [];
+    
+    for (let i = 0; i < numerator; i++) {
+      const notesInBeat = notesPerBeat[i] || 1;
+      let beatVoicing: string;
+      
+      if (practicePadMode) {
+        beatVoicing = Array(notesInBeat).fill('S').join(' ');
+      } else {
+        const drumPatternArray = getRandomItem([...randomSets.drumPatterns]) as readonly string[];
+        const beatTokens: string[] = [];
+        for (let j = 0; j < notesInBeat; j++) {
+          beatTokens.push(drumPatternArray[j % drumPatternArray.length]);
+        }
+        beatVoicing = formatList(beatTokens);
+      }
+      
+      const beatSticking = generateStickingForDrumPattern(beatVoicing, notesInBeat, practicePadMode);
+      perBeatVoicing.push(beatVoicing);
+      perBeatSticking.push(beatSticking);
+    }
+    
+    drumPattern = perBeatVoicing.join(' ');
+    stickingPattern = perBeatSticking.join(' ');
+  } else {
+    // Standard mode
+    // Calculate notes per beat (e.g., 16th notes in 4/4 = 4 notes per beat)
+    const [numerator, denominator] = parseTimeSignature(timeSignature);
+    const beatValue = denominator; // Typically 4 for quarter notes
+    const notesPerBeat = subdivision / beatValue;
+    
+    if (practicePadMode) {
+      // Generate pattern for one beat, will repeat automatically
+      const beatTokens: string[] = [];
+      for (let i = 0; i < notesPerBeat; i++) {
+        // 80% chance of S, 20% chance of rest
+        beatTokens.push(Math.random() < 0.8 ? 'S' : '-');
+      }
+      drumPattern = formatList(beatTokens);
+    } else {
+      // Generate voicing pattern for one beat (not full bar)
+      const drumPatternArray = getRandomItem([...randomSets.drumPatterns]) as readonly string[];
+      const beatTokens: string[] = [];
+      for (let i = 0; i < notesPerBeat; i++) {
+        beatTokens.push(drumPatternArray[i % drumPatternArray.length]);
+      }
+      drumPattern = formatList(beatTokens);
+    }
+    
+    // Generate sticking pattern (2-4 notes, matching voicing pattern)
+    stickingPattern = generateStickingForDrumPattern(drumPattern, notesPerBeat, practicePadMode);
+  }
   
   // Random repeat (1-4 bars)
   const repeat = Math.floor(Math.random() * 4) + 1;
@@ -511,6 +734,8 @@ export function randomizePattern(pattern: Pattern, practicePadMode: boolean = fa
     _presetAccents: accents,
     _advancedMode: useAdvancedMode,
     _perBeatSubdivisions: perBeatSubdivisions,
+    _perBeatVoicing: perBeatVoicing,
+    _perBeatSticking: perBeatSticking,
   };
 }
 

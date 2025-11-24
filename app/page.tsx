@@ -12,7 +12,12 @@ import { useAudioLoader } from '@/hooks/useAudioLoader';
 import { usePlayback } from '@/hooks/usePlayback';
 import { useMIDIPractice } from '@/hooks/useMIDIPractice';
 import { useMicrophonePractice } from '@/hooks/useMicrophonePractice';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { PlaybackProgress } from '@/components/shared/PlaybackProgress';
+import { ToastProvider } from '@/components/shared/Toast';
 import { useStore } from '@/store/useStore';
+import { PracticeStats } from '@/components/PracticeMode/PracticeStats';
+import { PatternLibrary } from '@/components/PracticeMode/PatternLibrary';
 
 export default function Home() {
   const darkMode = useStore((state) => state.darkMode);
@@ -162,6 +167,9 @@ export default function Home() {
   // Initialize playback hook
   usePlayback();
   
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts();
+  
   // Initialize MIDI practice hook (must be in a component that stays mounted)
   useMIDIPractice();
   
@@ -169,8 +177,9 @@ export default function Home() {
   useMicrophonePractice();
 
   return (
-    <main className="min-h-screen">
-      <div className="container mx-auto p-4">
+    <ToastProvider>
+      <main className="min-h-screen">
+        <div className="container mx-auto p-4">
         <h1 className="text-4xl font-bold mb-4">Drum Practice Generator</h1>
         <p className="text-lg text-gray-600 mb-6">
           React migration in progress...
@@ -179,13 +188,19 @@ export default function Home() {
         {/* Toolbar Component */}
         <Toolbar />
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4" style={{ width: '100%', boxSizing: 'border-box' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4 dpgen-main-grid" style={{ width: '100%', boxSizing: 'border-box' }}>
           {/* Pattern List Component */}
-          <div className="lg:col-span-1" style={{ minWidth: 0, overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="lg:col-span-1 dpgen-patterns-column" style={{ minWidth: 0, overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
               <h2 className="text-2xl font-semibold mb-4">Patterns</h2>
               <PatternList />
             </div>
+            
+            {/* Practice Statistics */}
+            <PracticeStats />
+            
+            {/* Pattern Library */}
+            <PatternLibrary />
             
             {/* Polyrhythm List Component */}
             <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
@@ -195,7 +210,7 @@ export default function Home() {
           </div>
           
           {/* Stave Component */}
-          <div className="lg:col-span-2" style={{ minWidth: 0, overflow: 'hidden', width: '100%', position: 'relative' }}>
+          <div className="lg:col-span-2 dpgen-stave-column" style={{ minWidth: 0, overflow: 'hidden', width: '100%', position: 'relative' }}>
             <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
               <h2 className="text-2xl font-semibold mb-4">Music Notation</h2>
               <Stave />
@@ -215,6 +230,7 @@ export default function Home() {
         </div>
       </div>
     </main>
+    </ToastProvider>
   )
 }
 

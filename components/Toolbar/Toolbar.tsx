@@ -5,12 +5,15 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { ToolbarButton } from '../shared/ToolbarButton';
 import { ToolbarGroup } from '../shared/ToolbarGroup';
 import { ToolbarDivider } from '../shared/ToolbarDivider';
 import { ToolbarDropdown } from '../shared/ToolbarDropdown';
+import { Tooltip } from '../shared/Tooltip';
+import { KeyboardShortcutsModal } from '../shared/KeyboardShortcutsModal';
+import { useToast } from '../shared/Toast';
 import { createDefaultPattern, generateRandomPattern, randomizePattern } from '@/lib/utils/patternUtils';
 import { MIDIPractice } from '../PracticeMode/MIDIPractice';
 import { MicrophonePractice } from '../PracticeMode/MicrophonePractice';
@@ -22,6 +25,7 @@ import { PolyrhythmBuilder } from '../PracticeMode/PolyrhythmBuilder';
 import { AudioSettingsModal } from '../PracticeMode/AudioSettingsModal';
 import { PlaybackSettingsModal } from '../PracticeMode/PlaybackSettingsModal';
 import { MIDIRecording } from '../PracticeMode/MIDIRecording';
+import { MIDIMappingEditor } from '../PracticeMode/MIDIMappingEditor';
 import { usePresets } from '@/hooks/usePresets';
 import { parseTimeSignature, buildAccentIndices, parseNumberList } from '@/lib/utils/patternUtils';
 import { exportSVG, exportPNG, exportMIDI, sharePatternURL } from '@/lib/utils/exportUtils';
@@ -31,6 +35,7 @@ import { convertMIDIRecordingToPattern } from '@/lib/utils/midiRecordingUtils';
 import { startCountIn, stopCountIn, startMetronome, stopMetronome } from '@/lib/utils/midiRecordingManager';
 
 export function Toolbar() {
+  const { showToast } = useToast();
   const [midiPracticeOpen, setMidiPracticeOpen] = useState(false);
   const [microphonePracticeOpen, setMicrophonePracticeOpen] = useState(false);
   const [showPresetsBrowser, setShowPresetsBrowser] = useState(false);
@@ -41,10 +46,12 @@ export function Toolbar() {
   const [presetsDropdownOpen, setPresetsDropdownOpen] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showPlaybackSettings, setShowPlaybackSettings] = useState(false);
+  const [showMIDIMapping, setShowMIDIMapping] = useState(false);
   const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
   const [midiRecordingOpen, setMidiRecordingOpen] = useState(false);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [tapTempoMessage, setTapTempoMessage] = useState<string | null>(null);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   
   // Load presets for the dropdown
   const { presets, loading: presetsLoading } = usePresets();
@@ -55,10 +62,10 @@ export function Toolbar() {
   
   // Close settings dropdown when modals open
   useEffect(() => {
-    if (showAudioSettings || showPlaybackSettings) {
+    if (showAudioSettings || showPlaybackSettings || showMIDIMapping) {
       setSettingsDropdownOpen(false);
     }
-  }, [showAudioSettings, showPlaybackSettings]);
+  }, [showAudioSettings, showPlaybackSettings, showMIDIMapping]);
   
   // Store state and actions
   const bpm = useStore((state) => state.bpm);
@@ -195,22 +202,25 @@ export function Toolbar() {
     saveToHistory();
   };
 
-  const handleClearPatterns = () => {
+  const handleClearPatterns = useCallback(() => {
     if (confirm('Are you sure you want to clear all patterns? This action cannot be undone.')) {
       clearPatterns();
       saveToHistory();
+      showToast('All patterns cleared', 'info');
     }
-  };
+  }, [clearPatterns, saveToHistory, showToast]);
 
   const handleGenerate = () => {
-    const newPattern = generateRandomPattern(practicePadMode);
+    // Randomly enable advanced mode (10% chance)
+    const useAdvancedMode = Math.random() < 0.1;
+    const newPattern = generateRandomPattern(practicePadMode, useAdvancedMode);
     addPattern(newPattern);
     saveToHistory();
   };
 
-  const handleRandomize = () => {
+  const handleRandomize = useCallback(() => {
     if (patterns.length === 0) {
-      alert('No patterns to randomize. Add a pattern first.');
+      showToast('No patterns to randomize. Add a pattern first.', 'warning');
       return;
     }
     
@@ -225,11 +235,16 @@ export function Toolbar() {
           stickingPattern: randomized.stickingPattern,
           repeat: randomized.repeat,
           _presetAccents: randomized._presetAccents,
+          _advancedMode: randomized._advancedMode,
+          _perBeatSubdivisions: randomized._perBeatSubdivisions,
+          _perBeatVoicing: randomized._perBeatVoicing,
+          _perBeatSticking: randomized._perBeatSticking,
         });
       });
       saveToHistory();
+      showToast('All patterns randomized', 'success');
     }
-  };
+  }, [patterns, practicePadMode, updatePattern, saveToHistory, showToast]);
 
   // MIDI Recording handlers
   const handleStartMIDIRecording = async () => {
@@ -258,7 +273,7 @@ export function Toolbar() {
       }
       
       if (!midiRecording.input) {
-        alert('Please configure MIDI recording settings first. Click the microphone icon to open settings.');
+        showToast('Please configure MIDI recording settings first. Click the microphone icon to open settings.', 'warning');
         setMidiRecordingOpen(true);
         return;
       }
@@ -389,19 +404,23 @@ export function Toolbar() {
       {/* Playback Controls */}
       <ToolbarGroup>
         {!isPlaying ? (
-          <ToolbarButton
-            onClick={handlePlay}
-            title="Play pattern (Spacebar)"
-            icon="fas fa-play"
-            variant="primary"
-          />
+          <Tooltip content="Play pattern (Spacebar)">
+            <ToolbarButton
+              onClick={handlePlay}
+              title="Play pattern (Spacebar)"
+              icon="fas fa-play"
+              variant="primary"
+            />
+          </Tooltip>
         ) : (
-          <ToolbarButton
-            onClick={handleStop}
-            title="Stop playback (Escape)"
-            icon="fas fa-stop"
-            variant="primary"
-          />
+          <Tooltip content="Stop playback (Escape)">
+            <ToolbarButton
+              onClick={handleStop}
+              title="Stop playback (Escape)"
+              icon="fas fa-stop"
+              variant="primary"
+            />
+          </Tooltip>
         )}
         <div className="dpgen-toolbar__bpm">
           <ToolbarButton
@@ -450,26 +469,34 @@ export function Toolbar() {
 
       {/* Pattern Actions */}
       <ToolbarGroup>
-        <ToolbarButton
-          onClick={handleGenerate}
-          title="Generate Pattern"
-          icon="fas fa-magic"
-        />
-        <ToolbarButton
-          onClick={handleAddPattern}
-          title="Add Pattern"
-          icon="fas fa-plus"
-        />
-        <ToolbarButton
-          onClick={handleRandomize}
-          title="Randomize All"
-          icon="fas fa-dice"
-        />
-        <ToolbarButton
-          onClick={handleClearPatterns}
-          title="Clear All Patterns"
-          icon="fas fa-trash"
-        />
+        <Tooltip content="Generate random pattern (Ctrl/Cmd + Shift + N)">
+          <ToolbarButton
+            onClick={handleGenerate}
+            title="Generate Pattern"
+            icon="fas fa-magic"
+          />
+        </Tooltip>
+        <Tooltip content="Add new pattern (Ctrl/Cmd + N)">
+          <ToolbarButton
+            onClick={handleAddPattern}
+            title="Add Pattern"
+            icon="fas fa-plus"
+          />
+        </Tooltip>
+        <Tooltip content="Randomize all patterns (Ctrl/Cmd + R)">
+          <ToolbarButton
+            onClick={handleRandomize}
+            title="Randomize All"
+            icon="fas fa-dice"
+          />
+        </Tooltip>
+        <Tooltip content="Clear all patterns">
+          <ToolbarButton
+            onClick={handleClearPatterns}
+            title="Clear All Patterns"
+            icon="fas fa-trash"
+          />
+        </Tooltip>
       </ToolbarGroup>
 
       <ToolbarDivider />
@@ -477,6 +504,16 @@ export function Toolbar() {
       {/* Export */}
       <ToolbarGroup>
         <ToolbarDropdown buttonIcon="fas fa-download" buttonTitle="Export Options">
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item" 
+            onClick={() => {
+              const staveElement = document.querySelector('.dpgen-stave__surface') as HTMLElement;
+              exportPDF(staveElement);
+            }}
+          >
+            <i className="fas fa-file-pdf" /> Export PDF
+          </button>
           <button 
             type="button" 
             className="dpgen-toolbar__menu-item" 
@@ -516,6 +553,40 @@ export function Toolbar() {
           >
             <i className="fas fa-share-alt" /> Share Pattern
           </button>
+          <div className="dpgen-toolbar__menu-divider" />
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item" 
+            onClick={() => {
+              exportPatternCollection(patterns, bpm);
+            }}
+          >
+            <i className="fas fa-download" /> Export Collection
+          </button>
+          <label className="dpgen-toolbar__menu-item" style={{ cursor: 'pointer', margin: 0 }}>
+            <input
+              type="file"
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  importPatternCollection(file, (importedPatterns, importedBpm) => {
+                    // Clear existing patterns and add imported ones
+                    clearPatterns();
+                    importedPatterns.forEach(pattern => {
+                      addPattern(pattern);
+                    });
+                    setBPM(importedBpm);
+                    saveToHistory();
+                  });
+                }
+                // Reset input so same file can be selected again
+                e.target.value = '';
+              }}
+            />
+            <i className="fas fa-upload" /> Import Collection
+          </label>
         </ToolbarDropdown>
       </ToolbarGroup>
 
@@ -819,6 +890,16 @@ export function Toolbar() {
           >
             <i className="fas fa-sliders-h" /> Playback Settings
           </button>
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item"
+            onClick={() => {
+              setSettingsDropdownOpen(false);
+              setShowMIDIMapping(true);
+            }}
+          >
+            <i className="fas fa-keyboard" /> MIDI Note Mapping
+          </button>
         </ToolbarDropdown>
       </ToolbarGroup>
 
@@ -927,11 +1008,13 @@ export function Toolbar() {
           title="Toggle dark mode"
           icon={darkMode ? 'fas fa-sun' : 'fas fa-moon'}
         />
-        <ToolbarButton
-          onClick={() => console.log('Help')}
-          title="Help & Instructions"
-          icon="fas fa-question-circle"
-        />
+        <Tooltip content="Keyboard shortcuts (?)">
+          <ToolbarButton
+            onClick={() => setShowKeyboardShortcuts(true)}
+            title="Keyboard Shortcuts"
+            icon="fas fa-keyboard"
+          />
+        </Tooltip>
       </ToolbarGroup>
       
       {/* MIDI Practice Modal */}
@@ -979,10 +1062,21 @@ export function Toolbar() {
         <PlaybackSettingsModal onClose={() => setShowPlaybackSettings(false)} />
       )}
 
+      {/* MIDI Mapping Editor Modal */}
+      {showMIDIMapping && (
+        <MIDIMappingEditor onClose={() => setShowMIDIMapping(false)} />
+      )}
+
       {/* MIDI Recording Modal */}
       {midiRecordingOpen && (
         <MIDIRecording onClose={() => setMidiRecordingOpen(false)} />
       )}
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
+      />
     </div>
   );
 }

@@ -40,16 +40,27 @@ interface CalibrationState {
 
 interface MIDICalibrationProps {
   onClose: () => void;
+  mode?: 'practice' | 'recording';
 }
 
-export function MIDICalibration({ onClose }: MIDICalibrationProps) {
+export function MIDICalibration({ onClose, mode = 'practice' }: MIDICalibrationProps) {
   const bpm = useStore((state) => state.bpm);
   const midiPractice = useStore((state) => state.midiPractice);
+  const midiRecording = useStore((state) => state.midiRecording);
   const setMIDILatencyAdjustment = useStore((state) => state.setMIDILatencyAdjustment);
+  const setMIDIRecordingLatencyAdjustment = useStore((state) => state.setMIDIRecordingLatencyAdjustment);
   
   const { devices, access, refreshDevices } = useMIDIDevices();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
-  const [latencyAdjustment, setLatencyAdjustment] = useState<number>(midiPractice.latencyAdjustment);
+  
+  // Use the appropriate latency adjustment based on mode
+  const currentLatencyAdjustment = mode === 'recording' 
+    ? midiRecording.latencyAdjustment 
+    : midiPractice.latencyAdjustment;
+  const [latencyAdjustment, setLatencyAdjustment] = useState<number>(currentLatencyAdjustment);
+  
+  // Get the appropriate input based on mode
+  const currentInput = mode === 'recording' ? midiRecording.input : midiPractice.input;
   
   const [calibration, setCalibration] = useState<CalibrationState>({
     active: false,
@@ -80,12 +91,12 @@ export function MIDICalibration({ onClose }: MIDICalibrationProps) {
 
   // Initialize selected device
   useEffect(() => {
-    if (midiPractice.input) {
-      setSelectedDeviceId(midiPractice.input.id);
+    if (currentInput) {
+      setSelectedDeviceId(currentInput.id);
     } else if (devices.length > 0 && !selectedDeviceId) {
       setSelectedDeviceId(devices[0].id);
     }
-  }, [midiPractice.input, devices, selectedDeviceId]);
+  }, [currentInput, devices, selectedDeviceId]);
 
   // Stop calibration when modal closes or component unmounts
   useEffect(() => {
@@ -185,14 +196,13 @@ export function MIDICalibration({ onClose }: MIDICalibrationProps) {
       return;
     }
 
-    // Use the same input instance from practice mode if available, otherwise get from access
+    // Use the same input instance from practice/recording mode if available, otherwise get from access
     // This ensures we're using the same MIDI input that might already be open
     let input: MIDIInput | null = null;
     
-    if (midiPractice.input && midiPractice.input.id === selectedDeviceId) {
-      // Use existing input from practice mode
-      input = midiPractice.input;
-      console.log('Using existing MIDI input from practice mode:', input.name, input.id);
+    if (currentInput && currentInput.id === selectedDeviceId) {
+      // Use existing input from practice/recording mode
+      input = currentInput;
     } else {
       // Get new input from access
       const newInput = access.inputs.get(selectedDeviceId);
@@ -203,13 +213,6 @@ export function MIDICalibration({ onClose }: MIDICalibrationProps) {
       input = newInput;
     }
     
-    // Log MIDI input state
-    console.log('MIDI input state:', {
-      connection: input.connection,
-      state: input.state,
-      id: input.id,
-      name: input.name
-    });
     
     // Note: In Web MIDI API, setting onmidimessage should automatically open the connection
     // The connection property may still show 'closed' until a message is actually received
@@ -675,7 +678,12 @@ export function MIDICalibration({ onClose }: MIDICalibrationProps) {
       return;
     }
     
-    setMIDILatencyAdjustment(latencyAdjustment);
+    // Save to the appropriate store based on mode
+    if (mode === 'recording') {
+      setMIDIRecordingLatencyAdjustment(latencyAdjustment);
+    } else {
+      setMIDILatencyAdjustment(latencyAdjustment);
+    }
     
     // Save to localStorage
     try {

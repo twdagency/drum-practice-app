@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile viewport fixes */
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+}
+
 :root {
   --dpgen-bg: #f6f7fb;
   --dpgen-card: #ffffff;
@@ -262,6 +274,19 @@ body {
   width: 100%;
   box-sizing: border-box;
   transition: background 0.2s ease;
+  cursor: pointer;
+  outline: none;
+}
+
+.dpgen-pattern-header:focus {
+  outline: 2px solid var(--dpgen-primary);
+  outline-offset: -2px;
+  border-radius: 12px 12px 0 0;
+}
+
+.dpgen-pattern-header:focus-visible {
+  outline: 2px solid var(--dpgen-primary);
+  outline-offset: -2px;
 }
 
 .dpgen-pattern-content {
@@ -286,6 +311,96 @@ body {
   }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Enhanced visual feedback */
+.dpgen-pattern-item {
+  animation: slideIn 0.3s ease-out;
+}
+
+.dpgen-button:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+.dpgen-toolbar__button:active {
+  transform: scale(0.95);
+}
+
+/* Loading spinner */
+.dpgen-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--dpgen-border);
+  border-top-color: var(--dpgen-primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Smooth transitions for state changes */
+.dpgen-card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.dpgen-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Focus states for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--dpgen-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .dpgen-pattern-fields {
   display: grid;
   grid-template-columns: 1fr;
@@ -294,14 +409,210 @@ body {
   box-sizing: border-box;
 }
 
-@media (min-width: 768px) {
-  .dpgen-pattern-fields {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
+/* Ensure fields don't overflow */
+/* Collapsible Section Styles */
+.collapsible-section {
+  transition: box-shadow var(--dpgen-transition);
+}
+
+.collapsible-section:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.collapsible-section-header:focus {
+  outline: 2px solid var(--dpgen-primary);
+  outline-offset: -2px;
+  border-radius: var(--dpgen-radius);
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* Ensure fields don't overflow */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Visual feedback for pattern changes */
+.dpgen-pattern-fields .dpgen-field {
+  transition: all var(--dpgen-transition);
+}
+
+.dpgen-pattern-fields .dpgen-field:focus-within {
+  transform: translateY(-1px);
+}
+
+.dpgen-icon-button {
+  position: relative;
+  transition: all var(--dpgen-transition);
+}
+
+.dpgen-icon-button:hover {
+  transform: scale(1.05);
+}
+
+.dpgen-icon-button:active {
+  transform: scale(0.95);
+}
+
+/* Visual feedback for pattern changes */
+.dpgen-pattern-item {
+  transition: all var(--dpgen-transition);
+}
+
+.dpgen-pattern-item.pattern-updated {
+  animation: highlightPattern 0.6s ease-out;
+}
+
+@keyframes highlightPattern {
+  0% {
+    background: var(--dpgen-card);
+    transform: scale(1);
+  }
+  50% {
+    background: rgba(60, 109, 240, 0.1);
+    transform: scale(1.01);
+  }
+  100% {
+    background: var(--dpgen-card);
+    transform: scale(1);
+  }
+}
+
+/* Smooth transitions for input changes */
+.dpgen-pattern-fields input,
+.dpgen-pattern-fields select,
+.dpgen-pattern-fields textarea {
+  transition: all var(--dpgen-transition);
+}
+
+.dpgen-pattern-fields input:focus,
+.dpgen-pattern-fields select:focus,
+.dpgen-pattern-fields textarea:focus {
+  outline: 2px solid var(--dpgen-primary);
+  outline-offset: 2px;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(60, 109, 240, 0.15);
+}
+
+/* Button press feedback */
+.dpgen-icon-button:active,
+.dpgen-pattern-action:active {
+  animation: buttonPress 0.2s ease-out;
+}
+
+@keyframes buttonPress {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Success feedback for randomize actions */
+.randomize-success {
+  animation: randomizeSuccess 0.5s ease-out;
+}
+
+@keyframes randomizeSuccess {
+  0% {
+    background: var(--dpgen-card);
+  }
+  50% {
+    background: rgba(16, 185, 129, 0.2);
+  }
+  100% {
+    background: var(--dpgen-card);
+  }
+}
+
+/* Enhanced note highlighting during playback */
+.dpgen-note--active {
+  transition: all 0.2s ease-out;
+  animation: noteHighlight 0.3s ease-out;
+}
+
+@keyframes noteHighlight {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.4));
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.8));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.6));
+  }
+}
+
+/* Accented notes pulse effect */
+.dpgen-note--active[data-accented="true"] {
+  animation: accentPulse 0.5s ease-out, noteHighlight 0.3s ease-out;
+}
+
+@keyframes accentPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(249, 115, 22, 1));
+  }
+}
+
+/* Smooth transitions for annotation highlighting */
+.dpgen-annotation--active {
+  transition: all 0.2s ease-out;
+  animation: annotationHighlight 0.3s ease-out;
+}
+
+@keyframes annotationHighlight {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Ghost notes are now rendered with parentheses via VexFlow annotations */
+/* No special CSS styling needed - they look like normal notes with parentheses */
+
 .dpgen-pattern-fields .dpgen-field {
   min-width: 0;
   width: 100%;
@@ -314,6 +625,256 @@ body {
   width: 100%;
   box-sizing: border-box;
   max-width: 100%;
+}
+
+/* Mobile and Tablet Responsive Styles */
+@media (max-width: 1024px) {
+  /* Tablet adjustments */
+  .dpgen-main-grid {
+    gap: 1rem !important;
+  }
+  
+  .dpgen-card {
+    padding: 1rem !important;
+  }
+  
+  .dpgen-card h2 {
+    font-size: 1.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile adjustments */
+  .container {
+    padding: 0.75rem !important;
+  }
+  
+  h1 {
+    font-size: 1.75rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .dpgen-main-grid {
+    gap: 0.75rem !important;
+    margin-top: 0.75rem !important;
+  }
+  
+  .dpgen-card {
+    padding: 1rem !important;
+    border-radius: var(--dpgen-radius);
+  }
+  
+  .dpgen-card h2 {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* Toolbar mobile adjustments */
+  .dpgen-toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem !important;
+    position: relative !important; /* Remove sticky on mobile to save space */
+    top: auto !important;
+  }
+  
+  .dpgen-toolbar__group {
+    gap: 0.375rem;
+  }
+  
+  .dpgen-toolbar__bpm {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0 0.25rem !important;
+  }
+  
+  .dpgen-toolbar__bpm-input {
+    width: 55px !important;
+    font-size: 0.875rem !important;
+    min-height: 44px;
+  }
+  
+  .dpgen-toolbar__button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem 0.625rem !important;
+  }
+  
+  .dpgen-toolbar__button--small {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.375rem 0.5rem !important;
+  }
+  
+  .dpgen-toolbar__divider {
+    height: 24px;
+    margin: 0 0.125rem;
+  }
+  
+  /* Pattern fields mobile */
+  .dpgen-pattern-fields {
+    gap: 0.75rem !important;
+  }
+  
+  .dpgen-pattern-item {
+    margin-bottom: 0.75rem !important;
+    padding: 0.875rem !important;
+  }
+  
+  .dpgen-pattern-item__header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .dpgen-pattern-item__actions {
+    gap: 0.375rem;
+  }
+  
+  .dpgen-pattern-action {
+    min-height: 40px;
+    min-width: 40px;
+  }
+  
+  /* Stave mobile */
+  .dpgen-stave {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem !important;
+  }
+  
+  .dpgen-stave__surface {
+    min-width: 100%;
+  }
+  
+  /* Visual metronome mobile */
+  .dpgen-visual-metronome {
+    max-width: calc(100vw - 2rem);
+    padding: 1rem !important;
+    font-size: 0.875rem;
+  }
+  
+  /* Collapsible sections mobile */
+  .collapsible-section-header {
+    padding: 0.75rem !important;
+    font-size: 0.875rem !important;
+    min-height: 44px;
+  }
+  
+  .collapsible-section-content {
+    padding: 0.75rem !important;
+  }
+  
+  /* Buttons mobile - larger touch targets */
+  button, .dpgen-button {
+    min-height: 44px; /* iOS recommended touch target */
+    min-width: 44px;
+    padding: 0.5rem 0.75rem;
+    -webkit-tap-highlight-color: rgba(60, 109, 240, 0.2);
+  }
+  
+  /* Inputs mobile */
+  input, select, textarea {
+    min-height: 44px; /* iOS recommended touch target */
+    font-size: 16px; /* Prevents zoom on iOS */
+    -webkit-tap-highlight-color: rgba(60, 109, 240, 0.2);
+  }
+  
+  /* Per-beat editors mobile */
+  .dpgen-per-beat-editor {
+    gap: 0.5rem !important;
+  }
+  
+  .dpgen-per-beat-editor__item {
+    padding: 0.75rem !important;
+  }
+  
+  /* Dropdowns mobile */
+  .dpgen-dropdown {
+    min-width: 200px;
+  }
+  
+  /* Modal mobile */
+  .dpgen-modal {
+    padding: 1rem !important;
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Small mobile adjustments */
+  .container {
+    padding: 0.5rem !important;
+  }
+  
+  h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  .dpgen-card {
+    padding: 0.75rem !important;
+  }
+  
+  .dpgen-toolbar {
+    padding: 0.5rem !important;
+    gap: 0.375rem !important;
+  }
+  
+  .dpgen-toolbar__group {
+    gap: 0.25rem;
+  }
+  
+  .dpgen-toolbar__bpm {
+    padding: 0 0.125rem !important;
+  }
+  
+  .dpgen-toolbar__bpm-input {
+    width: 50px !important;
+    font-size: 0.8125rem !important;
+  }
+  
+  .dpgen-toolbar__bpm-label {
+    font-size: 0.75rem !important;
+  }
+  
+  .dpgen-toolbar__button {
+    padding: 0.375rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+  }
+  
+  .dpgen-toolbar__button i {
+    font-size: 0.875rem !important;
+  }
+  
+  /* Hide less critical elements on very small screens */
+  .dpgen-tap-tempo-message {
+    display: none;
+  }
+  
+  /* Pattern item small mobile */
+  .dpgen-pattern-item {
+    padding: 0.625rem !important;
+  }
+  
+  .dpgen-pattern-item__title {
+    font-size: 0.875rem !important;
+  }
+  
+  .dpgen-pattern-item__stats {
+    font-size: 0.75rem !important;
+  }
+  
+  /* Collapsible sections small mobile */
+  .collapsible-section-header {
+    padding: 0.625rem !important;
+    font-size: 0.8125rem !important;
+  }
+  
+  .collapsible-section-content {
+    padding: 0.625rem !important;
+  }
 }
 
 .dpgen-pattern-action {
@@ -429,17 +990,13 @@ body {
   gap: 1rem;
 }
 
-@media (min-width: 768px) {
-  .dpgen-pattern-fields {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 /* Make accent editor, subdivision field, and foot controls span full width */
 .dpgen-pattern-fields .dpgen-field:has(.dpgen-accent-editor),
 .dpgen-pattern-fields .dpgen-field:has(.dpgen-toggle-switch),
 .dpgen-pattern-fields .dpgen-field:has([class*="per-beat-subdivision"]),
-.dpgen-pattern-fields .dpgen-field:has(.dpgen-pattern-subdivision) {
+.dpgen-pattern-fields .dpgen-field:has(.dpgen-pattern-subdivision),
+.dpgen-pattern-fields .dpgen-field:has(.per-beat-voicing-editor),
+.dpgen-pattern-fields .dpgen-field:has(.per-beat-sticking-editor) {
   grid-column: 1 / -1;
 }
 
@@ -698,6 +1255,38 @@ tspan.dpgen-annotation--active.dpgen-annotation--right {
 }
 
 /* Visual Metronome Animation */
+/* Enhanced beat pulse animation */
+@keyframes beatPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(60, 109, 240, 0);
+  }
+  50% {
+    transform: scale(1.6);
+    box-shadow: 0 0 15px rgba(60, 109, 240, 0.8);
+  }
+  100% {
+    transform: scale(1.4);
+    box-shadow: 0 0 12px rgba(60, 109, 240, 0.7);
+  }
+}
+
+/* Visual click flash animation */
+@keyframes clickFlash {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
 @keyframes metronomeSwing {
   0% {
     transform: rotate(0deg);
@@ -823,6 +1412,11 @@ tspan.dpgen-annotation--active.dpgen-annotation--right {
   background: rgba(0, 0, 0, 0.75);
 }
 
+.dpgen-dark-mode .dpgen-modal {
+  background: var(--dpgen-card);
+  border: 1px solid var(--dpgen-border);
+}
+
 /* Dark mode - Empty State */
 .dpgen-dark-mode .dpgen-empty-state {
   color: var(--dpgen-muted);
@@ -877,5 +1471,21 @@ tspan.dpgen-annotation--active.dpgen-annotation--right {
 
 .dpgen-dark-mode .dpgen-export-menu__item:hover {
   background: #1f2230;
+}
+
+/* Loading Skeleton Animation */
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.dpgen-skeleton {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
 }
 

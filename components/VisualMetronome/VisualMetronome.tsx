@@ -4,7 +4,8 @@
 
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
 
 export function VisualMetronome() {
@@ -12,9 +13,26 @@ export function VisualMetronome() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   
   // Initialize position - start with default to avoid hydration mismatch
   const [position, setPosition] = useState({ x: 16, y: 80 });
+  
+  // Create portal container on mount
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const container = document.createElement('div');
+      container.id = 'visual-metronome-portal';
+      document.body.appendChild(container);
+      setPortalContainer(container);
+      
+      return () => {
+        if (document.body.contains(container)) {
+          document.body.removeChild(container);
+        }
+      };
+    }
+  }, []);
   
   // Load position from localStorage on client side only (after mount)
   useEffect(() => {
@@ -40,7 +58,13 @@ export function VisualMetronome() {
   const isPlaying = useStore((state) => state.isPlaying);
   const bpm = useStore((state) => state.bpm);
   const currentBeat = useStore((state) => state.currentBeat);
+  const patterns = useStore((state) => state.patterns);
   const setShowVisualMetronome = useStore((state) => state.setShowVisualMetronome);
+  
+  // Get time signature from first pattern (default to 4/4)
+  const timeSignature = patterns.length > 0 ? patterns[0].timeSignature : '4/4';
+  const [numerator] = timeSignature.split('/').map(Number);
+  const beatsPerBar = numerator || 4;
   
   // Save position to localStorage when it changes
   useEffect(() => {
@@ -53,11 +77,11 @@ export function VisualMetronome() {
     if (!armRef.current) return;
     
     if (isPlaying && showVisualMetronome) {
-      // Calculate animation duration for one bar (4 beats)
+      // Calculate animation duration for one bar based on time signature
       const beatDuration = 60000 / bpm; // milliseconds per beat
-      const barDuration = beatDuration * 4; // 4 beats per bar
+      const barDuration = beatDuration * beatsPerBar; // beats per bar based on time signature
       
-      // Start continuous smooth animation - one full cycle per bar (4 beats)
+      // Start continuous smooth animation - one full cycle per bar
       armRef.current.style.animation = `metronomeSwing ${barDuration}ms ease-in-out infinite`;
     } else {
       // Stop animation
@@ -66,7 +90,7 @@ export function VisualMetronome() {
         armRef.current.style.transform = 'rotate(0deg)';
       }
     }
-  }, [isPlaying, showVisualMetronome, bpm, mounted]);
+  }, [isPlaying, showVisualMetronome, bpm, beatsPerBar, mounted]);
 
   // Dragging is now handled via onMouseDown on the container div
 
@@ -75,11 +99,11 @@ export function VisualMetronome() {
   };
 
   // Don't render until mounted (prevents flash on page load)
-  if (!mounted || !showVisualMetronome) {
+  if (!mounted || !showVisualMetronome || !portalContainer) {
     return null;
   }
 
-  return (
+  const metronomeContent = (
     <div 
       ref={containerRef}
       className="dpgen-visual-metronome" 
@@ -96,11 +120,66 @@ export function VisualMetronome() {
         left: `${position.x}px`,
         top: `${position.y}px`,
         zIndex: 1000, // Above toolbar and other UI elements
-        cursor: isDragging ? 'grabbing' : 'move',
+        cursor: isDragging ? 'grabbing' : 'default',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        userSelect: 'none'
+        userSelect: 'none',
+        pointerEvents: 'auto',
+        willChange: isDragging ? 'transform' : 'auto',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        transform: 'translateZ(0)'
       }}
       onMouseDown={(e) => {
+        // Allow dragging from anywhere on the metronome, except buttons and interactive elements
+        const target = e.target as HTMLElement;
+        if (target.closest('.dpgen-metronome-close') || 
+            target.closest('.dpgen-beat-dot') ||
+            target.closest('button') ||
+            target.tagName === 'BUTTON') {
+          return;
+        }
+        
+        // Allow dragging from anywhere on the container
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        
+        const offsetX = e.clientX - rect.left;
+        const offsetY = e.clientY - rect.top;
+
+        let rafId: number | null = null;
+        const handleMouseMove = (e: MouseEvent) => {
+          e.preventDefault();
+          if (rafId !== null) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => {
+            const newX = e.clientX - offsetX;
+            const newY = e.clientY - offsetY;
+            const maxX = window.innerWidth - rect.width;
+            const maxY = window.innerHeight - rect.height;
+            setPosition({ 
+              x: Math.max(0, Math.min(maxX, newX)), 
+              y: Math.max(0, Math.min(maxY, newY))
+            });
+            rafId = null;
+          });
+        };
+
+        const handleMouseUp = () => {
+          setIsDragging(false);
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      }}
+      onTouchStart={(e) => {
         // Allow dragging from anywhere on the metronome, except buttons
         const target = e.target as HTMLElement;
         if (target.closest('.dpgen-metronome-close') || 
@@ -115,12 +194,15 @@ export function VisualMetronome() {
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
         
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
+        const touch = e.touches[0];
+        const offsetX = touch.clientX - rect.left;
+        const offsetY = touch.clientY - rect.top;
 
-        const handleMouseMove = (e: MouseEvent) => {
-          const newX = e.clientX - offsetX;
-          const newY = e.clientY - offsetY;
+        const handleTouchMove = (e: TouchEvent) => {
+          if (e.touches.length !== 1) return;
+          const touch = e.touches[0];
+          const newX = touch.clientX - offsetX;
+          const newY = touch.clientY - offsetY;
           const maxX = window.innerWidth - rect.width;
           const maxY = window.innerHeight - rect.height;
           setPosition({ 
@@ -129,14 +211,14 @@ export function VisualMetronome() {
           });
         };
 
-        const handleMouseUp = () => {
+        const handleTouchEnd = () => {
           setIsDragging(false);
-          document.removeEventListener('mousemove', handleMouseMove);
-          document.removeEventListener('mouseup', handleMouseUp);
+          document.removeEventListener('touchmove', handleTouchMove);
+          document.removeEventListener('touchend', handleTouchEnd);
         };
 
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
       }}
     >
       {/* Drag handle and close button */}
@@ -152,13 +234,19 @@ export function VisualMetronome() {
           cursor: isDragging ? 'grabbing' : 'grab',
           padding: '0.25rem',
           borderRadius: '4px',
-          transition: 'background 0.2s ease'
+          transition: isDragging ? 'none' : 'background 0.2s ease',
+          pointerEvents: 'auto',
+          zIndex: 10
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.background = 'rgba(0, 0, 0, 0.05)';
+          if (!isDragging) {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(0, 0, 0, 0.05)';
+          }
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.background = 'transparent';
+          if (!isDragging) {
+            (e.currentTarget as HTMLElement).style.background = 'transparent';
+          }
         }}
       >
         <button
@@ -213,50 +301,92 @@ export function VisualMetronome() {
         alignItems: 'flex-start',
         marginTop: '1rem' // Add space for close button
       }}>
+        {/* Visual click indicator - flashes on beat 1 */}
+        {currentBeat === 1 && isPlaying && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: 'rgba(60, 109, 240, 0.2)',
+              border: '2px solid var(--dpgen-primary)',
+              animation: 'clickFlash 0.2s ease-out',
+              pointerEvents: 'none',
+              zIndex: 1
+            }}
+          />
+        )}
         <div 
           ref={armRef}
           className="dpgen-metronome-arm"
           style={{
             width: '4px',
             height: '80px',
-            background: 'var(--dpgen-primary)',
+            background: currentBeat === 1 && isPlaying 
+              ? 'var(--dpgen-primary)' 
+              : 'var(--dpgen-accent)',
             borderRadius: '2px',
             transformOrigin: 'top center',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-            willChange: 'transform'
+            boxShadow: currentBeat === 1 && isPlaying
+              ? '0 0 8px rgba(60, 109, 240, 0.6)'
+              : '0 2px 4px rgba(0, 0, 0, 0.1)',
+            willChange: 'transform',
+            transition: 'background 0.15s ease, box-shadow 0.15s ease',
+            zIndex: 2,
+            position: 'relative'
           }}
         />
       </div>
       <div className="dpgen-metronome-beat-indicator" style={{
         display: 'flex',
         gap: '0.75rem',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        justifyContent: 'center'
       }}>
-        {[1, 2, 3, 4].map((beat) => (
+        {Array.from({ length: beatsPerBar }, (_, i) => i + 1).map((beat) => (
           <div
             key={beat}
             className={`dpgen-beat-dot ${currentBeat === beat ? 'dpgen-beat-dot--active' : ''}`}
             data-beat={beat}
             style={{
-              width: '12px',
-              height: '12px',
+              width: '14px',
+              height: '14px',
               borderRadius: '50%',
               background: currentBeat === beat 
                 ? (beat === 1 ? 'var(--dpgen-primary)' : 'var(--dpgen-accent)')
                 : 'var(--dpgen-border)',
-              transition: 'all 0.2s ease',
-              border: '2px solid transparent',
-              transform: currentBeat === beat ? 'scale(1.3)' : 'scale(1)',
+              transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+              border: currentBeat === beat 
+                ? `2px solid ${beat === 1 ? 'var(--dpgen-primary)' : 'var(--dpgen-accent)'}`
+                : '2px solid transparent',
+              transform: currentBeat === beat ? 'scale(1.4)' : 'scale(1)',
               boxShadow: currentBeat === beat 
                 ? (beat === 1 
-                    ? '0 0 10px rgba(60, 109, 240, 0.6)' 
-                    : '0 0 8px rgba(249, 115, 22, 0.5)')
-                : 'none'
+                    ? '0 0 12px rgba(60, 109, 240, 0.7), 0 0 6px rgba(60, 109, 240, 0.4)' 
+                    : '0 0 10px rgba(249, 115, 22, 0.6), 0 0 5px rgba(249, 115, 22, 0.3)')
+                : 'none',
+              animation: currentBeat === beat ? 'beatPulse 0.3s ease-out' : 'none'
             }}
           />
         ))}
       </div>
+      {/* BPM and time signature display */}
+      <div style={{
+        fontSize: '0.75rem',
+        color: 'var(--dpgen-muted)',
+        fontWeight: 500,
+        marginTop: '-0.5rem'
+      }}>
+        {bpm} BPM • {timeSignature}
+      </div>
     </div>
   );
+
+  return createPortal(metronomeContent, portalContainer);
 }
 

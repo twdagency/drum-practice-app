@@ -5,19 +5,22 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Pattern } from '@/types';
 import { useStore } from '@/store/useStore';
 import { calculatePatternComplexity, parseTokens, formatList, getNotesPerBarForPattern } from '@/lib/utils/patternUtils';
 import { PatternFields } from './PatternFields';
 import { getSubdivisionText } from '@/lib/utils/subdivisionUtils';
+import { useToast } from '@/components/shared/Toast';
+import { calculateDifficultyRating } from '@/lib/utils/difficultyUtils';
 
 interface PatternItemProps {
   pattern: Pattern;
   index: number;
 }
 
-export function PatternItem({ pattern, index }: PatternItemProps) {
+function PatternItemComponent({ pattern, index }: PatternItemProps) {
+  const { showToast } = useToast();
   const [isExpanded, setIsExpanded] = useState(pattern._expanded ?? false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -30,50 +33,75 @@ export function PatternItem({ pattern, index }: PatternItemProps) {
   const saveToHistory = useStore((state) => state.saveToHistory);
   const patterns = useStore((state) => state.patterns);
 
-  // Calculate pattern stats (handles both normal and advanced modes)
-  const notesPerBar = getNotesPerBarForPattern(pattern);
-  const drumPattern = parseTokens(pattern.drumPattern || '');
-  let patternNotes = 0;
-  let patternRests = 0;
-  let patternAccents = 0;
+  // Memoize expensive calculations
+  const { notesPerBar, patternNotes, patternRests, patternAccents, complexity, subdivisionText, patternSummary, patternLabel } = useMemo(() => {
+    const notesPerBar = getNotesPerBarForPattern(pattern);
+    const drumPattern = parseTokens(pattern.drumPattern || '');
+    let patternNotes = 0;
+    let patternRests = 0;
+    let patternAccents = 0;
 
-  // Count notes and rests based on actual notes per bar
-  for (let i = 0; i < notesPerBar; i++) {
-    const token = drumPattern[i % drumPattern.length];
-    if (token && token.toUpperCase() === 'R') {
-      patternRests++;
-    } else {
-      patternNotes++;
+    // Count notes and rests based on actual notes per bar
+    for (let i = 0; i < notesPerBar; i++) {
+      const token = drumPattern[i % drumPattern.length];
+      if (token && token.toUpperCase() === 'R') {
+        patternRests++;
+      } else {
+        patternNotes++;
+      }
     }
-  }
 
-  // Count accents from _presetAccents
-  patternAccents = (pattern._presetAccents && pattern._presetAccents.length > 0) ? pattern._presetAccents.length : 0;
+    // Count accents from _presetAccents
+    patternAccents = (pattern._presetAccents && pattern._presetAccents.length > 0) ? pattern._presetAccents.length : 0;
 
-  const complexity = calculatePatternComplexity(pattern);
-  const subdivisionText = getSubdivisionText(pattern.subdivision);
-  const voicingShort = pattern.drumPattern.replace(/\s+/g, '').toUpperCase();
-  const accentsText = patternAccents > 0 ? `${patternAccents}ac` : '';
-  const patternSummary = pattern._presetName || `${pattern.timeSignature} ${subdivisionText} ${voicingShort}${accentsText ? ' ' + accentsText : ''}`;
-  const patternLabel = pattern._presetName ? pattern._presetName : `Pattern ${index + 1}`;
+    const complexity = calculatePatternComplexity(pattern);
+    const subdivisionText = getSubdivisionText(pattern.subdivision);
+    const voicingShort = pattern.drumPattern.replace(/\s+/g, '').toUpperCase();
+    const accentsText = patternAccents > 0 ? `${patternAccents}ac` : '';
+    const patternSummary = pattern._presetName || `${pattern.timeSignature} ${subdivisionText} ${voicingShort}${accentsText ? ' ' + accentsText : ''}`;
+    const patternLabel = pattern._presetName ? pattern._presetName : `Pattern ${index + 1}`;
 
-  const handleToggle = () => {
-    setIsExpanded(!isExpanded);
-  };
+    return { notesPerBar, patternNotes, patternRests, patternAccents, complexity, subdivisionText, patternSummary, patternLabel };
+  }, [pattern, index]);
 
-  const handleRemove = () => {
+  const handleToggle = useCallback(() => {
+    setIsExpanded(prev => !prev);
+  }, []);
+
+  const handleRemove = useCallback(() => {
     if (confirm(`Are you sure you want to remove ${patternLabel}?`)) {
       removePattern(pattern.id);
       saveToHistory();
     }
-  };
+  }, [patternLabel, pattern.id, removePattern, saveToHistory]);
 
-  const handleDuplicate = () => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Enter or Space: Toggle expand/collapse
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleToggle();
+    }
+    // Delete: Remove pattern (when focused on header)
+    else if (e.key === 'Delete' || (e.key === 'Backspace' && !e.shiftKey)) {
+      const target = e.target as HTMLElement;
+      if (target.closest('.dpgen-pattern-header')) {
+        e.preventDefault();
+        handleRemove();
+      }
+    }
+    // Escape: Collapse if expanded
+    else if (e.key === 'Escape' && isExpanded) {
+      e.preventDefault();
+      setIsExpanded(false);
+    }
+  }, [handleToggle, handleRemove, isExpanded]);
+
+  const handleDuplicate = useCallback(() => {
     duplicatePattern(pattern.id);
     saveToHistory();
-  };
+  }, [pattern.id, duplicatePattern, saveToHistory]);
 
-  const handleDragStart = (e: React.DragEvent) => {
+  const handleDragStart = useCallback((e: React.DragEvent) => {
     if ((e.target as HTMLElement).closest('button, input, select')) {
       e.preventDefault();
       return;
@@ -82,23 +110,23 @@ export function PatternItem({ pattern, index }: PatternItemProps) {
     setDraggedPatternId(pattern.id);
     e.dataTransfer.setData('text/plain', pattern.id.toString());
     e.dataTransfer.effectAllowed = 'move';
-  };
+  }, [pattern.id, setDraggedPatternId]);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     setIsDragging(false);
     setDragOver(false);
     setDraggedPatternId(null);
-  };
+  }, [setDraggedPatternId]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (draggedPatternId && draggedPatternId !== pattern.id) {
       setDragOver(true);
     }
-  };
+  }, [draggedPatternId, pattern.id]);
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = e.clientX;
     const y = e.clientY;
@@ -106,9 +134,9 @@ export function PatternItem({ pattern, index }: PatternItemProps) {
     if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
       setDragOver(false);
     }
-  };
+  }, []);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(false);
@@ -124,7 +152,7 @@ export function PatternItem({ pattern, index }: PatternItemProps) {
       reorderPatterns(draggedIndex, targetIndex);
       saveToHistory();
     }
-  };
+  }, [draggedPatternId, pattern.id, patterns, reorderPatterns, saveToHistory]);
 
   return (
     <div
@@ -148,6 +176,12 @@ export function PatternItem({ pattern, index }: PatternItemProps) {
           gap: '0.75rem',
           padding: '1rem 1.25rem',
         }}
+        onClick={handleToggle}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-expanded={isExpanded}
+        aria-label={`${patternLabel}, ${isExpanded ? 'expanded' : 'collapsed'}. Press Enter to ${isExpanded ? 'collapse' : 'expand'}, Delete to remove.`}
       >
         <i
           className="fas fa-grip-vertical dpgen-pattern-drag-handle"
@@ -212,6 +246,54 @@ export function PatternItem({ pattern, index }: PatternItemProps) {
         </button>
         <button
           type="button"
+          className="dpgen-pattern-action"
+          onClick={() => {
+            const name = prompt('Enter a name for this template:');
+            if (!name) return;
+            
+            const description = prompt('Enter a description (optional):') || undefined;
+            const category = prompt('Enter a category (e.g., "Groove", "Fill", "Rudiment") (optional):') || undefined;
+            
+            // Save to library as template
+            if (typeof window !== 'undefined') {
+              try {
+                const saved = localStorage.getItem('dpgen_pattern_library');
+                const library = saved ? JSON.parse(saved) : [];
+                const difficulty = calculateDifficultyRating(pattern);
+                
+                const libraryItem = {
+                  id: `lib_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                  name,
+                  description,
+                  pattern: {
+                    ...pattern,
+                    _expanded: false,
+                  },
+                  difficulty: difficulty.score,
+                  level: difficulty.level,
+                  createdAt: Date.now(),
+                  tags: [],
+                  isTemplate: true,
+                  category: category,
+                };
+                
+                library.push(libraryItem);
+                localStorage.setItem('dpgen_pattern_library', JSON.stringify(library));
+                showToast(`Template "${name}" saved to library`, 'success');
+              } catch (e) {
+                console.error('Failed to save template:', e);
+                showToast('Failed to save template', 'error');
+              }
+            }
+          }}
+          aria-label="Save as template"
+          title="Save as template to library"
+          style={{ flexShrink: 0 }}
+        >
+          <i className="fas fa-bookmark" />
+        </button>
+        <button
+          type="button"
           className="dpgen-pattern-action dpgen-pattern-remove"
           onClick={handleRemove}
           aria-label="Remove pattern"
@@ -266,4 +348,23 @@ export function PatternItem({ pattern, index }: PatternItemProps) {
     </div>
   );
 }
+
+// Memoize component to prevent unnecessary re-renders
+export const PatternItem = React.memo(PatternItemComponent, (prevProps, nextProps) => {
+  // Only re-render if pattern data actually changed
+  return (
+    prevProps.pattern.id === nextProps.pattern.id &&
+    prevProps.pattern.timeSignature === nextProps.pattern.timeSignature &&
+    prevProps.pattern.subdivision === nextProps.pattern.subdivision &&
+    prevProps.pattern.drumPattern === nextProps.pattern.drumPattern &&
+    prevProps.pattern.stickingPattern === nextProps.pattern.stickingPattern &&
+    prevProps.pattern.repeat === nextProps.pattern.repeat &&
+    prevProps.pattern._presetAccents === nextProps.pattern._presetAccents &&
+    prevProps.pattern._advancedMode === nextProps.pattern._advancedMode &&
+    prevProps.pattern._perBeatSubdivisions === nextProps.pattern._perBeatSubdivisions &&
+    prevProps.pattern._perBeatVoicing === nextProps.pattern._perBeatVoicing &&
+    prevProps.pattern._perBeatSticking === nextProps.pattern._perBeatSticking &&
+    prevProps.index === nextProps.index
+  );
+});
 

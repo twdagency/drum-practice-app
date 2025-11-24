@@ -20,6 +20,10 @@ export interface PracticeHit {
   matched: boolean;
 }
 
+export interface MIDINoteMap {
+  [drumToken: string]: number; // Drum token (K, S, H, etc.) -> MIDI note number
+}
+
 export interface MIDIPracticeState {
   enabled: boolean;
   input: MIDIInput | null;
@@ -39,6 +43,7 @@ export interface MIDIPracticeState {
   showMissedNotes: boolean;
   latencyTestActive: boolean;
   latencyTestTimes: number[];
+  noteMap: MIDINoteMap; // Custom MIDI note mapping
 }
 
 export interface MicrophonePracticeState {

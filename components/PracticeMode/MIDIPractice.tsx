@@ -12,12 +12,14 @@ import { CONSTANTS } from '@/lib/utils/constants';
 import { MIDICalibration } from './MIDICalibration';
 import { parseNumberList } from '@/lib/utils/patternUtils';
 import { ExpectedNote } from '@/types';
+import { useToast } from '@/components/shared/Toast';
 
 interface MIDIPracticeProps {
   onClose: () => void;
 }
 
 export function MIDIPractice({ onClose }: MIDIPracticeProps) {
+  const { showToast } = useToast();
   const midiPractice = useStore((state) => state.midiPractice);
   const isPlaying = useStore((state) => state.isPlaying);
   const patterns = useStore((state) => state.patterns);
@@ -54,16 +56,6 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
   const [customTolerance, setCustomTolerance] = useState<number>(50);
   const [latencyAdjustment, setLatencyAdjustment] = useState<number>(0);
 
-  // Debug: Log device status
-  React.useEffect(() => {
-    console.log('MIDI Practice Status:', {
-      isSupported,
-      deviceCount: devices.length,
-      selectedDeviceId,
-      patternsCount: patterns.length,
-      devices: devices.map(d => ({ id: d.id, name: d.name })),
-    });
-  }, [isSupported, devices, selectedDeviceId, patterns.length]);
 
   // Load settings from store (only watch specific properties to avoid resetting when visual feedback changes)
   useEffect(() => {
@@ -187,28 +179,25 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
 
   // Start practice
   const handleStartPractice = () => {
-    console.log('[MIDI Practice] Start Practice clicked:', { selectedDeviceId, patternsLength: patterns.length });
-    
     if (!selectedDeviceId) {
-      alert('Please select a MIDI device first.');
+      showToast('Please select a MIDI device first.', 'error');
       return;
     }
 
     // Make sure device is selected and input is set
     if (!access) {
       console.error('[MIDI Practice] No MIDI access available');
-      alert('MIDI access not available. Please refresh and try again.');
+      showToast('MIDI access not available. Please refresh and try again.', 'error');
       return;
     }
     
     const input = access.inputs.get(selectedDeviceId);
     if (!input) {
       console.error('[MIDI Practice] Device not found:', selectedDeviceId);
-      alert('MIDI device not found. Please refresh the device list.');
+      showToast('MIDI device not found. Please refresh the device list.', 'error');
       return;
     }
     
-    console.log('[MIDI Practice] Setting MIDI input:', input.name, input.id);
     setMIDIInput(input);
 
     // Set tolerance window
@@ -222,23 +211,19 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
     setMIDILatencyAdjustment(latencyAdjustment);
 
     // Build expected notes immediately (like WordPress plugin - line 12759)
-    console.log('[MIDI Practice] Building expected notes from', patterns.length, 'patterns');
     const expectedNotes = buildExpectedNotes().map(note => ({
       ...note,
       matched: false
     }));
-    console.log('[MIDI Practice] Built expected notes:', expectedNotes.length, 'notes');
     setMIDIExpectedNotes(expectedNotes);
 
     if (expectedNotes.length === 0) {
-      alert('No notes found in pattern.');
+      showToast('No notes found in pattern.', 'error');
       return;
     }
 
     // Enable practice mode
-    console.log('[MIDI Practice] Enabling practice mode...');
     setMIDIPracticeEnabled(true);
-    console.log('[MIDI Practice] Practice mode enabled');
     
     // Close modal
     onClose();
@@ -677,7 +662,6 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('[MIDI Practice] Start Practice button clicked:', { selectedDeviceId, patternsLength: patterns.length, disabled: !selectedDeviceId });
                 handleStartPractice();
               }}
               disabled={!selectedDeviceId}
