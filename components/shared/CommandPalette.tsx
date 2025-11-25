@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
 import { useToast } from './Toast';
-import { generateRandomPattern } from '@/lib/utils/patternUtils';
+import { generateRandomPattern, createDefaultPattern } from '@/lib/utils/patternUtils';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -66,7 +66,9 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       shortcut: 'Ctrl+N',
       category: 'Patterns',
       action: () => {
-        addPatternRef.current();
+        const pattern = createDefaultPattern();
+        addPatternRef.current(pattern);
+        saveToHistoryRef.current();
         onCloseRef.current();
         showToastRef.current('Pattern added', 'success');
       },
