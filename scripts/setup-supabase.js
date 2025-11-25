@@ -36,8 +36,16 @@ try {
             (value.startsWith("'") && value.endsWith("'"))) {
           value = value.slice(1, -1);
         }
-        process.env.DATABASE_URL = value;
-        break;
+        // Remove any trailing comments
+        value = value.split('#')[0].trim();
+        // Ensure we don't have "DATABASE_URL=" in the value itself
+        if (value.startsWith('DATABASE_URL=')) {
+          value = value.replace(/^DATABASE_URL=\s*/, '');
+        }
+        if (value) {
+          process.env.DATABASE_URL = value;
+          break;
+        }
       }
     }
   }
@@ -46,7 +54,12 @@ try {
 }
 
 async function setupSupabase() {
-  const databaseUrl = process.env.DATABASE_URL;
+  let databaseUrl = process.env.DATABASE_URL;
+  
+  // Clean up the connection string if it includes "DATABASE_URL=" prefix
+  if (databaseUrl && databaseUrl.startsWith('DATABASE_URL=')) {
+    databaseUrl = databaseUrl.replace(/^DATABASE_URL=\s*/, '');
+  }
   
   if (!databaseUrl) {
     console.error('❌ DATABASE_URL not found!');
