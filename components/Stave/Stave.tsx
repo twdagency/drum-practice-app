@@ -189,11 +189,16 @@ export function Stave() {
         return;
       }
 
+      // Detect mobile screen size
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      
       // Calculate stave dimensions - make responsive to container width
       const containerElement = staveRef.current?.parentElement;
       const rawContainerWidth = containerElement?.clientWidth || window.innerWidth;
-      const containerPadding = 64; // Total padding (left + right margins)
-      const availableWidth = Math.max(400, rawContainerWidth - containerPadding); // Minimum 400px
+      const containerPadding = isMobile ? 32 : 64; // Reduced padding on mobile
+      const availableWidth = isMobile 
+        ? Math.max(280, rawContainerWidth - containerPadding) // Lower minimum on mobile
+        : Math.max(400, rawContainerWidth - containerPadding); // Desktop minimum
       const lineSpacing = 280;
       
       // Helper function to check if pattern has triple drags (lllR, rrrL)
@@ -207,6 +212,11 @@ export function Stave() {
       
       // Helper function to get bars per line based on subdivision and pattern
       const getBarsPerLine = (subdivision: number, stickingPattern?: string): number => {
+        // On mobile, always show 1 bar per line to ensure it fits
+        if (isMobile) {
+          return 1;
+        }
+        
         // If pattern has triple drags (lllR, rrrL) and subdivision is 8 or higher, force 1 bar per line
         if (stickingPattern && hasTripleDrags(stickingPattern) && subdivision >= 8) {
           return 1;
@@ -488,8 +498,8 @@ export function Stave() {
           const extraSpacing = hasPolyrhythmsInLine ? 100 : 0; // Extra space for second stave
           const staveY = lineIndex * (lineSpacing + extraSpacing) + 36;
         // Use full available width for each stave line
-        const leftMargin = 16; // Left padding for stave
-        const rightMargin = 16; // Right padding
+        const leftMargin = isMobile ? 8 : 16; // Reduced margins on mobile
+        const rightMargin = isMobile ? 8 : 16;
         const actualStaveWidth = staveWidth - leftMargin - rightMargin; // Full width minus margins
         const stave = new VF.Stave(leftMargin, staveY, actualStaveWidth);
 
