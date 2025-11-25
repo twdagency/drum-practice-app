@@ -45,7 +45,8 @@ const keyMap: Record<string, string> = {
   S: 'c/5', // Snare (space C - 3rd space from bottom, middle)
   K: 'f/4', // Kick (space F below middle - standard position)
   F: 'a/4', // Floor Tom (space A below middle - standard position)
-  H: 'g/5/x', // Hi-hat (space G with X note head - above top line)
+  H: 'g/5/x', // Hi-hat Closed (space G with X note head - above top line)
+  O: 'g/5/x', // Hi-hat Open (space G with X note head - same position as closed)
   // Single-letter codes (Ht and Mt normalize to these)
   I: 'e/5', // High Tom (I = inner/high tom) - normalized from "Ht"
   M: 'd/5', // Mid Tom (M = mid tom) - normalized from "Mt"
@@ -67,6 +68,7 @@ export function Stave() {
   const showGridLines = useStore((state) => state.showGridLines);
   const showMeasureNumbers = useStore((state) => state.showMeasureNumbers);
   const playbackPosition = useStore((state) => state.playbackPosition);
+  const highlightColors = useStore((state) => state.highlightColors);
   const showVisualMetronome = useStore((state) => state.showVisualMetronome);
   const scrollAnimationEnabled = useStore((state) => state.scrollAnimationEnabled);
   const midiPractice = useStore((state) => state.midiPractice);
@@ -107,6 +109,8 @@ export function Stave() {
         drumPattern: p.drumPattern,
         stickingPattern: p.stickingPattern,
         repeat: p.repeat,
+        leftFoot: p.leftFoot,
+        rightFoot: p.rightFoot,
         _advancedMode: p._advancedMode,
         _perBeatSubdivisions: p._perBeatSubdivisions,
         _perBeatVoicing: p._perBeatVoicing,
@@ -192,8 +196,22 @@ export function Stave() {
       const availableWidth = Math.max(400, rawContainerWidth - containerPadding); // Minimum 400px
       const lineSpacing = 280;
       
-      // Helper function to get bars per line based on subdivision
-      const getBarsPerLine = (subdivision: number): number => {
+      // Helper function to check if pattern has triple drags (lllR, rrrL)
+      const hasTripleDrags = (stickingPattern: string): boolean => {
+        if (!stickingPattern) return false;
+        // Check for triple drag patterns: lllR, rrrL, lllL, rrrR, etc.
+        // Match three lowercase letters (l or r) followed by uppercase R or L
+        // This matches patterns like "lllR", "rrrL", "lllL", "rrrR"
+        return /(lll|rrr)[RL]/i.test(stickingPattern);
+      };
+      
+      // Helper function to get bars per line based on subdivision and pattern
+      const getBarsPerLine = (subdivision: number, stickingPattern?: string): number => {
+        // If pattern has triple drags (lllR, rrrL) and subdivision is 8 or higher, force 1 bar per line
+        if (stickingPattern && hasTripleDrags(stickingPattern) && subdivision >= 8) {
+          return 1;
+        }
+        
         switch (subdivision) {
           case 4: return 4;   // Quarter notes: 4 bars
           case 8: return 3;   // Eighth notes: 3 bars
@@ -364,10 +382,19 @@ export function Stave() {
       
       allBarData.forEach((barData) => {
         const barSubdivision = barData.pattern.subdivision;
-        const barsPerLineForSubdivision = getBarsPerLine(barSubdivision);
+        const stickingPattern = barData.pattern.stickingPattern || '';
+        const barsPerLineForSubdivision = getBarsPerLine(barSubdivision, stickingPattern);
         
         // If this bar has a different subdivision, start a new line
         if (currentSubdivision !== null && currentSubdivision !== barSubdivision) {
+          lines.push(currentLine);
+          currentLine = [];
+          currentSubdivision = null;
+        }
+        
+        // If this bar has triple drags and subdivision >= 8, force it to its own line
+        const hasTripleDrag = hasTripleDrags(stickingPattern) && barSubdivision >= 8;
+        if (hasTripleDrag && currentLine.length > 0) {
           lines.push(currentLine);
           currentLine = [];
           currentSubdivision = null;
@@ -1875,14 +1902,14 @@ export function Stave() {
                 const voice = note.group.getAttribute('data-voice') || note.voice;
                 const isPolyrhythmNote = voice === 'left' || voice === 'right' || voice === 'both';
                 
-                // Determine color from voice
-                let highlightColor = '#f97316'; // Default orange
+                // Determine color from voice - use store colors
+                let highlightColor = highlightColors.default; // Default/orange for both
                 if (voice === 'right') {
-                  highlightColor = '#3b82f6'; // Blue for right hand
+                  highlightColor = highlightColors.right; // Blue for right hand
                 } else if (voice === 'left') {
-                  highlightColor = '#10b981'; // Green for left hand
+                  highlightColor = highlightColors.left; // Green for left hand
                 } else if (voice === 'both') {
-                  highlightColor = '#f97316'; // Orange for both
+                  highlightColor = highlightColors.default; // Default for both
                 }
                 
                 // Set color on note shapes
@@ -2026,15 +2053,15 @@ export function Stave() {
       const voice = targetGroup.getAttribute('data-voice');
       const isPolyrhythmNote = voice === 'left' || voice === 'right' || voice === 'both';
       
-      // Use different colors for polyrhythm notes: blue for right, green for left, orange for both
-      let highlightColor = '#f97316'; // Default orange
+      // Use different colors for polyrhythm notes - use store colors
+      let highlightColor = highlightColors.default; // Default/orange
       if (isPolyrhythmNote) {
         if (voice === 'right') {
-          highlightColor = '#3b82f6'; // Blue for right hand
+          highlightColor = highlightColors.right; // Blue for right hand
         } else if (voice === 'left') {
-          highlightColor = '#10b981'; // Green for left hand
+          highlightColor = highlightColors.left; // Green for left hand
         } else if (voice === 'both') {
-          highlightColor = '#f97316'; // Orange for both (aligned notes)
+          highlightColor = highlightColors.default; // Default for both (aligned notes)
         }
       }
       
@@ -2056,8 +2083,12 @@ export function Stave() {
         const b = parseInt(hex.substr(4, 2), 16);
         groupEl.style.filter = `drop-shadow(0 0 6px rgba(${r}, ${g}, ${b}, 0.6))`;
       } else if (groupEl) {
-        // Default orange for regular notes
-        groupEl.style.filter = 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.6))';
+        // Default color for regular notes - use store color
+        const hex = highlightColors.default.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        groupEl.style.filter = `drop-shadow(0 0 6px rgba(${r}, ${g}, ${b}, 0.6))`;
       }
       
       // Find and highlight the annotation (sticking letter) separately

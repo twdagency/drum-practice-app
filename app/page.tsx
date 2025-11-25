@@ -13,15 +13,19 @@ import { usePlayback } from '@/hooks/usePlayback';
 import { useMIDIPractice } from '@/hooks/useMIDIPractice';
 import { useMicrophonePractice } from '@/hooks/useMicrophonePractice';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { usePracticeStats } from '@/hooks/usePracticeStats';
 import { PlaybackProgress } from '@/components/shared/PlaybackProgress';
 import { useStore } from '@/store/useStore';
 import { PracticeStats } from '@/components/PracticeMode/PracticeStats';
 import { PatternLibrary } from '@/components/PracticeMode/PatternLibrary';
 import { AutoSyncWrapper } from '@/components/shared/AutoSyncWrapper';
 import { ProgressTrackingWrapper } from '@/components/shared/ProgressTrackingWrapper';
+import { QuickControlPanel } from '@/components/shared/QuickControlPanel';
+import { AuthButton } from '@/components/auth/AuthButton';
 
 export default function Home() {
   const darkMode = useStore((state) => state.darkMode);
+  const polyrhythmPatterns = useStore((state) => state.polyrhythmPatterns);
   const setShowVisualMetronome = useStore((state) => state.setShowVisualMetronome);
   const setShowPolyrhythmShapes = useStore((state) => state.setShowPolyrhythmShapes);
   const setShowGridLines = useStore((state) => state.setShowGridLines);
@@ -177,19 +181,29 @@ export default function Home() {
   // Initialize microphone practice hook (must be in a component that stays mounted)
   useMicrophonePractice();
   
+  // Track practice statistics
+  usePracticeStats();
+  
   // Initialize progress tracking (ToastProvider is now in root layout)
 
   return (
     <>
       <AutoSyncWrapper />
       <ProgressTrackingWrapper />
+      {/* Auth Button - Top Right */}
+      {/* Temporarily hidden - Sign in/Sign up buttons */}
+      {/* <div
+        style={{
+          position: 'fixed',
+          top: '1rem',
+          right: '1rem',
+          zIndex: 1000,
+        }}
+      >
+        <AuthButton />
+      </div> */}
       <main className="min-h-screen">
         <div className="container mx-auto p-4">
-        <h1 className="text-4xl font-bold mb-4">Drum Practice Generator</h1>
-        <p className="text-lg text-gray-600 mb-6">
-          Generate and practice drumming patterns with real-time feedback
-        </p>
-        
         {/* Toolbar Component */}
         <Toolbar />
         
@@ -201,17 +215,19 @@ export default function Home() {
               <PatternList />
             </div>
             
+            {/* Polyrhythm List Component - Only show if there are polyrhythm patterns */}
+            {polyrhythmPatterns && polyrhythmPatterns.length > 0 && (
+              <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+                <h2 className="text-2xl font-semibold mb-4">Polyrhythms</h2>
+                <PolyrhythmList />
+              </div>
+            )}
+            
             {/* Practice Statistics */}
             <PracticeStats />
             
             {/* Pattern Library */}
             <PatternLibrary />
-            
-            {/* Polyrhythm List Component */}
-            <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-              <h2 className="text-2xl font-semibold mb-4">Polyrhythms</h2>
-              <PolyrhythmList />
-            </div>
           </div>
           
           {/* Stave Component */}

@@ -108,6 +108,38 @@ body {
   color: white;
 }
 
+/* Record button styling - red circle like a record button */
+.dpgen-record-button {
+  background: #ef4444 !important;
+  color: white !important;
+  border-radius: 50% !important;
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
+}
+
+.dpgen-record-button:hover {
+  background: #dc2626 !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+  transform: scale(1.05) !important;
+}
+
+.dpgen-record-button:disabled {
+  background: #9ca3af !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+.dpgen-record-button i {
+  font-size: 0.5rem !important;
+  color: white !important;
+}
+
 .dpgen-toolbar__button--small {
   padding: 0.375rem 0.5rem;
   font-size: 0.75rem;
@@ -141,6 +173,8 @@ body {
 }
 
 .dpgen-toolbar__menu {
+  animation: modalEnter 0.2s ease-out;
+  transform-origin: top center;
   position: absolute;
   top: calc(100% + 0.5rem);
   left: 0;
@@ -287,6 +321,32 @@ body {
 .dpgen-pattern-header:focus-visible {
   outline: 2px solid var(--dpgen-primary);
   outline-offset: -2px;
+}
+
+/* Enhanced focus indicators for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--dpgen-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip to main content link for screen readers */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+}
+
+.skip-to-main:focus {
+  left: 0;
+  top: 0;
+  padding: 1rem;
+  background: var(--dpgen-primary);
+  color: white;
+  text-decoration: none;
 }
 
 .dpgen-pattern-content {
@@ -562,15 +622,15 @@ textarea:focus-visible {
 
 @keyframes noteHighlight {
   0% {
-    transform: scale(1);
+    transform: translateY(0);
     filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.4));
   }
   50% {
-    transform: scale(1.05);
+    transform: translateY(-2px);
     filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.8));
   }
   100% {
-    transform: scale(1);
+    transform: translateY(0);
     filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.6));
   }
 }
@@ -1487,5 +1547,83 @@ tspan.dpgen-annotation--active.dpgen-annotation--right {
   display: inline-block;
   position: relative;
   overflow: hidden;
+}
+
+/* Pulse animation for recording indicator */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+}
+
+/* Button animations */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes buttonPress {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Pattern animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.dpgen-pattern-item {
+  animation: slideIn 0.3s ease-out;
+}
+
+.dpgen-pattern-item.dpgen-pattern-removing {
+  animation: fadeOut 0.2s ease-out;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 

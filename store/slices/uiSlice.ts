@@ -23,6 +23,15 @@ const loadPersistedUISettings = () => {
       window.localStorage.setItem('dpgen_ui_settings', JSON.stringify(parsed));
     }
     
+    // Ensure highlightColors has all required properties
+    if (parsed.highlightColors) {
+      parsed.highlightColors = {
+        default: parsed.highlightColors.default || '#f97316',
+        right: parsed.highlightColors.right || '#3b82f6',
+        left: parsed.highlightColors.left || '#10b981',
+      };
+    }
+    
     return parsed;
   } catch (e) {
     console.error('Failed to load persisted UI settings:', e);
@@ -57,6 +66,12 @@ export interface UISlice {
   polyrhythmDisplayMode: 'stacked' | 'two-staves'; // How to display polyrhythms on stave
   polyrhythmClickMode: 'both' | 'right-only' | 'left-only' | 'metronome-only' | 'none'; // Which clicks to play for polyrhythms
   practicePadMode: boolean; // When enabled, voicing pattern always displays as "S"
+  patternViewMode: 'list' | 'grid' | 'compact'; // Pattern list view mode
+  highlightColors: {
+    default: string; // Default/orange color for both hands
+    right: string; // Blue color for right hand
+    left: string; // Green color for left hand
+  };
 
   // Actions
   setIsFullscreen: (isFullscreen: boolean) => void;
@@ -72,6 +87,8 @@ export interface UISlice {
   setPolyrhythmDisplayMode: (mode: 'stacked' | 'two-staves' | 'separate-positions') => void;
   setPolyrhythmClickMode: (mode: 'both' | 'right-only' | 'left-only' | 'metronome-only' | 'none') => void;
   setPracticePadMode: (enabled: boolean) => void;
+  setPatternViewMode: (mode: 'list' | 'grid' | 'compact') => void;
+  setHighlightColor: (type: 'default' | 'right' | 'left', color: string) => void;
 }
 
 export const createUISlice: StateCreator<UISlice> = (set) => ({
@@ -88,6 +105,12 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
   polyrhythmDisplayMode: 'stacked',
   polyrhythmClickMode: 'both', // Default: play clicks for both hands
   practicePadMode: false,
+  patternViewMode: 'list', // Default to list view
+  highlightColors: {
+    default: '#f97316', // Orange
+    right: '#3b82f6', // Blue
+    left: '#10b981', // Green
+  },
 
   // Actions - save to localStorage when settings change
   setIsFullscreen: (isFullscreen) => {
@@ -158,6 +181,17 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
   setPracticePadMode: (enabled) => {
     set({ practicePadMode: enabled });
     saveUISettings({ practicePadMode: enabled });
+  },
+  setPatternViewMode: (mode) => {
+    set({ patternViewMode: mode });
+    saveUISettings({ patternViewMode: mode });
+  },
+  setHighlightColor: (type, color) => {
+    set((state) => {
+      const newColors = { ...state.highlightColors, [type]: color };
+      saveUISettings({ highlightColors: newColors });
+      return { highlightColors: newColors };
+    });
   },
 });
 

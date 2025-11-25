@@ -49,7 +49,14 @@ export function ToolbarDropdown({ buttonIcon, buttonTitle, children, controlledO
         <i className={buttonIcon} />
       </button>
       {isOpen && (
-        <div className="dpgen-toolbar__menu" style={{ display: 'block' }}>
+        <div 
+          className="dpgen-toolbar__menu" 
+          style={{ 
+            display: 'block',
+            animation: 'modalEnter 0.2s ease-out',
+            transformOrigin: 'top center',
+          }}
+        >
           {children}
         </div>
       )}

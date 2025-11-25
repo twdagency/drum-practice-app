@@ -137,6 +137,9 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
         _perBeatSubdivisions: perBeatSubdivisions,
         _perBeatVoicing: perBeatVoicing,
         _perBeatSticking: perBeatSticking,
+        // Preserve foot settings
+        leftFoot: pattern.leftFoot,
+        rightFoot: pattern.rightFoot,
       });
     } else {
       // Disable advanced mode, combine per-beat patterns back into single patterns
@@ -150,6 +153,9 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
         _perBeatSticking: undefined,
         drumPattern: combinedVoicing,
         stickingPattern: combinedSticking,
+        // Preserve foot settings
+        leftFoot: pattern.leftFoot,
+        rightFoot: pattern.rightFoot,
       });
     }
     
@@ -723,7 +729,12 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
       <CollapsibleSection title="Voicing & Sticking" icon="fas fa-drum" defaultExpanded={true}>
         {/* Voicing Pattern */}
         <div className="dpgen-field">
-        <label className="dpgen-label">Voicing Pattern</label>
+        <label className="dpgen-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          Voicing Pattern
+          <Tooltip content="S = Snare, K = Kick, Ht = High Tom, Mt = Mid Tom, F = Floor, H = Hi-hat, - = Rest. Use + for simultaneous notes (e.g., 'S+K' for snare+kick together). Use parentheses for ghost notes (e.g., '(S)' for ghost snare). Examples: 'S K S K' or 'S+K H+K S+K H+K' or 'Ht Mt S K' or 'S (S) S (S)'">
+            <i className="fas fa-info-circle" style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', cursor: 'help' }} />
+          </Tooltip>
+        </label>
         {!pattern._advancedMode ? (
           <>
             <div className="dpgen-input-group">
@@ -746,9 +757,6 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
                 </button>
               </Tooltip>
             </div>
-            <p className="dpgen-hint">
-              S = Snare, K = Kick, Ht = High Tom, Mt = Mid Tom, F = Floor, H = Hi-hat, - = Rest. Use + for simultaneous notes (e.g., "S+K" for snare+kick together). Use parentheses for ghost notes (e.g., "(S)" for ghost snare). Examples: "S K S K" or "S+K H+K S+K H+K" or "Ht Mt S K" or "S (S) S (S)"
-            </p>
           </>
         ) : (
           <PerBeatVoicingEditor
@@ -763,7 +771,12 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
 
       {/* Sticking Pattern */}
       <div className="dpgen-field">
-        <label className="dpgen-label">Sticking Pattern</label>
+        <label className="dpgen-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          Sticking Pattern
+          <Tooltip content="R = Right hand, L = Left hand, K = Kick (only when voicing has K), - = Rest. lR = Left flam (left grace note, right main), rL = Right flam (right grace note, left main). llR = Left drag (two left grace notes, right main), rrL = Right drag (two right grace notes, left main). lllR = Left ruff (three left grace notes, right main), rrrL = Right ruff (three right grace notes, left main). Patterns can span multiple bars and will continue across bars.">
+            <i className="fas fa-info-circle" style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', cursor: 'help' }} />
+          </Tooltip>
+        </label>
         {!pattern._advancedMode ? (
           <>
             <div style={{ marginBottom: '0.5rem' }}>
@@ -826,9 +839,6 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
                 </button>
               </Tooltip>
             </div>
-            <p className="dpgen-hint">
-              R = Right hand, L = Left hand, K = Kick (only when voicing has K), - = Rest. lR = Left flam (left grace note, right main), rL = Right flam (right grace note, left main). llR = Left drag (two left grace notes, right main), rrL = Right drag (two right grace notes, left main). lllR = Left ruff (three left grace notes, right main), rrrL = Right ruff (three right grace notes, left main). Patterns can span multiple bars and will continue across bars.
-            </p>
           </>
         ) : (
           <PerBeatStickingEditor
@@ -847,21 +857,43 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
       <CollapsibleSection title="Advanced Options" icon="fas fa-sliders-h" defaultExpanded={false}>
         {/* Left/Right Foot */}
         <div className="dpgen-field" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', cursor: 'pointer', width: '100%' }}>
-            <span style={{ flex: '1', minWidth: '100px' }}>
+          <label 
+            className="dpgen-toggle-switch" 
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', cursor: 'pointer', width: '100%' }}
+          >
+            <span style={{ flex: 1, minWidth: '100px' }}>
               <span style={{ display: 'block', fontWeight: 500 }}>Left Foot</span>
               <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>(Pedal Hi-Hat)</span>
             </span>
-            <input type="checkbox" checked={pattern.leftFoot} onChange={handleLeftFootChange} style={{ order: 2 }} />
-            <span className="dpgen-toggle-slider" style={{ order: 2, flexShrink: 0 }} />
+            <input 
+              type="checkbox" 
+              checked={pattern.leftFoot || false} 
+              onChange={(e) => {
+                e.stopPropagation();
+                updatePattern(pattern.id, { leftFoot: e.target.checked });
+                saveToHistory();
+              }}
+            />
+            <span className="dpgen-toggle-slider" />
           </label>
-          <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', cursor: 'pointer', width: '100%' }}>
-            <span style={{ flex: '1', minWidth: '100px' }}>
+          <label 
+            className="dpgen-toggle-switch" 
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', cursor: 'pointer', width: '100%' }}
+          >
+            <span style={{ flex: 1, minWidth: '100px' }}>
               <span style={{ display: 'block', fontWeight: 500 }}>Right Foot</span>
               <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>(Kick)</span>
             </span>
-            <input type="checkbox" checked={pattern.rightFoot} onChange={handleRightFootChange} style={{ order: 2 }} />
-            <span className="dpgen-toggle-slider" style={{ order: 2, flexShrink: 0 }} />
+            <input 
+              type="checkbox" 
+              checked={pattern.rightFoot || false} 
+              onChange={(e) => {
+                e.stopPropagation();
+                updatePattern(pattern.id, { rightFoot: e.target.checked });
+                saveToHistory();
+              }}
+            />
+            <span className="dpgen-toggle-slider" />
           </label>
         </div>
       </CollapsibleSection>

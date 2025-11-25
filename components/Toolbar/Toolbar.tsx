@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import { ToolbarButton } from '../shared/ToolbarButton';
 import { ToolbarGroup } from '../shared/ToolbarGroup';
@@ -13,6 +13,9 @@ import { ToolbarDivider } from '../shared/ToolbarDivider';
 import { ToolbarDropdown } from '../shared/ToolbarDropdown';
 import { Tooltip } from '../shared/Tooltip';
 import { KeyboardShortcutsModal } from '../shared/KeyboardShortcutsModal';
+import { HelpModal } from '../shared/HelpModal';
+import { QuickControlPanel } from '../shared/QuickControlPanel';
+import { CommandPalette } from '../shared/CommandPalette';
 import { useToast } from '../shared/Toast';
 import { createDefaultPattern, generateRandomPattern, randomizePattern } from '@/lib/utils/patternUtils';
 import { MIDIPractice } from '../PracticeMode/MIDIPractice';
@@ -27,7 +30,6 @@ import { PlaybackSettingsModal } from '../PracticeMode/PlaybackSettingsModal';
 import { ApiSyncSettingsModal } from '../PracticeMode/ApiSyncSettingsModal';
 import { MIDIRecording } from '../PracticeMode/MIDIRecording';
 import { MIDIMappingEditor } from '../PracticeMode/MIDIMappingEditor';
-import { AuthButton } from '../auth/AuthButton';
 import { usePresets } from '@/hooks/usePresets';
 import { parseTimeSignature, buildAccentIndices, parseNumberList } from '@/lib/utils/patternUtils';
 import { exportPDF, exportPNG, exportSVG, exportMIDI, exportPatternCollection, importPatternCollection, sharePatternURL } from '@/lib/utils/exportUtils';
@@ -56,6 +58,8 @@ export function Toolbar() {
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [tapTempoMessage, setTapTempoMessage] = useState<string | null>(null);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [apiSyncEnabled, setApiSyncEnabled] = useState(false);
   
   // Load presets for the dropdown
@@ -91,6 +95,29 @@ export function Toolbar() {
       setSettingsDropdownOpen(false);
     }
   }, [showAudioSettings, showPlaybackSettings, showApiSyncSettings, showMIDIMapping]);
+
+  // Command Palette shortcut (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable ||
+        (target.closest('input') || target.closest('textarea'))
+      ) {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   
   // Store state and actions
   const bpm = useStore((state) => state.bpm);
@@ -129,7 +156,6 @@ export function Toolbar() {
   const clearMIDIRecordingNotes = useStore((state) => state.clearMIDIRecordingNotes);
   const addMIDIRecordingNote = useStore((state) => state.addMIDIRecordingNote);
   const setMIDIRecordingTimeSignature = useStore((state) => state.setMIDIRecordingTimeSignature);
-  const setMIDIRecordingSubdivision = useStore((state) => state.setMIDIRecordingSubdivision);
   const setMIDIRecordingCountInEnabled = useStore((state) => state.setMIDIRecordingCountInEnabled);
   const setMIDIRecordingCountInBeats = useStore((state) => state.setMIDIRecordingCountInBeats);
   const setMIDIRecordingInput = useStore((state) => state.setMIDIRecordingInput);
@@ -271,6 +297,10 @@ export function Toolbar() {
     }
   }, [patterns, practicePadMode, updatePattern, saveToHistory, showToast]);
 
+  // Auto-stop timer ref for toolbar recording
+  const toolbarRecordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const toolbarRecordingStartTimeRef = useRef<number | null>(null);
+
   // MIDI Recording handlers
   const handleStartMIDIRecording = async () => {
     if (!midiRecording.input) {
@@ -286,7 +316,6 @@ export function Toolbar() {
                 setMIDIRecordingInput(input);
                 // Load settings
                 setMIDIRecordingTimeSignature(parsed.timeSignature || '4/4');
-                setMIDIRecordingSubdivision(parsed.subdivision || 16);
                 setMIDIRecordingCountInEnabled(parsed.countInEnabled !== false);
                 setMIDIRecordingCountInBeats(parsed.countInBeats || 4);
               }
@@ -304,10 +333,27 @@ export function Toolbar() {
       }
     }
     
-    // Get settings for count-in
+    // Get settings for count-in and bars to record
     const countInEnabled = midiRecording.countInEnabled !== false;
     const countInBeats = midiRecording.countInBeats || 4;
     const metronomeEnabled = midiRecording.metronomeEnabled !== false;
+    const timeSignature = midiRecording.timeSignature || '4/4';
+    
+    // Get barsToRecord from localStorage
+    let barsToRecord: number | null = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem('dpgen_midi_recording_settings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.barsToRecord !== undefined) {
+            barsToRecord = parsed.barsToRecord;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load barsToRecord:', e);
+      }
+    }
     
     // Start recording with count-in if enabled
     if (countInEnabled) {
@@ -317,21 +363,88 @@ export function Toolbar() {
         () => {
           // Count-in complete, start actual recording
           if (metronomeEnabled) {
-            startMetronome(bpm);
+            // Calculate total beats for metronome based on bars to record
+            const [numerator] = timeSignature.split('/').map(Number);
+            const beatsPerBar = numerator;
+            const totalBeats = barsToRecord !== null ? barsToRecord * beatsPerBar : undefined;
+            startMetronome(bpm, undefined, totalBeats);
           }
           startMIDIRecordingHook(midiRecording.input!);
+          
+          // Set up auto-stop timer if barsToRecord is set
+          if (barsToRecord !== null) {
+            toolbarRecordingStartTimeRef.current = performance.now();
+            const [numerator, denominator] = timeSignature.split('/').map(Number);
+            const beatsPerBar = numerator;
+            const msPerBeat = 60000 / bpm;
+            const msPerBar = msPerBeat * beatsPerBar;
+            const totalMs = barsToRecord * msPerBar;
+            
+            toolbarRecordingTimerRef.current = setInterval(() => {
+              if (toolbarRecordingStartTimeRef.current) {
+                const elapsedMs = performance.now() - toolbarRecordingStartTimeRef.current;
+                const currentState = useStore.getState().midiRecording;
+                
+                if (elapsedMs >= totalMs && currentState.enabled) {
+                  console.log(`[Toolbar] Auto-stopping after ${barsToRecord} bars (${totalMs.toFixed(0)}ms elapsed)`);
+                  if (toolbarRecordingTimerRef.current) {
+                    clearInterval(toolbarRecordingTimerRef.current);
+                    toolbarRecordingTimerRef.current = null;
+                  }
+                  handleStopMIDIRecording();
+                }
+              }
+            }, 50);
+          }
         },
         undefined // No beat change callback for toolbar
       );
     } else {
       if (metronomeEnabled) {
-        startMetronome(bpm);
+        // Calculate total beats for metronome based on bars to record
+        const [numerator] = timeSignature.split('/').map(Number);
+        const beatsPerBar = numerator;
+        const totalBeats = barsToRecord !== null ? barsToRecord * beatsPerBar : undefined;
+        startMetronome(bpm, undefined, totalBeats);
       }
       await startMIDIRecordingHook(midiRecording.input);
+      
+      // Set up auto-stop timer if barsToRecord is set
+      if (barsToRecord !== null) {
+        toolbarRecordingStartTimeRef.current = performance.now();
+        const [numerator, denominator] = timeSignature.split('/').map(Number);
+        const beatsPerBar = numerator;
+        const msPerBeat = 60000 / bpm;
+        const msPerBar = msPerBeat * beatsPerBar;
+        const totalMs = barsToRecord * msPerBar;
+        
+        toolbarRecordingTimerRef.current = setInterval(() => {
+          if (toolbarRecordingStartTimeRef.current) {
+            const elapsedMs = performance.now() - toolbarRecordingStartTimeRef.current;
+            const currentState = useStore.getState().midiRecording;
+            
+            if (elapsedMs >= totalMs && currentState.enabled) {
+              console.log(`[Toolbar] Auto-stopping after ${barsToRecord} bars (${totalMs.toFixed(0)}ms elapsed)`);
+              if (toolbarRecordingTimerRef.current) {
+                clearInterval(toolbarRecordingTimerRef.current);
+                toolbarRecordingTimerRef.current = null;
+              }
+              handleStopMIDIRecording();
+            }
+          }
+        }, 50);
+      }
     }
   };
 
   const handleStopMIDIRecording = () => {
+    // Clear auto-stop timer if active
+    if (toolbarRecordingTimerRef.current) {
+      clearInterval(toolbarRecordingTimerRef.current);
+      toolbarRecordingTimerRef.current = null;
+    }
+    toolbarRecordingStartTimeRef.current = null;
+    
     // Stop count-in and metronome
     stopCountIn();
     stopMetronome();
@@ -339,26 +452,43 @@ export function Toolbar() {
     const recordedNotes = stopMIDIRecordingHook();
     
     if (recordedNotes && recordedNotes.length > 0) {
-      // Get settings for conversion
+      // Get settings for conversion (subdivision will be auto-detected)
       const timeSignature = midiRecording.timeSignature || '4/4';
-      const subdivision = midiRecording.subdivision || 16;
       
-      const patterns = convertMIDIRecordingToPattern(recordedNotes, timeSignature, subdivision, bpm);
+      // Get barsToRecord from localStorage if available
+      let barsToRecord: number | undefined = undefined;
+      if (typeof window !== 'undefined') {
+        try {
+          const saved = window.localStorage.getItem('dpgen_midi_recording_settings');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.barsToRecord !== undefined && parsed.barsToRecord !== null) {
+              barsToRecord = parsed.barsToRecord;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load barsToRecord:', e);
+        }
+      }
+      
+      // Get custom MIDI note map from store
+      const midiNoteMap = useStore.getState().midiPractice.noteMap;
+      
+      const patterns = convertMIDIRecordingToPattern(recordedNotes, timeSignature, undefined, bpm, midiNoteMap, barsToRecord);
       
       if (patterns.length > 0) {
-        // Replace all patterns with new ones
-        clearPatterns();
+        // Add new patterns to existing ones (don't replace)
         patterns.forEach(pattern => {
           addPattern(pattern);
         });
         saveToHistory();
         
-        alert(`${patterns.length} pattern${patterns.length > 1 ? 's' : ''} created from ${recordedNotes.length} MIDI notes!`);
+        showToast(`${patterns.length} pattern${patterns.length > 1 ? 's' : ''} created from ${recordedNotes.length} MIDI notes!`, 'success');
       } else {
-        alert('No patterns could be created from the recording.');
+        showToast('No patterns could be created from the recording.', 'error');
       }
     } else {
-      alert('No notes recorded.');
+      showToast('No notes recorded.', 'error');
     }
   };
 
@@ -390,6 +520,15 @@ export function Toolbar() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [midiRecording.enabled, midiRecording.input, isPlaying, bpm]);
+  
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (toolbarRecordingTimerRef.current) {
+        clearInterval(toolbarRecordingTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleLoadPreset = (presetId: string) => {
     const preset = presets.find(p => p.id === presetId);
@@ -709,7 +848,13 @@ export function Toolbar() {
             <i className="fas fa-folder" /> Collections
           </button>
           <div className="dpgen-toolbar__menu-divider" />
-          <button type="button" className="dpgen-toolbar__menu-item">
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item"
+            onClick={() => {
+              showToast('Daily Challenges coming soon!', 'info');
+            }}
+          >
             <i className="fas fa-trophy" /> Daily Challenges
           </button>
         </ToolbarDropdown>
@@ -817,6 +962,7 @@ export function Toolbar() {
             icon="fas fa-circle"
             variant="primary"
             disabled={!midiRecording.input}
+            className="dpgen-record-button"
           />
         )}
       </ToolbarGroup>
@@ -1057,11 +1203,13 @@ export function Toolbar() {
             icon="fas fa-keyboard"
           />
         </Tooltip>
-      </ToolbarGroup>
-
-      {/* Authentication */}
-      <ToolbarGroup>
-        <AuthButton />
+        <Tooltip content="Help & Instructions">
+          <ToolbarButton
+            onClick={() => setShowHelp(true)}
+            title="Help & Instructions"
+            icon="fas fa-question-circle"
+          />
+        </Tooltip>
       </ToolbarGroup>
       
       {/* MIDI Practice Modal */}
@@ -1131,6 +1279,26 @@ export function Toolbar() {
         isOpen={showKeyboardShortcuts}
         onClose={() => setShowKeyboardShortcuts(false)}
       />
+
+      {/* Help Modal */}
+      <HelpModal
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+      />
+
+      {/* Quick Control Panel */}
+      <QuickControlPanel
+        onOpenAudioSettings={() => setShowAudioSettings(true)}
+        onOpenPlaybackSettings={() => setShowPlaybackSettings(true)}
+      />
+
+      {/* Command Palette */}
+      {showCommandPalette && (
+        <CommandPalette
+          isOpen={showCommandPalette}
+          onClose={() => setShowCommandPalette(false)}
+        />
+      )}
     </div>
   );
 }

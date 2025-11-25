@@ -112,14 +112,14 @@ const persisted = loadPersistedSettings();
 
 // Default General MIDI drum map (channel 10, note numbers)
 const DEFAULT_MIDI_NOTE_MAP: MIDINoteMap = {
-  K: 36,  // Kick (C1)
-  S: 38,  // Snare (D1)
-  H: 42,  // Hi-hat closed (F#1)
-  'H+': 46, // Hi-hat open (A#1)
-  T: 47,  // Low-Mid Tom (B1)
-  Ht: 48, // High Tom (C2)
-  Mt: 45, // Mid Tom (A1)
-  F: 41,  // Low Tom (F1)
+  K: 36,  // Kick (C2)
+  S: 38,  // Snare (D2)
+  H: 42,  // Hi-hat closed (F#2)
+  O: 46,  // Hi-hat open (B2)
+  F: 41,  // Floor Tom (F2)
+  I: 48,  // High Tom (C3)
+  M: 47,  // Mid Tom (B2) - also supports 45
+  T: 48,  // Tom (Legacy - maps to High Tom)
   R: 0,   // Rest (no note)
 };
 
@@ -203,12 +203,36 @@ const initialPracticeGoals: PracticeGoals = {
   practiceTimeGoal: null,
 };
 
-export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => ({
+export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
+  // Load practice stats from localStorage if available
+  let loadedPracticeStats = initialPracticeStats;
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = window.localStorage.getItem('dpgen_practice_stats');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Merge with initial to ensure all fields exist
+        loadedPracticeStats = { ...initialPracticeStats, ...parsed };
+        // Ensure sessions array exists
+        if (!Array.isArray(loadedPracticeStats.sessions)) {
+          loadedPracticeStats.sessions = [];
+        }
+        // Ensure patternsPracticed object exists
+        if (!loadedPracticeStats.patternsPracticed || typeof loadedPracticeStats.patternsPracticed !== 'object') {
+          loadedPracticeStats.patternsPracticed = {};
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load practice stats from localStorage:', e);
+    }
+  }
+  
+  return {
   // Initial state
   midiPractice: { ...initialMIDIPractice },
   microphonePractice: { ...initialMicrophonePractice },
   midiRecording: { ...initialMIDIRecording },
-  practiceStats: { ...initialPracticeStats },
+  practiceStats: loadedPracticeStats,
   practiceGoals: { ...initialPracticeGoals },
   practiceStartTime: null,
 
@@ -732,5 +756,6 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => ({
     set((state) => ({
       practiceGoals: { ...state.practiceGoals, ...goals },
     })),
-});
+  };
+};
 

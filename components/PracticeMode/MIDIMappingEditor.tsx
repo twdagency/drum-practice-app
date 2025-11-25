@@ -17,24 +17,24 @@ const DRUM_LABELS: Record<string, string> = {
   K: 'Kick',
   S: 'Snare',
   H: 'Hi-hat (Closed)',
-  'H+': 'Hi-hat (Open)',
-  T: 'Tom',
-  Ht: 'High Tom',
-  Mt: 'Mid Tom',
+  O: 'Hi-hat (Open)',
   F: 'Floor Tom',
+  I: 'High Tom',
+  M: 'Mid Tom',
+  T: 'Tom (Legacy)',
   R: 'Rest',
 };
 
 const DEFAULT_MAP: MIDINoteMap = {
-  K: 36,
-  S: 38,
-  H: 42,
-  'H+': 46,
-  T: 47,
-  Ht: 48,  // High Tom (C2)
-  Mt: 45,  // Mid Tom (A1)
-  F: 41,
-  R: 0,
+  K: 36,  // Kick (C2)
+  S: 38,  // Snare (D2)
+  H: 42,  // Hi-hat Closed (F#2)
+  O: 46,  // Hi-hat Open (B2)
+  F: 41,  // Floor Tom (F2)
+  I: 48,  // High Tom (C3)
+  M: 47,  // Mid Tom (B2) - also supports 45
+  T: 48,  // Tom (Legacy - maps to High Tom)
+  R: 0,   // Rest
 };
 
 export function MIDIMappingEditor({ onClose }: MIDIMappingEditorProps) {
@@ -42,7 +42,34 @@ export function MIDIMappingEditor({ onClose }: MIDIMappingEditorProps) {
   const setMIDINoteMap = useStore((state) => state.setMIDINoteMap);
   const resetMIDINoteMap = useStore((state) => state.resetMIDINoteMap);
   
-  const [localMap, setLocalMap] = useState<MIDINoteMap>({ ...noteMap });
+  // Migrate old note map codes to new ones
+  const migrateNoteMap = (map: MIDINoteMap): MIDINoteMap => {
+    const migrated: MIDINoteMap = { ...map };
+    // Migrate old codes to new ones
+    if (migrated['H+'] !== undefined && migrated.O === undefined) {
+      migrated.O = migrated['H+'];
+      delete migrated['H+'];
+    }
+    if (migrated.Ht !== undefined && migrated.I === undefined) {
+      migrated.I = migrated.Ht;
+      delete migrated.Ht;
+    }
+    if (migrated.Mt !== undefined && migrated.M === undefined) {
+      migrated.M = migrated.Mt;
+      delete migrated.Mt;
+    }
+    // Ensure all required codes exist
+    if (!migrated.K) migrated.K = DEFAULT_MAP.K;
+    if (!migrated.S) migrated.S = DEFAULT_MAP.S;
+    if (!migrated.H) migrated.H = DEFAULT_MAP.H;
+    if (!migrated.O) migrated.O = DEFAULT_MAP.O;
+    if (!migrated.F) migrated.F = DEFAULT_MAP.F;
+    if (!migrated.I) migrated.I = DEFAULT_MAP.I;
+    if (!migrated.M) migrated.M = DEFAULT_MAP.M;
+    return migrated;
+  };
+  
+  const [localMap, setLocalMap] = useState<MIDINoteMap>(migrateNoteMap(noteMap));
   const [listeningTo, setListeningTo] = useState<string | null>(null);
   const [midiInput, setMidiInput] = useState<any>(null);
 

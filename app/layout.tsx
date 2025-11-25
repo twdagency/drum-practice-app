@@ -4,10 +4,14 @@ import { VexFlowLoader } from '@/components/VexFlowLoader'
 import { SessionProvider } from '@/components/providers/SessionProvider'
 import { ToastProvider } from '@/components/shared/Toast'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export const metadata: Metadata = {
   title: 'Drum Practice Generator',
   description: 'Generate and practice drumming patterns with real-time feedback',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export const viewport: Viewport = {
@@ -25,6 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
@@ -42,6 +47,7 @@ export default function RootLayout({
             </ToastProvider>
           </SessionProvider>
         </ErrorBoundary>
+        <SpeedInsights />
       </body>
     </html>
   )

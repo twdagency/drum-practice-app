@@ -16,7 +16,8 @@ export function VisualMetronome() {
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   
   // Initialize position - start with default to avoid hydration mismatch
-  const [position, setPosition] = useState({ x: 16, y: 80 });
+  // Default position will be calculated on client side to position to the right of notation
+  const [position, setPosition] = useState({ x: 1200, y: 80 }); // Fallback for SSR
   
   // Create portal container on mount
   useEffect(() => {
@@ -35,16 +36,86 @@ export function VisualMetronome() {
   }, []);
   
   // Load position from localStorage on client side only (after mount)
+  // If no saved position, calculate default position to the right of notation section
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('visualMetronomePosition');
+        let useSavedPosition = false;
+        
         if (saved) {
           const parsed = JSON.parse(saved);
-          setPosition(parsed);
+          // Check if saved position is valid and not the old default (middle/left of page)
+          // Old defaults were around x: 16 or x: 1200 (fallback)
+          // If it's in the left half of the screen, recalculate
+          if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+            // If position is in the left 60% of screen, it's likely the old default - recalculate
+            if (parsed.x < window.innerWidth * 0.6) {
+              useSavedPosition = false;
+            } else {
+              useSavedPosition = true;
+              setPosition(parsed);
+            }
+          }
+        }
+        
+        // If we're not using saved position, calculate default position to the right of notation section
+        if (!useSavedPosition) {
+          const calculateDefaultPosition = () => {
+            const staveColumn = document.querySelector('.dpgen-stave-column');
+            if (staveColumn) {
+              const rect = staveColumn.getBoundingClientRect();
+              // Only use this if the element has a valid width (is rendered)
+              if (rect.width > 0 && rect.right > 0) {
+                // Position to the right of the stave column with a small margin
+                const margin = 16;
+                const defaultX = rect.right + margin;
+                // Position vertically aligned with the top of the notation card (accounting for padding)
+                const defaultY = rect.top + 80; // Offset from top of stave column
+                return { x: defaultX, y: defaultY };
+              }
+            }
+            
+            // Fallback: if stave column not found or not rendered, use viewport-based calculation
+            // On large screens, patterns take 1/3, stave takes 2/3
+            // Position just to the right of the stave (which starts at ~33% and ends at ~100%)
+            const containerPadding = 32; // Account for container padding
+            // Calculate based on typical layout: container has padding, patterns ~33%, stave ~67%
+            // Position at ~70% of viewport width to be to the right of stave
+            const defaultX = window.innerWidth * 0.70;
+            return { x: defaultX, y: 80 };
+          };
+          
+          // Try multiple times to ensure layout is ready
+          let attempts = 0;
+          const maxAttempts = 10;
+          
+          const tryCalculate = () => {
+            attempts++;
+            const defaultPos = calculateDefaultPosition();
+            
+            // If we got a reasonable position (not fallback) or we've tried enough times
+            if (defaultPos.x > window.innerWidth * 0.5 || attempts >= maxAttempts) {
+              setPosition(defaultPos);
+              // Save the default position so it persists
+              localStorage.setItem('visualMetronomePosition', JSON.stringify(defaultPos));
+            } else {
+              // Try again after a short delay
+              setTimeout(tryCalculate, 100);
+            }
+          };
+          
+          // Start trying after initial delay
+          const timeoutId = setTimeout(tryCalculate, 200);
+          
+          return () => clearTimeout(timeoutId);
         }
       } catch (e) {
-        // Ignore parse errors
+        // On error, calculate and use default position
+        const defaultX = typeof window !== 'undefined' 
+          ? window.innerWidth * 0.70
+          : 1200;
+        setPosition({ x: defaultX, y: 80 });
       }
     }
   }, []);

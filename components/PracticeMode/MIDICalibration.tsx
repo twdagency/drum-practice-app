@@ -681,6 +681,15 @@ export function MIDICalibration({ onClose, mode = 'practice' }: MIDICalibrationP
     // Save to the appropriate store based on mode
     if (mode === 'recording') {
       setMIDIRecordingLatencyAdjustment(latencyAdjustment);
+      // Also save to recording settings so it persists
+      try {
+        const existing = localStorage.getItem('dpgen_midi_recording_settings');
+        const settings = existing ? JSON.parse(existing) : {};
+        settings.latencyAdjustment = latencyAdjustment;
+        localStorage.setItem('dpgen_midi_recording_settings', JSON.stringify(settings));
+      } catch (e) {
+        console.error('Failed to save latency to recording settings:', e);
+      }
     } else {
       setMIDILatencyAdjustment(latencyAdjustment);
     }

@@ -57,21 +57,23 @@ export function startCountIn(
   }
   
   const msPerBeat = 60000 / bpm;
-  let currentBeat = beats;
+  let beatCount = 0; // Track which beat we're on (1, 2, 3, 4...)
   
   countInCallback = onComplete;
   
-  // Play first beat immediately
-  playClickSound(true);
-  if (onBeatChange) onBeatChange(currentBeat);
+  // Play first beat immediately (beat 1)
+  beatCount = 1;
+  playClickSound(true); // Accent on beat 1
+  if (onBeatChange) onBeatChange(beatCount);
   
   countInInterval = setInterval(() => {
-    currentBeat--;
-    if (currentBeat > 0) {
-      playClickSound(currentBeat === 1); // Accent on beat 1
-      if (onBeatChange) onBeatChange(currentBeat);
+    beatCount++;
+    if (beatCount <= beats) {
+      // Play click for beats 2, 3, 4... (no accent except beat 1)
+      playClickSound(false);
+      if (onBeatChange) onBeatChange(beatCount);
     } else {
-      // Count-in complete
+      // Count-in complete (we've played all beats)
       if (countInInterval) {
         clearInterval(countInInterval);
         countInInterval = null;
@@ -97,8 +99,11 @@ export function stopCountIn() {
 
 /**
  * Start metronome
+ * @param bpm - Beats per minute
+ * @param onBeat - Optional callback when a beat is played
+ * @param totalBeats - Optional total number of beats to play (stops after this many beats)
  */
-export function startMetronome(bpm: number, onBeat?: (beat: number) => void) {
+export function startMetronome(bpm: number, onBeat?: (beat: number) => void, totalBeats?: number) {
   if (metronomeInterval) {
     clearInterval(metronomeInterval);
   }
@@ -111,11 +116,22 @@ export function startMetronome(bpm: number, onBeat?: (beat: number) => void) {
   beatCount++;
   if (onBeat) onBeat(beatCount);
   
+  // If totalBeats is set and we've already played all beats, stop
+  if (totalBeats && beatCount >= totalBeats) {
+    stopMetronome();
+    return;
+  }
+  
   metronomeInterval = setInterval(() => {
     const isAccent = beatCount % 4 === 0; // Accent on beat 1 (every 4 beats)
     playClickSound(isAccent);
     beatCount++;
     if (onBeat) onBeat(beatCount);
+    
+    // Stop if we've reached the total number of beats
+    if (totalBeats && beatCount >= totalBeats) {
+      stopMetronome();
+    }
   }, msPerBeat);
   
   metronomeCallback = (isAccent: boolean) => playClickSound(isAccent);

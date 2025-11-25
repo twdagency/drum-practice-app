@@ -8,7 +8,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
 import { ExpectedNote, PracticeHit } from '@/types';
 import { CONSTANTS } from '@/lib/utils/constants';
-import { parseNumberList } from '@/lib/utils/patternUtils';
+import { parseNumberList, getNotesPerBarForPattern, parseTokens } from '@/lib/utils/patternUtils';
 
 export function useMicrophonePractice() {
   const isPlaying = useStore((state) => state.isPlaying);
@@ -61,49 +61,76 @@ export function useMicrophonePractice() {
     
     patterns.forEach((pattern) => {
       const timeSig = pattern.timeSignature || '4/4';
-      const [beatsPerBar, beatValue] = timeSig.split('/').map(Number);
       const subdivision = pattern.subdivision || 16;
-      const phrase = pattern.phrase || '4 4 4 4';
       const drumPattern = pattern.drumPattern || 'S S K S';
       const repeat = pattern.repeat || 1;
       
-      const notesPerBeat = subdivision / 4;
-      const noteDuration = bpmMs / notesPerBeat;
+      // Get actual notes per bar (handles both standard and advanced per-beat subdivisions)
+      const notesPerBar = getNotesPerBarForPattern(pattern);
       
-      const phraseTokens = parseNumberList(phrase);
-      const drumTokens = drumPattern.split(/\s+/);
+      // Parse drum pattern tokens
+      const drumTokens = parseTokens(drumPattern);
       
-      for (let r = 0; r < repeat; r++) {
-        let noteIndexInPattern = 0;
-        let patternTimeOffset = 0;
+      // Calculate note durations - handle per-beat subdivisions if in advanced mode
+      let noteDurations: number[] = [];
+      if (pattern._advancedMode && pattern._perBeatSubdivisions) {
+        const [numerator] = timeSig.split('/').map(Number);
+        const beatValue = parseInt(timeSig.split('/')[1] || '4', 10);
+        const notesPerBeat = pattern._perBeatSubdivisions.map(sub => sub / beatValue);
         
-        phraseTokens.forEach((phraseVal) => {
-          const notesInThisPhrase = phraseVal;
+        // Calculate duration for each note based on its beat's subdivision
+        let noteIndex = 0;
+        for (let beatIndex = 0; beatIndex < numerator; beatIndex++) {
+          const beatSubdivision = pattern._perBeatSubdivisions[beatIndex] || subdivision;
+          const notesInThisBeat = Math.round(notesPerBeat[beatIndex] || (subdivision / beatValue));
+          const beatDuration = bpmMs * (beatValue / 4); // Duration of one beat in ms
+          const noteDurationInBeat = beatDuration / notesInThisBeat;
           
-          for (let i = 0; i < notesInThisPhrase; i++) {
-            const drumToken = drumTokens[noteIndexInPattern % drumTokens.length];
-            
-            // For microphone, we detect any hit (not specific to drum type)
-            // But we still track which note was expected for accuracy
-            if (drumToken !== 'R' && drumToken !== 'X') {
-              expectedNotes.push({
-                time: globalTimeOffset + patternTimeOffset,
-                note: drumToken, // Use drum token (K, S, etc.) instead of MIDI note
-                index: globalIndex,
-                matched: false,
-              });
-            }
-            
-            patternTimeOffset += noteDuration;
-            noteIndexInPattern++;
-            globalIndex++;
+          for (let i = 0; i < notesInThisBeat; i++) {
+            noteDurations.push(noteDurationInBeat);
           }
-        });
+        }
+      } else {
+        // Standard mode: all notes have the same duration
+        const notesPerBeat = subdivision / 4;
+        const noteDuration = bpmMs / notesPerBeat;
+        noteDurations = Array(notesPerBar).fill(noteDuration);
       }
       
-      const totalNotesInPattern = phraseTokens.reduce((sum, val) => sum + val, 0) * repeat;
-      const patternDuration = totalNotesInPattern * noteDuration;
-      globalTimeOffset += patternDuration;
+      // Calculate duration of one bar (one repeat)
+      const barDuration = noteDurations.reduce((sum, dur) => sum + dur, 0);
+      
+      // Build notes for each repeat of the pattern
+      for (let r = 0; r < repeat; r++) {
+        // Time offset for this repeat (accumulates across repeats)
+        const repeatTimeOffset = r * barDuration;
+        let noteTimeOffset = 0;
+        
+        // Process all notes in the bar
+        for (let i = 0; i < notesPerBar; i++) {
+          const drumToken = drumTokens[i % drumTokens.length];
+          const noteDuration = noteDurations[i % noteDurations.length];
+          
+          // For microphone, we detect any hit (not specific to drum type)
+          // But we still track which note was expected for accuracy
+          if (drumToken !== 'R' && drumToken !== 'X') {
+            expectedNotes.push({
+              time: globalTimeOffset + repeatTimeOffset + noteTimeOffset,
+              note: drumToken, // Use drum token (K, S, etc.) instead of MIDI note
+              index: globalIndex,
+              matched: false,
+            });
+          }
+          
+          // Accumulate time offset for next note
+          noteTimeOffset += noteDuration;
+          globalIndex++;
+        }
+      }
+      
+      // Calculate total duration of this pattern (all repeats)
+      const totalPatternDuration = barDuration * repeat;
+      globalTimeOffset += totalPatternDuration;
     });
     
     return expectedNotes;
@@ -435,7 +462,21 @@ export function useMicrophonePractice() {
       matched: false // Reset matched status when rebuilding
     }));
     setMicrophoneExpectedNotes(notes);
-    console.log('[Microphone Practice] Built expected notes:', notes.length);
+    console.log('[Microphone Practice] Built expected notes:', notes.length, 'notes across', patterns.length, 'patterns');
+    if (notes.length > 0) {
+      console.log('[Microphone Practice] Time range:', notes[0].time.toFixed(2), 'ms to', notes[notes.length - 1].time.toFixed(2), 'ms');
+      // Log notes from each pattern to verify they're all included
+      patterns.forEach((pattern, idx) => {
+        const patternNotes = notes.filter((n, i) => {
+          // Estimate which notes belong to this pattern based on time ranges
+          // This is approximate but helps with debugging
+          const patternStart = idx === 0 ? 0 : notes.findIndex(n => n.time > (idx * 1000));
+          const patternEnd = idx === patterns.length - 1 ? notes.length : notes.findIndex(n => n.time > ((idx + 1) * 1000));
+          return i >= (patternStart === -1 ? 0 : patternStart) && i < (patternEnd === -1 ? notes.length : patternEnd);
+        });
+        console.log(`[Microphone Practice] Pattern ${idx + 1} (${pattern.repeat || 1} bars): ~${patternNotes.length} expected notes`);
+      });
+    }
   }, [microphonePracticeEnabled, patterns, bpm, buildExpectedNotes, setMicrophoneExpectedNotes]);
 
   // Setup audio analysis when practice is enabled

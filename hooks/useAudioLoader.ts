@@ -1,5 +1,5 @@
 /**
- * Hook to load audio buffers on mount
+ * Hook to load audio buffers on mount and when playDrumSounds is enabled
  */
 
 import { useEffect } from 'react';
@@ -7,12 +7,13 @@ import { useStore } from '@/store/useStore';
 import { getAudioContext, loadAllAudioBuffers } from '@/lib/audio/audioLoader';
 
 /**
- * Hook to load audio buffers when component mounts
+ * Hook to load audio buffers when component mounts or when playDrumSounds is enabled
  */
 export function useAudioLoader() {
   const setAudioBuffers = useStore((state) => state.setAudioBuffers);
   const setAudioBuffersLoaded = useStore((state) => state.setAudioBuffersLoaded);
   const audioBuffersLoaded = useStore((state) => state.audioBuffersLoaded);
+  const playDrumSounds = useStore((state) => state.playDrumSounds);
 
   useEffect(() => {
     // Skip if already loaded
@@ -20,6 +21,8 @@ export function useAudioLoader() {
       return;
     }
 
+    // Load buffers on mount or when playDrumSounds is enabled
+    // This ensures buffers are available even if playDrumSounds was disabled initially
     let isMounted = true;
 
     async function loadAudio() {
@@ -58,5 +61,5 @@ export function useAudioLoader() {
     return () => {
       isMounted = false;
     };
-  }, [audioBuffersLoaded, setAudioBuffers, setAudioBuffersLoaded]);
+  }, [audioBuffersLoaded, playDrumSounds, setAudioBuffers, setAudioBuffersLoaded]);
 }

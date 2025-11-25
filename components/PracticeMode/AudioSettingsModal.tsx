@@ -29,6 +29,10 @@ export function AudioSettingsModal({ onClose }: AudioSettingsModalProps) {
   const polyrhythmDisplayMode = useStore((state) => state.polyrhythmDisplayMode);
   const setPolyrhythmClickMode = useStore((state) => state.setPolyrhythmClickMode);
   const setPolyrhythmDisplayMode = useStore((state) => state.setPolyrhythmDisplayMode);
+  
+  // Highlight colors
+  const highlightColors = useStore((state) => state.highlightColors);
+  const setHighlightColor = useStore((state) => state.setHighlightColor);
 
   const handleVolumeChange = (key: keyof typeof volumes, value: number) => {
     setVolume(key, value / 100);
@@ -192,6 +196,113 @@ export function AudioSettingsModal({ onClose }: AudioSettingsModalProps) {
             <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
               Enable drum sound playback (snare, kick, tom, floor)
             </p>
+          </div>
+
+          {/* Highlight Colors */}
+          <div style={{ marginBottom: '1.5rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--dpgen-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Note Highlight Colors</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setHighlightColor('default', '#f97316');
+                  setHighlightColor('right', '#3b82f6');
+                  setHighlightColor('left', '#10b981');
+                }}
+                style={{
+                  padding: '0.375rem 0.75rem',
+                  fontSize: '0.75rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--dpgen-border)',
+                  background: 'var(--dpgen-bg)',
+                  color: 'var(--dpgen-text)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--dpgen-card)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--dpgen-bg)';
+                }}
+              >
+                Reset to Defaults
+              </button>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginBottom: '1rem' }}>
+              Customize the colors used to highlight notes during playback
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block', fontWeight: 500 }}>
+                  Default / Both Hands
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <input
+                    type="color"
+                    value={highlightColors.default}
+                    onChange={(e) => setHighlightColor('default', e.target.value)}
+                    style={{
+                      width: '60px',
+                      height: '40px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--dpgen-border)',
+                      cursor: 'pointer',
+                    }}
+                  />
+                  <span style={{ fontSize: '0.875rem', color: 'var(--dpgen-text)' }}>
+                    {highlightColors.default}
+                  </span>
+                </div>
+              </div>
+              
+              <div>
+                <label style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block', fontWeight: 500 }}>
+                  Right Hand
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <input
+                    type="color"
+                    value={highlightColors.right}
+                    onChange={(e) => setHighlightColor('right', e.target.value)}
+                    style={{
+                      width: '60px',
+                      height: '40px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--dpgen-border)',
+                      cursor: 'pointer',
+                    }}
+                  />
+                  <span style={{ fontSize: '0.875rem', color: 'var(--dpgen-text)' }}>
+                    {highlightColors.right}
+                  </span>
+                </div>
+              </div>
+              
+              <div>
+                <label style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block', fontWeight: 500 }}>
+                  Left Hand
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <input
+                    type="color"
+                    value={highlightColors.left}
+                    onChange={(e) => setHighlightColor('left', e.target.value)}
+                    style={{
+                      width: '60px',
+                      height: '40px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--dpgen-border)',
+                      cursor: 'pointer',
+                    }}
+                  />
+                  <span style={{ fontSize: '0.875rem', color: 'var(--dpgen-text)' }}>
+                    {highlightColors.left}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Polyrhythm Settings */}
