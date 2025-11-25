@@ -54,6 +54,7 @@ export interface ConvertedPattern {
   leftFoot: boolean;
   rightFoot: boolean;
   repeat: number;
+  _advancedMode?: boolean; // If true, use per-beat subdivisions instead of single subdivision
   _perBeatSubdivisions?: number[]; // Optional per-beat subdivisions for advanced mode
 }
 
