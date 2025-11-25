@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
 import { useToast } from './Toast';
+import { generateRandomPattern } from '@/lib/utils/patternUtils';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -33,7 +34,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
   // Store actions - Zustand selectors for functions are stable
   const addPattern = useStore((state) => state.addPattern);
-  const generateRandomPattern = useStore((state) => state.generateRandomPattern);
+  const saveToHistory = useStore((state) => state.saveToHistory);
+  const practicePadMode = useStore((state) => state.practicePadMode);
   const setBPM = useStore((state) => state.setBPM);
   const bpm = useStore((state) => state.bpm);
 
@@ -43,7 +45,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const bpmRef = useRef(bpm);
   const setBPMRef = useRef(setBPM);
   const addPatternRef = useRef(addPattern);
-  const generateRandomPatternRef = useRef(generateRandomPattern);
+  const saveToHistoryRef = useRef(saveToHistory);
+  const practicePadModeRef = useRef(practicePadMode);
 
   // Update refs synchronously (not in useEffect to avoid loops)
   onCloseRef.current = onClose;
@@ -51,7 +54,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   bpmRef.current = bpm;
   setBPMRef.current = setBPM;
   addPatternRef.current = addPattern;
-  generateRandomPatternRef.current = generateRandomPattern;
+  saveToHistoryRef.current = saveToHistory;
+  practicePadModeRef.current = practicePadMode;
 
   // Define available commands - use refs to avoid dependency issues
   const allCommands: Command[] = useMemo(() => [
@@ -74,7 +78,9 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       shortcut: 'Ctrl+Shift+N',
       category: 'Patterns',
       action: () => {
-        generateRandomPatternRef.current();
+        const newPattern = generateRandomPattern(practicePadModeRef.current, false);
+        addPatternRef.current(newPattern);
+        saveToHistoryRef.current();
         onCloseRef.current();
         showToastRef.current('Random pattern generated', 'success');
       },
