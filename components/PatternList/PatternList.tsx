@@ -35,7 +35,7 @@ export function PatternList() {
       
       const start = Math.max(0, Math.floor(scrollTop / itemHeight) - buffer);
       const end = Math.min(
-        filteredPatterns.length - 1,
+        patterns.length - 1,
         Math.ceil((scrollTop + containerHeight) / itemHeight) + buffer
       );
       
