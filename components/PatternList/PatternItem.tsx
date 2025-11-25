@@ -36,7 +36,7 @@ function PatternItemComponent({ pattern, index, viewMode = 'list' }: PatternItem
   const saveToHistory = useStore((state) => state.saveToHistory);
   const patterns = useStore((state) => state.patterns);
   const isPlaying = useStore((state) => state.isPlaying);
-  const currentPatternIndex = useStore((state) => state.currentPatternIndex);
+  const playbackPosition = useStore((state) => state.playbackPosition);
 
   // Memoize expensive calculations
   const { notesPerBar, patternNotes, patternRests, patternAccents, complexity, subdivisionText, patternSummary, patternLabel } = useMemo(() => {
@@ -196,8 +196,28 @@ function PatternItemComponent({ pattern, index, viewMode = 'list' }: PatternItem
     },
   ];
 
+  // Calculate which pattern is currently playing based on playbackPosition
+  const currentPatternIndex = useMemo(() => {
+    if (!isPlaying || playbackPosition === null || playbackPosition < 0) {
+      return -1;
+    }
+    
+    let cumulativeNotes = 0;
+    for (let i = 0; i < patterns.length; i++) {
+      const p = patterns[i];
+      const notesPerBar = getNotesPerBarForPattern(p);
+      const totalNotes = notesPerBar * (p.repeat || 1);
+      
+      if (playbackPosition >= cumulativeNotes && playbackPosition < cumulativeNotes + totalNotes) {
+        return i;
+      }
+      cumulativeNotes += totalNotes;
+    }
+    return -1;
+  }, [isPlaying, playbackPosition, patterns]);
+
   // Check if this pattern is currently playing
-  const isCurrentlyPlaying = isPlaying && patterns[currentPatternIndex]?.id === pattern.id;
+  const isCurrentlyPlaying = isPlaying && currentPatternIndex >= 0 && patterns[currentPatternIndex]?.id === pattern.id;
 
   // Color code by time signature
   const getTimeSignatureColor = (timeSig: string) => {
