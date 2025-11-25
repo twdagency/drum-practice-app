@@ -12,6 +12,8 @@ import { CONSTANTS } from '@/lib/utils/constants';
 import { MicrophoneCalibration } from './MicrophoneCalibration';
 import { parseNumberList } from '@/lib/utils/patternUtils';
 import { ExpectedNote } from '@/types';
+import { getAudioWorkletSupportInfo } from '@/lib/utils/audioWorkletSupport';
+import { getAudioContext } from '@/lib/audio/audioLoader';
 
 interface MicrophonePracticeProps {
   onClose: () => void;
@@ -147,14 +149,25 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
     
     try {
       // Request access with specific device
+      // Don't specify echoCancellation/noiseSuppression/autoGainControl - let browser use defaults
+      // This matches the original implementation that worked
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           deviceId: { exact: deviceId },
         },
       });
 
-      // Create audio context
+      // Create a separate audio context for microphone (original approach that worked)
+      // This matches the original implementation before AudioWorklet changes
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Resume context if suspended (required for user interaction)
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
+      console.log('[Microphone Practice] Using separate AudioContext for microphone, state:', audioContext.state);
+      
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = CONSTANTS.AUDIO.FFT_SIZE;
       analyser.smoothingTimeConstant = CONSTANTS.AUDIO.SMOOTHING_TIME_CONSTANT;
@@ -419,6 +432,29 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
           </div>
         )}
 
+        {/* Audio Ducking Warning */}
+        <div style={{
+          padding: '1rem',
+          background: 'rgba(245, 158, 11, 0.1)',
+          border: '1px solid #f59e0b',
+          borderRadius: '8px',
+          marginBottom: '1.5rem',
+          color: '#f59e0b',
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+            ⚠️ Audio Volume Notice
+          </div>
+          <div style={{ fontSize: '0.875rem', lineHeight: '1.5' }}>
+            If playback audio is quiet when the microphone is active, check your system audio settings:
+            <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+              <li><strong>Windows:</strong> Sound Settings → Communications tab → Set to "Do nothing"</li>
+              <li><strong>Realtek Audio:</strong> Open Realtek Audio Control Panel → Disable "Echo cancellation" or "Audio ducking" features</li>
+              <li><strong>Other audio drivers:</strong> Check your audio control panel for similar settings</li>
+              <li><strong>Alternative:</strong> Use headphones (prevents feedback, so system won't duck audio)</li>
+            </ul>
+          </div>
+        </div>
+
         {/* Device Selection */}
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
@@ -665,6 +701,30 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
             marginBottom: '1.5rem',
           }}>
             <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>Practice Stats</h3>
+            {/* Detection method indicator */}
+            <div style={{ 
+              fontSize: '0.75rem', 
+              color: 'var(--dpgen-muted)', 
+              marginBottom: '0.75rem',
+              fontStyle: 'italic',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem'
+            }}>
+              {getAudioWorkletSupportInfo().supported && !getAudioWorkletSupportInfo().needsFallback
+                ? (
+                  <>
+                    <span>⚡</span>
+                    <span>Using AudioWorklet (low latency, ~5ms accuracy)</span>
+                  </>
+                )
+                : (
+                  <>
+                    <span>📊</span>
+                    <span>Using AnalyserNode fallback (~25ms accuracy)</span>
+                  </>
+                )}
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
               <div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)' }}>Accuracy</div>

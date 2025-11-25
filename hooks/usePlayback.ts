@@ -72,9 +72,12 @@ export function usePlayback() {
   const countInBeatRef = useRef<number>(0);
   const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const isPlayingRef = useRef<boolean>(false);
+  const continuousToneRef = useRef<{osc: OscillatorNode; gain: GainNode} | null>(null); // Continuous tone to prevent ducking
 
+  const microphonePractice = useStore((state) => state.microphonePractice);
+  
   /**
-   * Initialize audio context
+   * Initialize audio context and keep it active
    */
   useEffect(() => {
     if (!audioContextRef.current) {
@@ -84,7 +87,51 @@ export function usePlayback() {
         console.error('Failed to create AudioContext:', error);
       }
     }
-  }, []);
+    
+    // Ensure audio context stays active and running (especially when microphone practice starts)
+    const ensureContextActive = async () => {
+      if (audioContextRef.current) {
+        // Only try to resume if user has interacted (isPlaying indicates user started playback)
+        // This prevents the "AudioContext was not allowed to start" error on page load
+        if (audioContextRef.current.state === 'suspended' && isPlaying) {
+          try {
+            await audioContextRef.current.resume();
+            console.log('[Playback] AudioContext resumed, state:', audioContextRef.current.state);
+          } catch (error) {
+            console.error('[Playback] Failed to resume AudioContext:', error);
+          }
+        }
+        
+        // Log context state for debugging
+        if (microphonePractice.enabled && audioContextRef.current.state !== 'running') {
+          console.warn('[Playback] AudioContext state is', audioContextRef.current.state, 'when microphone practice is enabled');
+        }
+      }
+    };
+    
+    // Check more frequently when microphone practice is enabled and playing
+    const checkInterval = (microphonePractice.enabled && isPlaying) ? 500 : 2000;
+    const interval = setInterval(ensureContextActive, checkInterval);
+    
+    // Only check immediately if already playing (user has interacted)
+    if (isPlaying) {
+      ensureContextActive();
+    }
+    
+    return () => {
+      clearInterval(interval);
+      // Cleanup continuous tone
+      if (continuousToneRef.current) {
+        try {
+          continuousToneRef.current.osc.stop();
+          continuousToneRef.current.gain.disconnect();
+          continuousToneRef.current = null;
+        } catch (error) {
+          // Ignore errors
+        }
+      }
+    };
+  }, [microphonePractice.enabled, isPlaying]);
 
   /**
    * Play a drum sound
@@ -196,19 +243,40 @@ export function usePlayback() {
         volumeBoost = 2.0; // Double the volume for kick and floor
       }
       
-      const finalGain = volume * volumeValue * volumeBoost;
+      // Boost volume when microphone practice is active (browser may duck audio)
+      const micBoost = microphonePractice.enabled ? 4.0 : 1.0; // 4x boost when mic is on (increased from 2x)
+      const finalGain = Math.min(1.0, volume * volumeValue * volumeBoost * micBoost);
       gainNode.gain.value = finalGain;
       
-      console.log(`[playDrumSound] Volume settings: volumeKey="${volumeKey}", volumeValue=${volumeValue}, volumeBoost=${volumeBoost}, finalGain=${finalGain}`);
+      if (microphonePractice.enabled) {
+        console.log(`[playDrumSound] Microphone practice active - applying ${micBoost}x volume boost, finalGain=${finalGain.toFixed(3)}`);
+      }
+      
+      console.log(`[playDrumSound] Volume settings: volumeKey="${volumeKey}", volumeValue=${volumeValue}, volumeBoost=${volumeBoost}, micBoost=${micBoost}, finalGain=${finalGain}`);
       
       if (volumeValue === 0) {
         console.warn(`[playDrumSound] Volume for ${volumeKey} is 0 - sound won't be audible`);
       }
       
-      console.log(`[playDrumSound] Connecting audio graph: source -> gainNode -> destination`);
-      source.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      console.log(`[playDrumSound] Audio graph connected successfully`);
+      // When microphone is active, use two-stage gain to maximize volume
+      // This helps compensate for browser audio ducking
+      if (microphonePractice.enabled) {
+        const preGain = ctx.createGain();
+        // First stage: boost signal (before final gain clamping)
+        preGain.gain.value = 2.0;
+        // Second stage: final volume (already calculated with micBoost)
+        gainNode.gain.value = finalGain;
+        
+        source.connect(preGain);
+        preGain.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        console.log(`[playDrumSound] Audio graph connected (two-stage gain for mic practice): source -> preGain(2.0) -> gainNode(${finalGain.toFixed(3)}) -> destination`);
+      } else {
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        console.log(`[playDrumSound] Audio graph connected successfully`);
+      }
       
       // Verify destination is connected
       if (!ctx.destination) {
@@ -259,21 +327,43 @@ export function usePlayback() {
     } catch (error) {
       console.error(`[playDrumSound] Error playing drum sound ${sound}:`, error);
     }
-  }, [audioBuffers, audioBuffersLoaded, volumes]);
+  }, [audioBuffers, audioBuffersLoaded, volumes, microphonePractice.enabled]);
 
   /**
    * Play a metronome click with different sound types
    */
-  const playClick = useCallback((isAccent: boolean = false) => {
+  const playClick = useCallback(async (isAccent: boolean = false) => {
     // Don't play clicks if clickMode is 'none' or silent practice mode
     if (!audioContextRef.current || clickMode === 'none' || silentPracticeMode) {
       return;
     }
 
     try {
-      const osc = audioContextRef.current.createOscillator();
-      const gainNode = audioContextRef.current.createGain();
-      const now = audioContextRef.current.currentTime;
+      const ctx = audioContextRef.current;
+      
+      // Resume audio context if suspended (required for user interaction)
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      
+      // Ensure context is running - if not, try to resume again
+      if (ctx.state !== 'running') {
+        console.warn('[Playback] Audio context not running, attempting to resume. State:', ctx.state);
+        try {
+          await ctx.resume();
+          if (ctx.state !== 'running') {
+            console.error('[Playback] Failed to resume AudioContext, state:', ctx.state);
+            return;
+          }
+        } catch (error) {
+          console.error('[Playback] Error resuming AudioContext:', error);
+          return;
+        }
+      }
+      
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      const now = ctx.currentTime;
       
       // Configure oscillator based on click sound type
       switch (clickSoundType) {
@@ -300,20 +390,43 @@ export function usePlayback() {
       }
       
       // Quick attack and decay for click sound
-      const volume = volumes.click || 0.8;
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(isAccent ? 0.3 * volume : 0.2 * volume, now + 0.001);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+      const baseVolume = volumes.click || 0.8;
       
-      osc.connect(gainNode);
-      gainNode.connect(audioContextRef.current.destination);
+      // When microphone is active, use a two-stage gain to maximize volume
+      // This helps compensate for browser audio ducking
+      if (microphonePractice.enabled) {
+        // Use two gain nodes in series for more effective volume
+        const preGain = ctx.createGain();
+        const postGain = ctx.createGain();
+        
+        // First stage: boost the signal
+        preGain.gain.value = 2.0;
+        // Second stage: final volume
+        const accentGain = isAccent ? 0.9 : 0.8;
+        postGain.gain.setValueAtTime(0, now);
+        postGain.gain.linearRampToValueAtTime(accentGain * baseVolume, now + 0.001);
+        postGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        
+        osc.connect(preGain);
+        preGain.connect(postGain);
+        postGain.connect(ctx.destination);
+      } else {
+        // Normal mode: single gain node
+        const accentGain = isAccent ? 0.5 * baseVolume : 0.4 * baseVolume;
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(accentGain, now + 0.001);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+      }
       
       osc.start(now);
-      osc.stop(now + 0.05);
+      osc.stop(now + 0.1);
     } catch (error) {
-      console.error('Error playing click:', error);
+      console.error('[Playback] Error playing click:', error);
     }
-  }, [clickMode, silentPracticeMode, clickSoundType, volumes.click]);
+  }, [clickMode, silentPracticeMode, clickSoundType, volumes.click, microphonePractice.enabled]);
 
   /**
    * Calculate scheduled notes for a polyrhythm pattern
