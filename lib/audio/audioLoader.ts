@@ -39,9 +39,26 @@ export async function loadAllAudioBuffers(
     loadAudioBuffer(audioContext, '/sounds/mid-tom.wav'),
     loadAudioBuffer(audioContext, '/sounds/floor.wav'),
     loadAudioBuffer(audioContext, '/sounds/hihat.wav'),
-    loadAudioBuffer(audioContext, '/sounds/crash.wav').catch(() => null), // Crash cymbal - fallback to null if doesn't exist
-    loadAudioBuffer(audioContext, '/sounds/ride.wav').catch(() => null), // Ride cymbal - fallback to null if doesn't exist
+    loadAudioBuffer(audioContext, '/sounds/crash.wav').catch((err) => {
+      console.warn('Failed to load crash.wav, will use hiHat as fallback:', err);
+      return null;
+    }), // Crash cymbal - fallback to null if doesn't exist
+    loadAudioBuffer(audioContext, '/sounds/ride.wav').catch((err) => {
+      console.warn('Failed to load ride.wav, will use hiHat as fallback:', err);
+      return null;
+    }), // Ride cymbal - fallback to null if doesn't exist
   ]);
+
+  console.log('Audio buffers loaded:', {
+    snare: snare ? '✓' : '✗',
+    kick: kick ? '✓' : '✗',
+    highTom: highTom ? '✓' : '✗',
+    midTom: midTom ? '✓' : '✗',
+    floor: floor ? '✓' : '✗',
+    hiHat: hiHat ? '✓' : '✗',
+    crash: crash ? '✓' : '✗ (will use hiHat)',
+    ride: ride ? '✓' : '✗ (will use hiHat)',
+  });
 
   return {
     snare,

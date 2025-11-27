@@ -185,7 +185,7 @@ export function usePlayback() {
     
     const buffer = audioBuffers[bufferKey];
     if (!buffer) {
-      console.warn(`[playDrumSound] No buffer found for key "${bufferKey}"}" (sound: "${sound}", normalized: "${normalizedSound}")`);
+      console.warn(`[playDrumSound] No buffer found for key "${bufferKey}" (sound: "${sound}", normalized: "${normalizedSound}")`);
       console.warn(`[playDrumSound] Available audio buffer keys:`, Object.keys(audioBuffers));
       console.warn(`[playDrumSound] Buffer values:`, {
         snare: audioBuffers.snare ? 'loaded' : 'null',
@@ -194,7 +194,10 @@ export function usePlayback() {
         highTom: audioBuffers.highTom ? 'loaded' : 'null',
         midTom: audioBuffers.midTom ? 'loaded' : 'null',
         hiHat: audioBuffers.hiHat ? 'loaded' : 'null',
+        crash: audioBuffers.crash ? 'loaded' : 'null',
+        ride: audioBuffers.ride ? 'loaded' : 'null',
       });
+      console.warn(`[playDrumSound] If crash/ride show as null, try refreshing the page to reload audio buffers`);
       return;
     }
     
