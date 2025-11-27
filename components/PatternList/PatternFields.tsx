@@ -731,7 +731,7 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
         <div className="dpgen-field">
         <label className="dpgen-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           Voicing Pattern
-          <Tooltip content="S = Snare, K = Kick, Ht = High Tom, Mt = Mid Tom, F = Floor, H = Hi-hat, - = Rest. Use + for simultaneous notes (e.g., 'S+K' for snare+kick together). Use parentheses for ghost notes (e.g., '(S)' for ghost snare). Examples: 'S K S K' or 'S+K H+K S+K H+K' or 'Ht Mt S K' or 'S (S) S (S)'">
+          <Tooltip content="S = Snare, K = Kick, Ht = High Tom, Mt = Mid Tom, F = Floor, H = Hi-hat, C = Crash, Y = Ride, - = Rest. Use + for simultaneous notes (e.g., 'S+K' for snare+kick together). Use parentheses for ghost notes (e.g., '(S)' for ghost snare). Examples: 'S K S K' or 'S+K H+K S+K H+K' or 'Ht Mt S K' or 'S (S) S (S)' or 'S K S C'">
             <i className="fas fa-info-circle" style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', cursor: 'help' }} />
           </Tooltip>
         </label>

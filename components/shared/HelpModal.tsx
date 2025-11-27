@@ -53,6 +53,8 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <li><strong>Ht</strong> or <strong>I</strong> - High tom</li>
               <li><strong>Mt</strong> or <strong>M</strong> - Mid tom</li>
               <li><strong>T</strong> - Tom (maps to high tom)</li>
+              <li><strong>C</strong> - Crash cymbal</li>
+              <li><strong>Y</strong> - Ride cymbal</li>
             </ul>
 
             <h4 style={{ marginTop: '1.5rem' }}>Simultaneous Hits</h4>
