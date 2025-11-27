@@ -377,3 +377,4 @@ presetsData.version = '1.7';
 fs.writeFileSync(presetsPath, JSON.stringify(presetsData, null, 2), 'utf8');
 console.log(`Done! Total presets: ${presetsData.presets.length}`);
 
+

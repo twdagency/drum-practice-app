@@ -157,3 +157,4 @@ export function usePracticeStats() {
   }, [isPracticeActive, practiceStartTime, setPracticeStartTime]);
 }
 
+

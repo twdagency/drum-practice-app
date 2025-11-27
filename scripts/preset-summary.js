@@ -17,3 +17,4 @@ Object.entries(categories).sort((a,b) => b[1] - a[1]).forEach(([cat, count]) => 
 console.log(`\nTotal presets: ${data.presets.length}`);
 console.log(`Version: ${data.version}`);
 
+
