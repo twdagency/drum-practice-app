@@ -43,9 +43,10 @@ function PracticeTimeChart({ sessions }: PracticeTimeChartProps) {
 
   const maxDuration = Math.max(...dailyData.map(d => d.duration), 1);
   const chartHeight = 120;
-  const chartWidth = 100;
-  const barWidth = 12;
-  const barGap = 4;
+  const barWidth = 24;
+  const barGap = 8;
+  const chartPadding = 20;
+  const totalWidth = dailyData.length * (barWidth + barGap) + barGap + (chartPadding * 2);
 
   return (
     <div style={{ 
@@ -56,15 +57,19 @@ function PracticeTimeChart({ sessions }: PracticeTimeChartProps) {
     }}>
       <svg 
         width="100%" 
-        height={chartHeight + 40}
-        viewBox={`0 0 ${dailyData.length * (barWidth + barGap) + barGap} ${chartHeight + 40}`}
-        style={{ minWidth: '300px' }}
+        height={chartHeight + 50}
+        viewBox={`0 0 ${totalWidth} ${chartHeight + 50}`}
+        style={{ minWidth: '400px' }}
+        preserveAspectRatio="xMidYMid meet"
       >
         {/* Bars */}
         {dailyData.map((day, index) => {
           const barHeight = maxDuration > 0 ? (day.duration / maxDuration) * chartHeight : 0;
-          const x = index * (barWidth + barGap) + barGap;
+          const x = chartPadding + index * (barWidth + barGap) + barGap;
           const y = chartHeight - barHeight;
+          
+          // Split label into two lines if it has both day name and number
+          const labelParts = day.label.split(' ');
           
           return (
             <g key={day.date}>
@@ -77,17 +82,42 @@ function PracticeTimeChart({ sessions }: PracticeTimeChartProps) {
                 rx="2"
                 opacity={day.duration > 0 ? 1 : 0.3}
               />
-              {/* Label */}
-              <text
-                x={x + barWidth / 2}
-                y={chartHeight + 20}
-                textAnchor="middle"
-                fontSize="10"
-                fill="var(--dpgen-muted)"
-                style={{ userSelect: 'none' }}
-              >
-                {day.label}
-              </text>
+              {/* Label - split into two lines for better spacing */}
+              {labelParts.length > 1 ? (
+                <>
+                  <text
+                    x={x + barWidth / 2}
+                    y={chartHeight + 15}
+                    textAnchor="middle"
+                    fontSize="9"
+                    fill="var(--dpgen-muted)"
+                    style={{ userSelect: 'none' }}
+                  >
+                    {labelParts[0]}
+                  </text>
+                  <text
+                    x={x + barWidth / 2}
+                    y={chartHeight + 28}
+                    textAnchor="middle"
+                    fontSize="9"
+                    fill="var(--dpgen-muted)"
+                    style={{ userSelect: 'none' }}
+                  >
+                    {labelParts[1]}
+                  </text>
+                </>
+              ) : (
+                <text
+                  x={x + barWidth / 2}
+                  y={chartHeight + 20}
+                  textAnchor="middle"
+                  fontSize="9"
+                  fill="var(--dpgen-muted)"
+                  style={{ userSelect: 'none' }}
+                >
+                  {day.label}
+                </text>
+              )}
               {/* Value on hover */}
               {day.duration > 0 && (
                 <title>{formatDuration(day.duration)}</title>
