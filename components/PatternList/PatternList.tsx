@@ -9,12 +9,19 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { PatternItem } from './PatternItem';
 import { Pattern } from '@/types';
+import { createDefaultPattern } from '@/lib/utils/patternUtils';
 
 export function PatternList() {
   const patterns = useStore((state) => state.patterns);
   const patternViewMode = useStore((state) => state.patternViewMode);
+  const addPattern = useStore((state) => state.addPattern);
   const containerRef = useRef<HTMLDivElement>(null);
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number } | null>(null);
+  
+  const handleAddPattern = () => {
+    const newPattern = createDefaultPattern();
+    addPattern(newPattern);
+  };
 
   // Virtualization: only render visible patterns when there are many (>20) and in list view
   const shouldVirtualize = patterns.length > 20 && patternViewMode === 'list';
@@ -77,9 +84,34 @@ export function PatternList() {
           <p style={{ fontSize: '1rem', fontWeight: 500, marginBottom: '0.5rem' }}>
             No patterns yet
           </p>
-          <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-            Click "Add Pattern" to create your first pattern
+          <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '1.5rem' }}>
+            Create your first pattern to get started
           </p>
+          <button
+            onClick={handleAddPattern}
+            style={{
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              color: 'var(--dpgen-bg)',
+              background: 'var(--dpgen-primary)',
+              border: 'none',
+              borderRadius: 'var(--dpgen-radius)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--dpgen-primary-hover)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--dpgen-primary)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <i className="fas fa-plus" style={{ marginRight: '0.5rem' }} />
+            Add Pattern
+          </button>
         </div>
       </div>
     );
