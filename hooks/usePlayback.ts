@@ -1178,7 +1178,7 @@ export function usePlayback() {
                   else normalizedToken = upperToken; // Single letters (S, K, T, F, H) to uppercase
                   
                   // Allow all valid drum tokens (using normalized internal codes I, M)
-                  const allowedTokens = ['S', 'K', 'T', 'F', 'H', 'I', 'M'];
+                  const allowedTokens = ['S', 'K', 'T', 'F', 'H', 'I', 'M', 'C', 'Y', 'O'];
                   if (allowedTokens.includes(normalizedToken)) {
                     // Use normalized token (I, M) instead of original (Ht, Mt)
                     sounds.push(normalizedToken);
