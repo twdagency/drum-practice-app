@@ -93,7 +93,7 @@ export function PatternList() {
               padding: '0.75rem 1.5rem',
               fontSize: '0.875rem',
               fontWeight: 500,
-              color: 'var(--dpgen-bg)',
+              color: 'white',
               background: 'var(--dpgen-primary)',
               border: 'none',
               borderRadius: 'var(--dpgen-radius)',
@@ -101,7 +101,7 @@ export function PatternList() {
               transition: 'all 0.2s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--dpgen-primary-hover)';
+              e.currentTarget.style.background = 'var(--dpgen-primary-dark)';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
