@@ -74,6 +74,7 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
   const beatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const resetColorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const levelCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const streamRef = useRef<MediaStream | null>(null); // Store stream in ref for access in checkAudioLevel
   const latencyAdjustmentRef = useRef<number>(latencyAdjustment);
   const lastHitTimeRef = useRef<number>(0);
   const sensitivityRef = useRef<number>(sensitivity);
@@ -138,16 +139,31 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     }
   };
 
-  // Play click sound
+  // Play click sound - use shared AudioContext to avoid conflicts
   const playClickSound = async (isAccent: boolean) => {
     try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioContextRef.current;
+      // Use shared AudioContext from audioLoader (same as playback)
+      const { getAudioContext } = await import('@/lib/audio/audioLoader');
+      const ctx = getAudioContext();
       
+      // Resume audio context if suspended (required for user interaction)
       if (ctx.state === 'suspended') {
         await ctx.resume();
+      }
+      
+      // Ensure context is running
+      if (ctx.state !== 'running') {
+        console.warn('[Calibration] Audio context not running, state:', ctx.state);
+        // Try one more time to resume
+        try {
+          await ctx.resume();
+        } catch (e) {
+          console.error('[Calibration] Failed to resume AudioContext:', e);
+          return;
+        }
+        if (ctx.state !== 'running') {
+          return;
+        }
       }
       
       const oscillator = ctx.createOscillator();
@@ -159,19 +175,26 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
       oscillator.frequency.value = isAccent ? 800 : 600;
       oscillator.type = 'sine';
       
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+      // Increase volume significantly - browser may duck audio when mic is active
+      const startGain = isAccent ? 0.9 : 0.8; // Much louder (was 0.5/0.4)
+      gainNode.gain.setValueAtTime(startGain, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
       
       oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.1);
+      oscillator.stop(ctx.currentTime + 0.15);
+      
+      console.log('[Calibration] Click sound played', { isAccent, state: ctx.state, currentTime: ctx.currentTime });
     } catch (error) {
-      console.error('Error playing click sound:', error);
+      console.error('[Calibration] Error playing click sound:', error);
     }
   };
 
   // Check audio level for hits
   const checkAudioLevel = () => {
     if (!analyserRef.current || !dataArrayRef.current || !isActiveRef.current) {
+      if (!analyserRef.current) console.warn('[Calibration] No analyser ref');
+      if (!dataArrayRef.current) console.warn('[Calibration] No dataArray ref');
+      if (!isActiveRef.current) console.warn('[Calibration] Not active');
       setAudioLevel(0);
       return;
     }
@@ -182,9 +205,29 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
       setAudioLevel(0);
       return;
     }
+    
+    // Verify stream is still active (use ref to avoid closure issues)
+    const currentStream = streamRef.current;
+    if (currentStream) {
+      const tracks = currentStream.getAudioTracks();
+      const activeTracks = tracks.filter(t => t.readyState === 'live' && t.enabled);
+      if (activeTracks.length === 0) {
+        console.warn('[Calibration] No active audio tracks in stream');
+        setAudioLevel(0);
+        return;
+      }
+    } else {
+      console.warn('[Calibration] No stream ref available');
+    }
 
     // Get audio data - use time domain data for amplitude detection (better for drum hits)
-    analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
+    try {
+      analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
+    } catch (error) {
+      console.error('[Calibration] Error getting audio data:', error);
+      setAudioLevel(0);
+      return;
+    }
     
     // Calculate RMS (Root Mean Square) volume for more accurate amplitude detection
     let sum = 0;
@@ -199,6 +242,24 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
       }
     }
     const rms = Math.sqrt(sum / dataArrayRef.current.length);
+    
+    // Debug: Log audio levels occasionally (every 50 checks = ~2.5 seconds)
+    if (!(window as any).__calDebugCount) {
+      (window as any).__calDebugCount = 0;
+    }
+    (window as any).__calDebugCount++;
+    if ((window as any).__calDebugCount % 50 === 0) {
+      const normalizedVolume = Math.min(1, maxAmplitude);
+      const displayLevel = Math.min(100, normalizedVolume * 100);
+      const currentStream = streamRef.current;
+      console.log(`[Calibration] Audio levels - RMS: ${rms.toFixed(4)}, Max: ${maxAmplitude.toFixed(4)}, Display: ${displayLevel.toFixed(1)}%`);
+      console.log(`[Calibration] Stream status - Active: ${currentStream?.active}, Tracks: ${currentStream?.getAudioTracks().length}, Enabled: ${currentStream?.getAudioTracks().filter(t => t.readyState === 'live' && t.enabled).length}`);
+      
+      // If audio levels are very low, warn
+      if (rms < 0.001 && maxAmplitude < 0.01) {
+        console.warn('[Calibration] WARNING: Very low audio levels detected! Check microphone connection and permissions.');
+      }
+    }
     
     // Use peak amplitude directly for better transient detection (drum hits)
     // RMS is smoother but peak amplitude responds better to sudden transients
@@ -215,6 +276,15 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     // Show raw level (not relative to threshold) so user can see actual volume
     const displayLevel = Math.min(100, normalizedVolume * 100);
     setAudioLevel(displayLevel);
+    
+    // Debug: Log if we're getting any audio at all (every 100 checks = ~5 seconds)
+    if (!(window as any).__calLevelDebugCount) {
+      (window as any).__calLevelDebugCount = 0;
+    }
+    (window as any).__calLevelDebugCount++;
+    if ((window as any).__calLevelDebugCount % 100 === 0) {
+      console.log(`[Calibration] Current audio level: ${displayLevel.toFixed(1)}% (RMS: ${rms.toFixed(4)}, Max: ${maxAmplitude.toFixed(4)})`);
+    }
     
     // Debug logging (throttled to every 50 checks = ~2.5 seconds)
     if (!(window as any).__micCalDebugCount) {
@@ -402,6 +472,9 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     if (!newStream) {
       return;
     }
+    
+    // Store stream in ref for access in checkAudioLevel
+    streamRef.current = newStream;
 
     // Create audio context and analyser
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -570,6 +643,9 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
         clearInterval(levelCheckIntervalRef.current);
         levelCheckIntervalRef.current = null;
       }
+      
+      // Clear stream ref
+      streamRef.current = null;
 
       if (resetColorTimeoutRef.current) {
         clearTimeout(resetColorTimeoutRef.current);

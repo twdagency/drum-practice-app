@@ -9,6 +9,7 @@ import { useStore } from '@/store/useStore';
 import { ExpectedNote, PracticeHit } from '@/types';
 import { CONSTANTS } from '@/lib/utils/constants';
 import { parseNumberList, getNotesPerBarForPattern, parseTokens } from '@/lib/utils/patternUtils';
+import { getAudioWorkletSupportInfo } from '@/lib/utils/audioWorkletSupport';
 
 export function useMicrophonePractice() {
   const isPlaying = useStore((state) => state.isPlaying);
@@ -39,6 +40,9 @@ export function useMicrophonePractice() {
   const levelCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const previousVolumeRef = useRef<number>(0); // Track previous volume for transient detection
   const peakVolumeAfterHitRef = useRef<number>(0); // Track peak volume after last hit to detect decay
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+  const useAudioWorkletRef = useRef<boolean>(false);
+  const audioContextStartTimeRef = useRef<number | null>(null); // Track AudioContext start time for timing sync
 
   // Get current practice settings
   const expectedNotes = useStore((state) => state.microphonePractice.expectedNotes);
@@ -166,8 +170,224 @@ export function useMicrophonePractice() {
     return closest;
   }, [expectedNotes, accuracyWindow]);
 
-  // Handle microphone audio detection
+  // Handle hit from AudioWorklet or AnalyserNode
+  const handleDetectedHit = useCallback((hitTime: number) => {
+    // Read all values from store directly to avoid stale closures
+    const storeState = useStore.getState();
+    const currentIsPlaying = storeState.isPlaying;
+    const currentCountInActive = storeState.microphonePractice.countInActive;
+    const currentExpectedNotes = storeState.microphonePractice.expectedNotes;
+    const currentAccuracyWindow = storeState.microphonePractice.accuracyWindow;
+    const currentLatencyAdjustment = storeState.microphonePractice.latencyAdjustment;
+    
+    // console.log('[Microphone Practice] handleDetectedHit called:', {
+    //   hitTime: hitTime.toFixed(2),
+    //   hasStartTime: !!startTimeRef.current,
+    //   isPlaying: currentIsPlaying,
+    //   countInActive: currentCountInActive,
+    //   expectedNotesCount: currentExpectedNotes.length,
+    // });
+    
+    if (!startTimeRef.current) {
+      // console.log('[Microphone Practice] Early return: no startTime');
+      return; // Waiting for playback to start
+    }
+
+    if (currentCountInActive) {
+      // console.log('[Microphone Practice] Early return: count-in still active');
+      return; // Waiting for count-in to complete
+    }
+
+    if (!currentIsPlaying) {
+      // console.log('[Microphone Practice] Early return: not playing');
+      return; // Not playing
+    }
+
+    const elapsedTime = hitTime - startTimeRef.current;
+    const adjustedElapsedTime = elapsedTime - currentLatencyAdjustment;
+    
+    // console.log('[Microphone Practice] Processing hit:', {
+    //   hitTime: hitTime.toFixed(2),
+    //   startTime: startTimeRef.current.toFixed(2),
+    //   elapsedTime: elapsedTime.toFixed(2),
+    //   adjustedElapsedTime: adjustedElapsedTime.toFixed(2),
+    //   latencyAdjustment: currentLatencyAdjustment,
+    //   expectedNotesCount: currentExpectedNotes.length,
+    //   accuracyWindow: currentAccuracyWindow,
+    //   searchWindow: currentAccuracyWindow * 3,
+    //   expectedNoteTimes: currentExpectedNotes.length > 0 
+    //     ? currentExpectedNotes.slice(0, 8).map(n => n.time.toFixed(2)).join(', ')
+    //     : 'NO NOTES',
+    // });
+
+    // Find closest expected note using current notes from store
+    const searchWindow = currentAccuracyWindow * 3;
+    let closest: { note: string | number; expectedTime: number; index: number } | null = null;
+    let minDistance = Infinity;
+
+    currentExpectedNotes.forEach((expected, index) => {
+      // Skip already matched notes (only allow one match per note)
+      if (expected.matched) {
+        return;
+      }
+      
+      const distance = Math.abs(expected.time - adjustedElapsedTime);
+      
+      // For microphone, we match any hit (don't check note type)
+      if (distance < searchWindow && distance < minDistance) {
+        minDistance = distance;
+        closest = {
+          note: expected.note,
+          expectedTime: expected.time,
+          index: index,
+        };
+      }
+    });
+    
+    if (!closest) {
+      // console.log('[Microphone Practice] No closest note found for elapsed time:', adjustedElapsedTime.toFixed(2));
+      // console.log('[Microphone Practice] Expected note times:', currentExpectedNotes.length > 0 
+      //   ? currentExpectedNotes.map(n => n.time.toFixed(2)).join(', ')
+      //   : 'NO NOTES IN STORE');
+      // console.log('[Microphone Practice] Search window:', searchWindow.toFixed(2), 'ms');
+      return;
+    }
+    
+    // console.log('[Microphone Practice] Found closest note:', {
+    //   note: closest.note,
+    //   expectedTime: closest.expectedTime.toFixed(2),
+    //   index: closest.index,
+    //   elapsedTime: adjustedElapsedTime.toFixed(2),
+    //   distance: minDistance.toFixed(2),
+    // });
+
+    const timingError = Math.abs(closest.expectedTime - adjustedElapsedTime);
+    const rawTimingError = adjustedElapsedTime - closest.expectedTime;
+    const isEarly = rawTimingError < 0;
+    const perfectThreshold = Math.min(CONSTANTS.TIMING.PERFECT_HIT_THRESHOLD, currentAccuracyWindow / 4);
+    const isPerfect = timingError <= perfectThreshold;
+    const isWithinWindow = timingError <= currentAccuracyWindow;
+
+    if (isWithinWindow) {
+      markMicrophoneNoteMatched(closest.index);
+    }
+
+    const hit: PracticeHit = {
+      time: adjustedElapsedTime,
+      note: closest.note,
+      expectedTime: closest.expectedTime,
+      timingError: timingError,
+      rawTimingError: rawTimingError,
+      early: isEarly,
+      perfect: isPerfect,
+      matched: isWithinWindow,
+    };
+
+    addMicrophoneHit(hit);
+  }, [markMicrophoneNoteMatched, addMicrophoneHit]);
+
+  // Setup AudioWorklet for low-latency hit detection
+  const setupAudioWorklet = useCallback(async (
+    audioContext: AudioContext,
+    source: MediaStreamAudioSourceNode
+  ): Promise<AudioWorkletNode | null> => {
+    // Check if AudioWorklet is supported
+    if (!audioContext.audioWorklet) {
+      console.log('[Microphone Practice] AudioWorklet not supported, using AnalyserNode fallback');
+      return null;
+    }
+
+    try {
+      // Load the worklet module
+      await audioContext.audioWorklet.addModule('/worklets/drum-onset-processor.js');
+      
+      // Track AudioContext start time for timing synchronization
+      audioContextStartTimeRef.current = performance.now() - (audioContext.currentTime * 1000);
+      
+      // Create worklet node with initial parameters
+      // Convert sensitivity (0-100) to worklet range (0-2)
+      const workletSensitivity = (sensitivity / 50) || 1.5;
+      const workletNode = new AudioWorkletNode(audioContext, 'drum-onset-processor', {
+        processorOptions: {
+          sensitivity: workletSensitivity,
+          minIntervalMs: hitCooldown,
+        },
+      });
+
+      // Handle hit messages from worklet
+      workletNode.port.onmessage = (event) => {
+        if (event.data.type === 'hit') {
+          const hitData = event.data;
+          
+          // console.log('[Microphone Practice] AudioWorklet detected hit:', {
+          //   time: hitData.time,
+          //   level: hitData.level?.toFixed(4),
+          //   threshold: hitData.threshold?.toFixed(4),
+          //   hasStartTime: !!startTimeRef.current,
+          //   hasAudioContextStartTime: !!audioContextStartTimeRef.current,
+          // });
+          
+          // Convert worklet time (ms) to performance.now() equivalent
+          // Worklet time is relative to AudioContext creation, we need to sync it
+          if (!audioContextStartTimeRef.current) {
+            // console.log('[Microphone Practice] Waiting for audioContextStartTime');
+            return; // Wait for audioContext timing to be set up
+          }
+
+          // Convert AudioContext time to performance.now() time
+          // hitData.time is in ms from AudioContext start
+          const audioContextTimeMs = hitData.time;
+          const performanceTime = audioContextStartTimeRef.current + audioContextTimeMs;
+          
+          // console.log('[Microphone Practice] Converting worklet time to performance time:', {
+          //   audioContextTimeMs: audioContextTimeMs.toFixed(2),
+          //   audioContextStartTime: audioContextStartTimeRef.current.toFixed(2),
+          //   performanceTime: performanceTime.toFixed(2),
+          //   hasStartTime: !!startTimeRef.current,
+          //   isPlaying: useStore.getState().isPlaying,
+          // });
+          
+          // Use the performance time for hit detection
+          // Note: handleDetectedHit will check if startTime is set and if playing
+          // We can call it even if startTime isn't set yet - it will handle the check
+          handleDetectedHit(performanceTime);
+        }
+      };
+
+      // Connect source to worklet
+      source.connect(workletNode);
+      
+      console.log('[Microphone Practice] AudioWorklet initialized successfully', {
+        sensitivity: workletSensitivity,
+        minIntervalMs: hitCooldown,
+      });
+      
+      return workletNode;
+    } catch (error) {
+      console.error('[Microphone Practice] Failed to initialize AudioWorklet:', error);
+      return null;
+    }
+  }, [sensitivity, hitCooldown, handleDetectedHit]);
+
+  // Update AudioWorklet parameters when they change
+  useEffect(() => {
+    if (workletNodeRef.current && useAudioWorkletRef.current) {
+      const workletSensitivity = (sensitivity / 50) || 1.5;
+      workletNodeRef.current.port.postMessage({
+        type: 'update-parameters',
+        sensitivity: workletSensitivity,
+        minIntervalMs: hitCooldown,
+      });
+    }
+  }, [sensitivity, hitCooldown]);
+
+  // Handle microphone audio detection (AnalyserNode fallback)
   const checkAudioLevel = useCallback(() => {
+    // Skip if using AudioWorklet (it handles detection separately)
+    if (useAudioWorkletRef.current) {
+      return;
+    }
+
     if (!analyserRef.current || !dataArrayRef.current) {
       // Silent return - analyser might not be set up yet
       return;
@@ -279,8 +499,7 @@ export function useMicrophonePractice() {
       }
       
       const elapsedTime = now - startTimeRef.current;
-      const adjustedElapsedTime = elapsedTime - latencyAdjustment;
-
+      
       // Update previous volume and peak volume after registering hit
       // Set previousVolumeRef to a lower value to allow next hit to show an increase
       // For rapid hits, set it even lower to allow very quick consecutive detection
@@ -294,68 +513,18 @@ export function useMicrophonePractice() {
       }
       peakVolumeAfterHitRef.current = normalizedVolume; // Track peak volume for decay detection
       
-      console.log('[Microphone Practice] Hit detected!', {
+      console.log('[Microphone Practice] Hit detected (AnalyserNode)!', {
         normalizedVolume: normalizedVolume.toFixed(3),
         adjustedThreshold: adjustedThreshold.toFixed(3),
         volumeIncrease: volumeIncrease.toFixed(3),
         isTransient,
         crossedThreshold,
         elapsedTime: elapsedTime.toFixed(2),
-        adjustedElapsedTime: adjustedElapsedTime.toFixed(2),
         expectedNotesCount: expectedNotes.length
       });
 
-      // Find closest expected note
-      const closestNote = findClosestExpectedNote(adjustedElapsedTime);
-
-      if (closestNote) {
-        const timingError = Math.abs(closestNote.expectedTime - adjustedElapsedTime);
-        const rawTimingError = adjustedElapsedTime - closestNote.expectedTime;
-        const isEarly = rawTimingError < 0;
-        const perfectThreshold = Math.min(CONSTANTS.TIMING.PERFECT_HIT_THRESHOLD, accuracyWindow / 4);
-        const isPerfect = timingError <= perfectThreshold;
-        const isWithinWindow = timingError <= accuracyWindow;
-
-        console.log('[Microphone Practice] Matched note!', {
-          expectedTime: closestNote.expectedTime.toFixed(2),
-          timingError: timingError.toFixed(2),
-          isWithinWindow,
-          index: closestNote.index
-        });
-
-        if (isWithinWindow) {
-          markMicrophoneNoteMatched(closestNote.index);
-        }
-
-        const hit: PracticeHit = {
-          time: adjustedElapsedTime,
-          note: closestNote.note,
-          expectedTime: closestNote.expectedTime,
-          timingError: timingError,
-          rawTimingError: rawTimingError,
-          early: isEarly,
-          perfect: isPerfect,
-          matched: isWithinWindow,
-        };
-
-        addMicrophoneHit(hit);
-      } else {
-        console.log('[Microphone Practice] Hit detected but no matching note found', {
-          adjustedElapsedTime: adjustedElapsedTime.toFixed(2),
-          expectedNotesRange: expectedNotes.length > 0 
-            ? `${expectedNotes[0].time.toFixed(2)} - ${expectedNotes[expectedNotes.length - 1].time.toFixed(2)}`
-            : 'none',
-          expectedNotes: expectedNotes.map(n => ({ time: n.time.toFixed(2), note: n.note, matched: n.matched })),
-          searchWindow: (accuracyWindow * 3).toFixed(2),
-          startTime: startTimeRef.current?.toFixed(2),
-          now: now.toFixed(2),
-          elapsedTime: elapsedTime.toFixed(2),
-          latencyAdjustment
-        });
-        
-        // Don't record unmatched hits - they cause issues with color display
-        // Only record hits that actually match an expected note
-      }
+      // Use shared hit handler
+      handleDetectedHit(now);
       
       // Update previous volume after processing (even if no hit registered)
       // This allows transient detection to work properly
@@ -385,7 +554,7 @@ export function useMicrophonePractice() {
         }
       }
     }
-  }, [microphonePracticeEnabled, isPlaying, countInActive, hitCooldown, threshold, sensitivity, latencyAdjustment, accuracyWindow, findClosestExpectedNote, markMicrophoneNoteMatched, addMicrophoneHit]);
+  }, [microphonePracticeEnabled, isPlaying, countInActive, hitCooldown, threshold, sensitivity, latencyAdjustment, accuracyWindow, handleDetectedHit, expectedNotes]);
 
   // Reset matched notes and clear hits when playback starts
   const clearMicrophoneHits = useStore((state) => state.clearMicrophoneHits);
@@ -410,38 +579,38 @@ export function useMicrophonePractice() {
       lastHitTimeRef.current = 0; // Reset last hit time
       previousVolumeRef.current = 0; // Reset previous volume for transient detection
       peakVolumeAfterHitRef.current = 0; // Reset peak volume tracking
-      console.log('[Microphone Practice] Reset matched notes, cleared hits, and reset start time - playback starting');
+      // console.log('[Microphone Practice] Reset matched notes, cleared hits, and reset start time - playback starting');
     } else if (!isPlaying) {
       hasResetRef.current = false;
     }
   }, [isPlaying, playbackPosition, expectedNotes, setMicrophoneExpectedNotes, clearMicrophoneHits, setMicrophoneStartTime]);
   
-  // Set start time when count-in completes and first note is about to play (matching MIDI practice)
+  // Set start time when the first note actually plays (when playbackPosition becomes 0)
   useEffect(() => {
     // Reset hasResetRef when playback stops or position moves past first note
     if (!isPlaying || (playbackPosition !== null && playbackPosition >= 0 && !countInActive)) {
       hasResetRef.current = false;
     }
     
-    // Set start time when first note is expected to play (like WordPress plugin)
-    // This happens when count-in completes and playback actually starts
-    if (expectedNotes.length > 0 && !startTimeRef.current && !countInActive && playbackPosition !== null && playbackPosition >= 0) {
-      // Count-in just completed, first note is about to play
+    // Set start time when the first note actually plays (playbackPosition becomes 0)
+    // This ensures we sync with when the audio actually starts, not when isPlaying becomes true
+    if (expectedNotes.length > 0 && !startTimeRef.current && !countInActive && isPlaying && playbackPosition === 0) {
+      // First note is actually playing now
       const firstNoteTime = expectedNotes[0].time; // Usually 0
       
       // Set start time so that elapsedTime = 0 when first note plays
-      // This means startTime should be performance.now() when first note actually plays
+      // Since playbackPosition is 0, the first note is playing RIGHT NOW
       const now = performance.now();
       const startTime = now - firstNoteTime; // Adjust for first note offset
       startTimeRef.current = startTime;
       setMicrophoneStartTime(startTime);
-      console.log('[Microphone Practice] Start time set:', { 
-        startTime: startTime.toFixed(2), 
-        firstNoteTime: firstNoteTime.toFixed(2), 
-        now: now.toFixed(2),
-        playbackPosition,
-        countInActive
-      });
+      // console.log('[Microphone Practice] Start time set (first note playing):', { 
+      //   startTime: startTime.toFixed(2), 
+      //   firstNoteTime: firstNoteTime.toFixed(2), 
+      //   now: now.toFixed(2),
+      //   playbackPosition,
+      //   countInActive
+      // });
     }
   }, [expectedNotes, countInActive, playbackPosition, isPlaying, setMicrophoneStartTime]);
   
@@ -490,54 +659,116 @@ export function useMicrophonePractice() {
       }
       analyserRef.current = null;
       dataArrayRef.current = null;
+      if (workletNodeRef.current) {
+        workletNodeRef.current.disconnect();
+        workletNodeRef.current = null;
+      }
+      useAudioWorkletRef.current = false;
+      audioContextStartTimeRef.current = null;
       return;
     }
 
     const analyser = microphonePractice.analyser;
-    if (!analyser) {
-      console.log('[Microphone Practice] No analyser available yet - waiting for device setup');
+    const source = microphonePractice.microphone;
+    const audioContext = microphonePractice.audioContext;
+    
+    if (!analyser || !source || !audioContext) {
+      console.log('[Microphone Practice] No analyser/source/audioContext available yet - waiting for device setup');
       return;
     }
 
-    // Clear any existing interval
-    if (levelCheckIntervalRef.current) {
-      clearInterval(levelCheckIntervalRef.current);
-      levelCheckIntervalRef.current = null;
+    // Don't re-initialize if AudioWorklet is already set up and working
+    if (workletNodeRef.current && useAudioWorkletRef.current) {
+      console.log('[Microphone Practice] AudioWorklet already initialized, skipping re-initialization');
+      return;
     }
 
-    // Initialize analyser refs
-    analyserRef.current = analyser;
-    // For time-domain data, use fftSize (not frequencyBinCount)
-    const bufferLength = analyser.fftSize;
-    dataArrayRef.current = new Uint8Array(new ArrayBuffer(bufferLength));
+    // Check AudioWorklet support and try to use it
+    const supportInfo = getAudioWorkletSupportInfo();
+    const shouldUseAudioWorklet = supportInfo.supported && !supportInfo.needsFallback;
 
-    console.log('[Microphone Practice] Setting up audio analysis', { 
-      bufferLength, 
-      isPlaying,
-      microphonePracticeEnabled,
-      hasAnalyser: !!analyser,
-      hasDataArray: !!dataArrayRef.current
-    });
+    if (shouldUseAudioWorklet && !workletNodeRef.current) {
+      // Try to set up AudioWorklet
+      setupAudioWorklet(audioContext, source).then((workletNode) => {
+        if (workletNode) {
+          workletNodeRef.current = workletNode;
+          useAudioWorkletRef.current = true;
+          console.log('[Microphone Practice] Using AudioWorklet for hit detection (low latency)');
+          
+          // Clear any existing interval (we don't need polling with AudioWorklet)
+          if (levelCheckIntervalRef.current) {
+            clearInterval(levelCheckIntervalRef.current);
+            levelCheckIntervalRef.current = null;
+            setMicrophoneLevelCheckInterval(null);
+          }
+        } else {
+          // Fallback to AnalyserNode
+          useAudioWorkletRef.current = false;
+          setupAnalyserNodeFallback(analyser);
+        }
+      }).catch((error) => {
+        console.error('[Microphone Practice] AudioWorklet setup failed, using fallback:', error);
+        useAudioWorkletRef.current = false;
+        setupAnalyserNodeFallback(analyser);
+      });
+    } else if (!useAudioWorkletRef.current) {
+      // Use AnalyserNode fallback (only if not already using AudioWorklet)
+      setupAnalyserNodeFallback(analyser);
+    }
 
-    // Start checking audio levels (even when not playing, so we can detect hits when playback starts)
-    const interval = setInterval(() => {
-      checkAudioLevel();
-    }, CONSTANTS.AUDIO.LEVEL_CHECK_INTERVAL);
+    function setupAnalyserNodeFallback(analyser: AnalyserNode) {
+      // Don't re-setup if already running
+      if (levelCheckIntervalRef.current) {
+        console.log('[Microphone Practice] AnalyserNode fallback already running, skipping re-setup');
+        return;
+      }
 
-    levelCheckIntervalRef.current = interval;
-    setMicrophoneLevelCheckInterval(interval);
+      // Initialize analyser refs
+      analyserRef.current = analyser;
+      const bufferLength = analyser.fftSize;
+      dataArrayRef.current = new Uint8Array(new ArrayBuffer(bufferLength));
 
-    console.log('[Microphone Practice] Audio analysis interval started');
+      const supportInfo = getAudioWorkletSupportInfo();
+      console.log('[Microphone Practice] Using AnalyserNode fallback for hit detection', { 
+        bufferLength, 
+        isPlaying,
+        microphonePracticeEnabled,
+        hasAnalyser: !!analyser,
+        hasDataArray: !!dataArrayRef.current,
+        reason: supportInfo.reason
+      });
+
+      // Start checking audio levels (polling approach)
+      const interval = setInterval(() => {
+        checkAudioLevel();
+      }, CONSTANTS.AUDIO.LEVEL_CHECK_INTERVAL);
+
+      levelCheckIntervalRef.current = interval;
+      setMicrophoneLevelCheckInterval(interval);
+
+      console.log('[Microphone Practice] Audio analysis interval started (fallback mode)');
+    }
 
     return () => {
-      if (levelCheckIntervalRef.current) {
-        clearInterval(levelCheckIntervalRef.current);
-        levelCheckIntervalRef.current = null;
-        setMicrophoneLevelCheckInterval(null);
-        console.log('[Microphone Practice] Audio analysis interval stopped');
+      // Only cleanup if practice is actually being disabled
+      // Don't cleanup on every dependency change
+      if (!microphonePracticeEnabled) {
+        if (levelCheckIntervalRef.current) {
+          clearInterval(levelCheckIntervalRef.current);
+          levelCheckIntervalRef.current = null;
+          setMicrophoneLevelCheckInterval(null);
+          console.log('[Microphone Practice] Audio analysis interval stopped');
+        }
+        if (workletNodeRef.current) {
+          workletNodeRef.current.disconnect();
+          workletNodeRef.current = null;
+          useAudioWorkletRef.current = false;
+          audioContextStartTimeRef.current = null;
+          console.log('[Microphone Practice] AudioWorklet disconnected');
+        }
       }
     };
-  }, [microphonePracticeEnabled, microphonePractice.analyser, checkAudioLevel, setMicrophoneLevelCheckInterval, isPlaying]);
+  }, [microphonePracticeEnabled, microphonePractice.analyser, microphonePractice.microphone, microphonePractice.audioContext]);
 
   return {
     // Expose functions if needed
