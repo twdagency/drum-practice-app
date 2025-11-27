@@ -311,15 +311,18 @@ export function usePlayback() {
         return;
       }
       
-      // Check if buffer is silent (all zeros)
-      // Use a loop instead of spreading to avoid stack overflow for large buffers
+      // Check if buffer is silent (all zeros) - sample a subset for large buffers to avoid performance issues
       const channelData = source.buffer.getChannelData(0);
       let maxSample = 0;
-      for (let i = 0; i < channelData.length; i++) {
+      // For very large buffers (>100k samples), sample every Nth sample to avoid performance issues
+      const sampleRate = channelData.length > 100000 ? Math.floor(channelData.length / 10000) : 1;
+      for (let i = 0; i < channelData.length; i += sampleRate) {
         const absValue = Math.abs(channelData[i]);
         if (absValue > maxSample) {
           maxSample = absValue;
         }
+        // Early exit if we find a non-zero sample
+        if (maxSample > 0.001) break;
       }
       console.log(`[playDrumSound] Source buffer verified: duration=${source.buffer.duration.toFixed(3)}s, sampleRate=${source.buffer.sampleRate}Hz, numberOfChannels=${source.buffer.numberOfChannels}, length=${source.buffer.length} samples, maxSample=${maxSample.toFixed(6)}`);
       
