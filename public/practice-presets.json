@@ -3799,7 +3799,7 @@
       "subdivision": 12,
       "phrase": "3 3 3 3",
       "drumPattern": "K H S H K H S H K H S H",
-      "stickingPattern": "K R L R K R L R K R L R",
+      "stickingPattern": "K R R R K R L R K R R R",
       "bpm": 100,
       "repeat": 4,
       "difficulty": 6
@@ -3868,7 +3868,7 @@
       "subdivision": 16,
       "phrase": "4 4 4 4",
       "drumPattern": "K H S H K H S H K H S H K H S H",
-      "stickingPattern": "K R L R K R L R K R L R K R L R",
+      "stickingPattern": "K R R R K R L R K R R R K R L R",
       "bpm": 130,
       "repeat": 4,
       "difficulty": 5
@@ -3913,7 +3913,7 @@
       "subdivision": 16,
       "phrase": "4 4 4 4",
       "drumPattern": "K H S H K H S H K H S H K H S H",
-      "stickingPattern": "K R L R K R L R K R L R K R L R",
+      "stickingPattern": "K R R R K R L R K R R R K R L R",
       "bpm": 110,
       "repeat": 4,
       "difficulty": 5
@@ -3979,8 +3979,8 @@
       "timeSignature": "4/4",
       "subdivision": 16,
       "phrase": "4 4 4 4",
-      "drumPattern": "K H H S H K H H S H K H H S H K H H S H",
-      "stickingPattern": "K R L R K R L R K R L R K R L R",
+      "drumPattern": "K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H",
+      "stickingPattern": "K R R R K R R R K R R R K R R R",
       "bpm": 120,
       "repeat": 4,
       "difficulty": 4
@@ -4024,8 +4024,8 @@
       "timeSignature": "4/4",
       "subdivision": 16,
       "phrase": "4 4 4 4",
-      "drumPattern": "K H H S H K H H S H K H H S H K H H S H",
-      "stickingPattern": "K R L R K R L R K R L R K R L R",
+      "drumPattern": "K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H",
+      "stickingPattern": "K R R R K R R R K R R R K R R R",
       "bpm": 85,
       "repeat": 4,
       "difficulty": 4
@@ -4047,8 +4047,8 @@
       "timeSignature": "4/4",
       "subdivision": 16,
       "phrase": "4 4 4 4",
-      "drumPattern": "K H H S H K H H S H K H H S H K H H S H",
-      "stickingPattern": "K R L R K R L R K R L R K R L R",
+      "drumPattern": "K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H",
+      "stickingPattern": "K R R R K R R R K R R R K R R R",
       "bpm": 125,
       "repeat": 4,
       "difficulty": 4
@@ -4070,8 +4070,8 @@
       "timeSignature": "4/4",
       "subdivision": 16,
       "phrase": "4 4 4 4",
-      "drumPattern": "K H H S H K H H S H K H H S H K H H S H",
-      "stickingPattern": "K R L R K R L R K R L R K R L R",
+      "drumPattern": "K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H",
+      "stickingPattern": "K R R R K R R R K R R R K R R R",
       "bpm": 95,
       "repeat": 4,
       "difficulty": 3
@@ -4116,8 +4116,8 @@
       "timeSignature": "4/4",
       "subdivision": 16,
       "phrase": "4 4 4 4",
-      "drumPattern": "K H H S H K H H S H K H H S H K H H S H",
-      "stickingPattern": "K R L R K R L R K R L R K R L R",
+      "drumPattern": "K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H",
+      "stickingPattern": "K R R R K R R R K R R R K R R R",
       "bpm": 125,
       "repeat": 4,
       "difficulty": 4
