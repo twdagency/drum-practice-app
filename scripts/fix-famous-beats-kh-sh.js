@@ -40,25 +40,9 @@ function generateStickingForBeat(drumPattern) {
         // K+H: sticking is just K (H is ignored)
         sticking.push('K');
       } else if (first === 'S' && second === 'H') {
-        // S+H: sticking is whatever comes next in the pattern (H is ignored)
-        // Look ahead to see what the next non-H, non-K note is
-        let nextHand = 'R'; // Default
-        for (let j = i + 1; j < tokens.length; j++) {
-          const lookAhead = tokens[j];
-          if (lookAhead === 'S' || lookAhead === '(S)') {
-            nextHand = snareHand;
-            break;
-          } else if (lookAhead === 'H' || lookAhead.includes('+')) {
-            continue;
-          } else if (lookAhead === 'K') {
-            nextHand = 'K';
-            break;
-          }
-        }
-        sticking.push(nextHand);
-        if (nextHand === 'R' || nextHand === 'L') {
-          snareHand = snareHand === 'R' ? 'L' : 'R';
-        }
+        // S+H: sticking is the snare hand (alternating R/L, H is ignored)
+        sticking.push(snareHand);
+        snareHand = snareHand === 'R' ? 'L' : 'R'; // Alternate for next snare
       } else {
         // Other combinations - keep as is
         sticking.push(token);
@@ -121,7 +105,8 @@ function convertToKH_SH(drumPattern) {
 
   // Famous beats that should have K+H and S+H patterns
   // For patterns like "K H H S H", convert to "K+H H H S+H"
-  // Sticking: K+H -> K, H -> R, S+H -> R (next in pattern)
+  // Sticking: K+H -> K, H -> R, S+H -> L (snare alternates, so L after R R R)
+  // Note: Patterns should only contain ONE bar - the system will repeat based on 'repeat' field
   // Note: Shuffle patterns like "K H S H" should NOT be combined
   const shufflePatterns = [
     'famous-beat-purdy-shuffle', // K H S H - shuffle, don't combine
@@ -129,32 +114,32 @@ function convertToKH_SH(drumPattern) {
   ];
   
   const famousBeatsToFix = [
-  {
-    id: 'famous-beat-back-in-black',
-    expectedPattern: 'K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H',
-    // K+H -> K, H -> R, H -> R, S+H -> R (next is K+H which is K, but S+H uses R)
-    expectedSticking: 'K R R R K R R R K R R R K R R R'
-  },
-  {
-    id: 'famous-beat-billie-jean',
-    expectedPattern: 'K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H',
-    expectedSticking: 'K R R R K R R R K R R R K R R R'
-  },
-  {
-    id: 'famous-beat-when-the-levee',
-    expectedPattern: 'K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H',
-    expectedSticking: 'K R R R K R R R K R R R K R R R'
-  },
-  {
-    id: 'famous-beat-enter-sandman',
-    expectedPattern: 'K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H',
-    expectedSticking: 'K R R R K R R R K R R R K R R R'
-  },
-  {
-    id: 'famous-beat-sweet-child',
-    expectedPattern: 'K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H',
-    expectedSticking: 'K R R R K R R R K R R R K R R R'
-  },
+    {
+      id: 'famous-beat-back-in-black',
+      expectedPattern: 'K+H H H S+H', // ONE bar only
+      // K+H -> K, H -> R, H -> R, S+H -> L (snare alternates)
+      expectedSticking: 'K R R L' // ONE bar only
+    },
+    {
+      id: 'famous-beat-billie-jean',
+      expectedPattern: 'K+H H H S+H',
+      expectedSticking: 'K R R L'
+    },
+    {
+      id: 'famous-beat-when-the-levee',
+      expectedPattern: 'K+H H H S+H',
+      expectedSticking: 'K R R L'
+    },
+    {
+      id: 'famous-beat-enter-sandman',
+      expectedPattern: 'K+H H H S+H',
+      expectedSticking: 'K R R L'
+    },
+    {
+      id: 'famous-beat-sweet-child',
+      expectedPattern: 'K+H H H S+H',
+      expectedSticking: 'K R R L'
+    },
   // For patterns like "K H S H", H should be R (not alternating)
   {
     id: 'famous-beat-amen-break',
