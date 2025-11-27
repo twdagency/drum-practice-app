@@ -61,9 +61,16 @@ export function useMIDIPractice() {
       const phraseTokens = parseNumberList(phrase);
       const drumTokens = drumPattern.split(/\s+/);
       
+      // Calculate duration of one pattern repeat (before the repeat loop)
+      const notesPerRepeat = phraseTokens.reduce((sum, val) => sum + val, 0);
+      const oneRepeatDuration = notesPerRepeat * noteDuration;
+      
       // Build notes for each repeat
       for (let r = 0; r < repeat; r++) {
         let noteIndexInPattern = 0;
+        // Start patternTimeOffset at the beginning of this repeat
+        // Each repeat starts after the previous repeat
+        const repeatTimeOffset = r * oneRepeatDuration;
         let patternTimeOffset = 0; // Time offset within this pattern repeat
         
         // Build notes from phrase
@@ -75,9 +82,9 @@ export function useMIDIPractice() {
             const midiNote = noteMap[drumToken] || 0;
             
             if (midiNote > 0) {
-              // Use globalTimeOffset + patternTimeOffset for absolute time
+              // Use globalTimeOffset + repeatTimeOffset + patternTimeOffset for absolute time
               expectedNotes.push({
-                time: globalTimeOffset + patternTimeOffset,
+                time: globalTimeOffset + repeatTimeOffset + patternTimeOffset,
                 note: midiNote,
                 index: globalIndex,
                 matched: false,
