@@ -6,12 +6,14 @@ import { parseTimeSignature } from './patternUtils';
 import { MIDINoteMap } from '@/types';
 
 // MIDI note to drum voice mapping
-// Using single-letter codes: K, S, H, O, F, I (High Tom), M (Mid Tom)
+// Using single-letter codes: K, S, H, O, F, I (High Tom), M (Mid Tom), C (Crash), Y (Ride)
 // Note: The stave component expects:
 //   I: High Tom (e/5)
 //   M: Mid Tom (d/5)
 //   F: Floor Tom (a/4)
 //   T: Maps to High Tom (e/5) - legacy support
+//   C: Crash Cymbal (a/5/x)
+//   Y: Ride Cymbal (b/5/x) - Y to avoid conflict with R (Right hand)
 // 
 // Alesis Nitro common mappings:
 // - Kick: 36 (C2)
@@ -22,6 +24,9 @@ import { MIDINoteMap } from '@/types';
 // - Hi-Hat Open: 46 (B2)
 // - Low-Mid Tom: 47 (B2)
 // - High Tom: 48 (C3)
+// - Crash Cymbal 1: 49 (C#3)
+// - Ride Cymbal: 51 (D#3)
+// - Crash Cymbal 2: 57 (A3)
 const MIDI_TO_DRUM_MAP: Record<number, string> = {
   36: 'K',  // Kick (C2)
   38: 'S',  // Snare (D2)
@@ -32,8 +37,11 @@ const MIDI_TO_DRUM_MAP: Record<number, string> = {
   48: 'I',  // High Tom (C3) - mapped to I for stave positioning
   47: 'M',  // Low-Mid Tom (B2) - mapped to M for stave positioning
   45: 'M',  // Low Tom (A2) - mapped to M (mid tom)
-  49: 'I',  // Crash Cymbal 1 (C#3) - mapped to I (high tom position)
   50: 'I',  // High Tom (D3) - mapped to I for stave positioning
+  49: 'C',  // Crash Cymbal 1 (C#3)
+  57: 'C',  // Crash Cymbal 2 (A3)
+  51: 'Y',  // Ride Cymbal (D#3)
+  59: 'Y',  // Ride Cymbal Bell (B3) - also maps to Ride
 };
 
 export interface MIDIRecordedNote {

@@ -161,6 +161,8 @@ export function usePlayback() {
       T: 'highTom', // Legacy support - T maps to highTom
       F: 'floor',
       H: 'hiHat',
+      C: 'crash', // Crash cymbal
+      Y: 'ride', // Ride cymbal (Y to avoid conflict with R for Right hand)
     };
 
     // Normalize: convert two-letter codes (Ht, Mt) to single letters (I, M) like in Stave.tsx
@@ -226,11 +228,14 @@ export function usePlayback() {
       source.buffer = buffer;
       // Map buffer keys to volume keys
       // Note: highTom, midTom, and floor use snare volume for now
+      // Crash and ride use hiHat volume (they're cymbals)
       // (could be extended to have separate volume controls in the future)
       const volumeKey: keyof typeof volumes = 
         bufferKey === 'snare' ? 'snare' : 
         bufferKey === 'kick' ? 'kick' : 
         bufferKey === 'hiHat' ? 'hiHat' :
+        bufferKey === 'crash' ? 'hiHat' : // Use hiHat volume for crash
+        bufferKey === 'ride' ? 'hiHat' : // Use hiHat volume for ride
         bufferKey === 'highTom' ? 'snare' : // Use snare volume for highTom
         bufferKey === 'midTom' ? 'snare' : // Use snare volume for midTom
         bufferKey === 'floor' ? 'snare' : // Use snare volume for floor

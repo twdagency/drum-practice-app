@@ -52,6 +52,9 @@ const keyMap: Record<string, string> = {
   M: 'd/5', // Mid Tom (M = mid tom) - normalized from "Mt"
   // Legacy support for T (mapped to High Tom)
   T: 'e/5', // Tom (maps to High Tom, same as I)
+  // Cymbals
+  C: 'a/5/x', // Crash Cymbal (space A above staff with X note head)
+  Y: 'b/5/x', // Ride Cymbal (space B above staff with X note head) - Y to avoid conflict with R (Right hand)
 };
 
 export function Stave() {

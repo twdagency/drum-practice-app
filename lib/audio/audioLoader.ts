@@ -31,7 +31,7 @@ export async function loadAudioBuffer(
 export async function loadAllAudioBuffers(
   audioContext: AudioContext
 ): Promise<AudioBuffers> {
-  const [snare, kick, tom, highTom, midTom, floor, hiHat] = await Promise.all([
+  const [snare, kick, tom, highTom, midTom, floor, hiHat, crash, ride] = await Promise.all([
     loadAudioBuffer(audioContext, '/sounds/snare.wav'),
     loadAudioBuffer(audioContext, '/sounds/kick.wav'),
     loadAudioBuffer(audioContext, '/sounds/tom.wav').catch(() => null), // Legacy - fallback if doesn't exist
@@ -39,6 +39,8 @@ export async function loadAllAudioBuffers(
     loadAudioBuffer(audioContext, '/sounds/mid-tom.wav'),
     loadAudioBuffer(audioContext, '/sounds/floor.wav'),
     loadAudioBuffer(audioContext, '/sounds/hihat.wav'),
+    loadAudioBuffer(audioContext, '/sounds/crash.wav').catch(() => null), // Crash cymbal - fallback to null if doesn't exist
+    loadAudioBuffer(audioContext, '/sounds/ride.wav').catch(() => null), // Ride cymbal - fallback to null if doesn't exist
   ]);
 
   return {
@@ -49,6 +51,8 @@ export async function loadAllAudioBuffers(
     midTom,
     floor,
     hiHat,
+    crash: crash || hiHat, // Fallback to hiHat if crash doesn't exist
+    ride: ride || hiHat, // Fallback to hiHat if ride doesn't exist
   };
 }
 

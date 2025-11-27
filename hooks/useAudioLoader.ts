@@ -46,6 +46,8 @@ export function useAudioLoader() {
             highTom: buffers.highTom ? `loaded (${buffers.highTom.duration.toFixed(2)}s)` : 'null',
             midTom: buffers.midTom ? `loaded (${buffers.midTom.duration.toFixed(2)}s)` : 'null',
             hiHat: buffers.hiHat ? `loaded (${buffers.hiHat.duration.toFixed(2)}s)` : 'null',
+            crash: buffers.crash ? `loaded (${buffers.crash.duration.toFixed(2)}s)` : 'null',
+            ride: buffers.ride ? `loaded (${buffers.ride.duration.toFixed(2)}s)` : 'null',
           });
         }
       } catch (error) {

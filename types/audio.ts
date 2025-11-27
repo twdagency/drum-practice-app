@@ -10,6 +10,8 @@ export interface AudioBuffers {
   midTom: AudioBuffer | null;
   floor: AudioBuffer | null;
   hiHat: AudioBuffer | null;
+  crash: AudioBuffer | null; // Crash cymbal
+  ride: AudioBuffer | null; // Ride cymbal
 }
 
 export interface Volumes {
