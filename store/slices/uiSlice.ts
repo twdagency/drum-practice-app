@@ -32,6 +32,24 @@ const loadPersistedUISettings = () => {
       };
     }
     
+    // Migrate scrollAnimationEnabled to scrollMode if needed
+    if (parsed.scrollMode === undefined && parsed.scrollAnimationEnabled !== undefined) {
+      parsed.scrollMode = parsed.scrollAnimationEnabled ? 'horizontal' : 'none';
+      // Save the migrated value back to localStorage
+      window.localStorage.setItem('dpgen_ui_settings', JSON.stringify(parsed));
+    }
+    
+    // Ensure scroll settings have defaults
+    if (parsed.scrollMode === undefined) {
+      parsed.scrollMode = 'none';
+    }
+    if (parsed.scrollSpeed === undefined) {
+      parsed.scrollSpeed = 'medium';
+    }
+    if (parsed.lookAheadDistance === undefined) {
+      parsed.lookAheadDistance = 2;
+    }
+    
     return parsed;
   } catch (e) {
     console.error('Failed to load persisted UI settings:', e);
@@ -52,10 +70,16 @@ const saveUISettings = (settings: Partial<UISlice>) => {
   }
 };
 
+export type ScrollMode = 'horizontal' | 'vertical' | 'fixed-playhead' | 'page-turn' | 'none';
+export type ScrollSpeed = 'slow' | 'medium' | 'fast';
+
 export interface UISlice {
   // State
   isFullscreen: boolean;
-  scrollAnimationEnabled: boolean;
+  scrollAnimationEnabled: boolean; // Deprecated: use scrollMode instead, kept for backward compatibility
+  scrollMode: ScrollMode; // Current scroll animation mode
+  scrollSpeed: ScrollSpeed; // Speed of scroll animations
+  lookAheadDistance: number; // Look-ahead distance in measures (for horizontal mode)
   staveZoom: number;
   showGridLines: boolean;
   showMeasureNumbers: boolean;
@@ -75,7 +99,10 @@ export interface UISlice {
 
   // Actions
   setIsFullscreen: (isFullscreen: boolean) => void;
-  setScrollAnimationEnabled: (enabled: boolean) => void;
+  setScrollAnimationEnabled: (enabled: boolean) => void; // Deprecated: use setScrollMode instead
+  setScrollMode: (mode: ScrollMode) => void;
+  setScrollSpeed: (speed: ScrollSpeed) => void;
+  setLookAheadDistance: (distance: number) => void;
   setStaveZoom: (zoom: number) => void;
   setShowGridLines: (show: boolean) => void;
   setShowMeasureNumbers: (show: boolean) => void;
@@ -91,26 +118,33 @@ export interface UISlice {
   setHighlightColor: (type: 'default' | 'right' | 'left', color: string) => void;
 }
 
-export const createUISlice: StateCreator<UISlice> = (set) => ({
-  // Initial state - use defaults (will be updated from localStorage on client)
-  isFullscreen: false,
-  scrollAnimationEnabled: false,
-  staveZoom: 1.0,
-  showGridLines: false,
-  showMeasureNumbers: true,
-  showVisualMetronome: true,
-  showPolyrhythmShapes: false,
-  currentBeat: 0,
-  darkMode: false,
-  polyrhythmDisplayMode: 'stacked',
-  polyrhythmClickMode: 'both', // Default: play clicks for both hands
-  practicePadMode: false,
-  patternViewMode: 'list', // Default to list view
-  highlightColors: {
-    default: '#f97316', // Orange
-    right: '#3b82f6', // Blue
-    left: '#10b981', // Green
-  },
+export const createUISlice: StateCreator<UISlice> = (set) => {
+  // Load persisted settings to get defaults
+  const persisted = loadPersistedUISettings();
+  
+  return {
+    // Initial state - use defaults (will be updated from localStorage on client)
+    isFullscreen: false,
+    scrollAnimationEnabled: false, // Deprecated, kept for backward compatibility
+    scrollMode: (persisted?.scrollMode as ScrollMode) || 'none',
+    scrollSpeed: (persisted?.scrollSpeed as ScrollSpeed) || 'medium',
+    lookAheadDistance: persisted?.lookAheadDistance ?? 2,
+    staveZoom: 1.0,
+    showGridLines: false,
+    showMeasureNumbers: true,
+    showVisualMetronome: true,
+    showPolyrhythmShapes: false,
+    currentBeat: 0,
+    darkMode: false,
+    polyrhythmDisplayMode: 'stacked',
+    polyrhythmClickMode: 'both', // Default: play clicks for both hands
+    practicePadMode: false,
+    patternViewMode: 'list', // Default to list view
+    highlightColors: {
+      default: '#f97316', // Orange
+      right: '#3b82f6', // Blue
+      left: '#10b981', // Green
+    },
 
   // Actions - save to localStorage when settings change
   setIsFullscreen: (isFullscreen) => {
@@ -118,8 +152,25 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
     saveUISettings({ isFullscreen });
   },
   setScrollAnimationEnabled: (enabled) => {
-    set({ scrollAnimationEnabled: enabled });
-    saveUISettings({ scrollAnimationEnabled: enabled });
+    // Deprecated: migrate to scrollMode
+    const newMode: ScrollMode = enabled ? 'horizontal' : 'none';
+    set({ scrollAnimationEnabled: enabled, scrollMode: newMode });
+    saveUISettings({ scrollAnimationEnabled: enabled, scrollMode: newMode });
+  },
+  setScrollMode: (mode) => {
+    set({ scrollMode: mode });
+    // Also update deprecated scrollAnimationEnabled for backward compatibility
+    set({ scrollAnimationEnabled: mode !== 'none' });
+    saveUISettings({ scrollMode: mode, scrollAnimationEnabled: mode !== 'none' });
+  },
+  setScrollSpeed: (speed) => {
+    set({ scrollSpeed: speed });
+    saveUISettings({ scrollSpeed: speed });
+  },
+  setLookAheadDistance: (distance) => {
+    const clampedDistance = Math.max(1, Math.min(5, distance));
+    set({ lookAheadDistance: clampedDistance });
+    saveUISettings({ lookAheadDistance: clampedDistance });
   },
   setStaveZoom: (zoom) => {
     const clampedZoom = Math.max(0.5, Math.min(2.0, zoom));
@@ -193,5 +244,6 @@ export const createUISlice: StateCreator<UISlice> = (set) => ({
       return { highlightColors: newColors };
     });
   },
-});
+  };
+};
 

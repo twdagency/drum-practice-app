@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Pattern } from '@/types';
 import { PolyrhythmPattern } from '@/types/polyrhythm';
@@ -13,6 +13,15 @@ import { randomSets } from '@/lib/utils/randomSets';
 import { polyrhythmToCombinedPattern } from '@/lib/utils/polyrhythmUtils';
 import { calculatePolyrhythmPositions } from '@/lib/utils/polyrhythmPositionCalculator';
 import { calculatePolyrhythmDurations } from '@/lib/utils/polyrhythmDurationCalculator';
+import {
+  calculateHorizontalScrollPosition,
+  calculateVerticalScrollPosition,
+  calculateFixedPlayheadPosition,
+  shouldTriggerPageTurn,
+  calculatePageTurnPosition,
+  getScrollSpeedMultiplier,
+  getScrollBehavior,
+} from '@/lib/utils/scrollModes';
 
 // VexFlow types (we'll need to install @types/vexflow or define our own)
 declare global {
@@ -62,6 +71,18 @@ export function Stave() {
   const rendererRef = useRef<any>(null);
   const noteElementsRef = useRef<Map<number, SVGElement[]>>(new Map());
   const prevIsPlayingRef = useRef<boolean>(false);
+  const containerWidthRef = useRef<number | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  
+  // Track scroll state for different modes
+  const currentLineIndexRef = useRef<number>(0);
+  const currentPageRef = useRef<number>(0);
+  const scrollAnimationFrameRef = useRef<number | null>(null);
+  const fixedPlayheadXRef = useRef<number | null>(null);
+  // Store target scroll position for smooth continuous scrolling
+  const targetScrollLeftRef = useRef<number | null>(null);
+  const smoothScrollAnimationRef = useRef<number | null>(null);
   const patterns = useStore((state) => state.patterns);
   const polyrhythmPatterns = useStore((state) => state.polyrhythmPatterns);
   const polyrhythmDisplayMode = useStore((state) => state.polyrhythmDisplayMode);
@@ -74,6 +95,9 @@ export function Stave() {
   const highlightColors = useStore((state) => state.highlightColors);
   const showVisualMetronome = useStore((state) => state.showVisualMetronome);
   const scrollAnimationEnabled = useStore((state) => state.scrollAnimationEnabled);
+  const scrollMode = useStore((state) => state.scrollMode);
+  const scrollSpeed = useStore((state) => state.scrollSpeed);
+  const lookAheadDistance = useStore((state) => state.lookAheadDistance);
   const midiPractice = useStore((state) => state.midiPractice);
   const microphonePractice = useStore((state) => state.microphonePractice);
   const isPlaying = useStore((state) => state.isPlaying);
@@ -102,6 +126,8 @@ export function Stave() {
   }, [polyrhythmPatterns]);
 
   // Memoize render key to detect when full re-render is needed
+  // containerWidth is included but only updates via ResizeObserver (actual resize events)
+  // This prevents re-renders when patterns are added (which might cause slight layout shifts)
   const renderKey = useMemo(() => {
     return JSON.stringify({
       patterns: patterns.map(p => ({
@@ -130,13 +156,55 @@ export function Stave() {
       darkMode,
       showGridLines,
       showMeasureNumbers,
+      containerWidth, // Only changes on actual resize, not on pattern additions
+      scrollMode, // Re-render when scroll mode changes to switch between horizontal/vertical layout
     });
-  }, [patterns, polyrhythmPatterns, polyrhythmDisplayMode, darkMode, showGridLines, showMeasureNumbers]);
+  }, [patterns, polyrhythmPatterns, polyrhythmDisplayMode, darkMode, showGridLines, showMeasureNumbers, containerWidth, scrollMode]);
 
   const prevRenderKeyRef = useRef<string>('');
 
   // Debounce rendering for rapid changes
   const renderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Set up ResizeObserver to track container width changes
+  useEffect(() => {
+    if (!staveRef.current) {
+      return;
+    }
+
+    const containerElement = staveRef.current.parentElement;
+    if (!containerElement) {
+      return;
+    }
+
+    // Initialize container width if not set
+    const initialWidth = containerElement.clientWidth;
+    if (containerWidthRef.current === null) {
+      containerWidthRef.current = initialWidth;
+      setContainerWidth(initialWidth);
+    }
+
+    // Set up ResizeObserver to update container width only on actual resize
+    resizeObserverRef.current = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const newWidth = entry.contentRect.width;
+        if (containerWidthRef.current !== newWidth) {
+          containerWidthRef.current = newWidth;
+          // Update state to trigger re-render with new width
+          setContainerWidth(newWidth);
+        }
+      }
+    });
+
+    resizeObserverRef.current.observe(containerElement);
+
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!staveRef.current) {
@@ -195,14 +263,23 @@ export function Stave() {
       // Detect mobile screen size
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
       
-      // Calculate stave dimensions - make responsive to container width
+      // Calculate stave dimensions - use cached container width to prevent shifts
+      // The containerWidth state is only updated by ResizeObserver, so it won't change
+      // when patterns are added, preventing the stave from shifting
       const containerElement = staveRef.current?.parentElement;
-      const rawContainerWidth = containerElement?.clientWidth || window.innerWidth;
+      const rawContainerWidth = containerWidth ?? (containerElement?.clientWidth || window.innerWidth);
+      
+      // Update cache and state if it's the initial render
+      if (containerWidth === null && containerElement) {
+        const initialWidth = containerElement.clientWidth;
+        containerWidthRef.current = initialWidth;
+        setContainerWidth(initialWidth);
+      }
       const containerPadding = isMobile ? 32 : 64; // Reduced padding on mobile
       const availableWidth = isMobile 
         ? Math.max(280, rawContainerWidth - containerPadding) // Lower minimum on mobile
         : Math.max(400, rawContainerWidth - containerPadding); // Desktop minimum
-      const lineSpacing = 280;
+      const lineSpacing = 220; // Reduced from 280 for tighter spacing between rows
       
       // Helper function to check if pattern has triple drags (lllR, rrrL)
       const hasTripleDrags = (stickingPattern: string): boolean => {
@@ -387,55 +464,68 @@ export function Stave() {
         cumulativeNoteIndex += notesPerBar;
       });
 
+      // Check if we should render horizontally (for horizontal scroll or fixed playhead modes)
+      const renderHorizontally = scrollMode === 'horizontal' || scrollMode === 'fixed-playhead';
+      
       // Group bars into lines based on subdivision
-      // Bars with the same subdivision go on the same line (up to their max capacity)
+      // For horizontal modes, put ALL bars in a single line
       const lines: Array<typeof allBarData> = [];
       let currentLine: typeof allBarData = [];
       let currentSubdivision: number | null = null;
       
-      allBarData.forEach((barData) => {
-        const barSubdivision = barData.pattern.subdivision;
-        const stickingPattern = barData.pattern.stickingPattern || '';
-        const barsPerLineForSubdivision = getBarsPerLine(barSubdivision, stickingPattern);
+      if (renderHorizontally) {
+        // Horizontal mode: put all bars in one line
+        lines.push([...allBarData]);
+      } else {
+        // Vertical mode: group bars into lines based on subdivision
+        allBarData.forEach((barData) => {
+          const barSubdivision = barData.pattern.subdivision;
+          const stickingPattern = barData.pattern.stickingPattern || '';
+          const barsPerLineForSubdivision = getBarsPerLine(barSubdivision, stickingPattern);
+          
+          // If this bar has a different subdivision, start a new line
+          if (currentSubdivision !== null && currentSubdivision !== barSubdivision) {
+            lines.push(currentLine);
+            currentLine = [];
+            currentSubdivision = null;
+          }
+          
+          // If this bar has triple drags and subdivision >= 8, force it to its own line
+          const hasTripleDrag = hasTripleDrags(stickingPattern) && barSubdivision >= 8;
+          if (hasTripleDrag && currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = [];
+            currentSubdivision = null;
+          }
+          
+          // If line is full, start a new line
+          if (currentLine.length >= barsPerLineForSubdivision) {
+            lines.push(currentLine);
+            currentLine = [];
+            currentSubdivision = null;
+          }
+          
+          // Add bar to current line
+          currentLine.push(barData);
+          if (currentSubdivision === null) {
+            currentSubdivision = barSubdivision;
+          }
+        });
         
-        // If this bar has a different subdivision, start a new line
-        if (currentSubdivision !== null && currentSubdivision !== barSubdivision) {
+        // Add the last line if it has bars
+        if (currentLine.length > 0) {
           lines.push(currentLine);
-          currentLine = [];
-          currentSubdivision = null;
         }
-        
-        // If this bar has triple drags and subdivision >= 8, force it to its own line
-        const hasTripleDrag = hasTripleDrags(stickingPattern) && barSubdivision >= 8;
-        if (hasTripleDrag && currentLine.length > 0) {
-          lines.push(currentLine);
-          currentLine = [];
-          currentSubdivision = null;
-        }
-        
-        // If line is full, start a new line
-        if (currentLine.length >= barsPerLineForSubdivision) {
-          lines.push(currentLine);
-          currentLine = [];
-          currentSubdivision = null;
-        }
-        
-        // Add bar to current line
-        currentLine.push(barData);
-        if (currentSubdivision === null) {
-          currentSubdivision = barSubdivision;
-        }
-      });
-      
-      // Add the last line if it has bars
-      if (currentLine.length > 0) {
-        lines.push(currentLine);
       }
       
       const numLines = lines.length;
       const totalHeight = numLines * lineSpacing;
 
       // console.log('Creating renderer with', allBarData.length, 'bars,', numLines, 'lines');
+
+      // Declare calculatedStaveWidth and rendererWidth in outer scope so they're accessible throughout the function
+      let calculatedStaveWidth = 0; // Store for use in stave creation
+      let rendererWidth = rawContainerWidth; // Store renderer width for use after rendering
 
       // Create renderer
       let context: any;
@@ -459,11 +549,57 @@ export function Stave() {
           return;
         }
         
-        // Ensure renderer width matches container width exactly
-        // This prevents overflow - the renderer should be the same width as the container
-        const rendererWidth = rawContainerWidth;
+        // For horizontal modes, calculate width needed for all measures based on actual note counts
+        // For vertical modes, use container width
+        rendererWidth = rawContainerWidth; // Initialize to container width
+        
+        if (renderHorizontally && allBarData.length > 0) {
+          // Calculate width based on actual number of notes per measure
+          // Base width per note - increased to prevent compression and ensure horizontal scroll
+          // Higher subdivisions need more space per note
+          const baseWidthPerNote = 40; // Base pixels per note (increased to ensure scroll)
+          
+          let totalWidth = 0;
+          allBarData.forEach((barData) => {
+            const notesPerBar = barData.totalNotesInBar;
+            // Width scales with number of notes
+            // For higher subdivisions, add extra spacing
+            const subdivision = barData.pattern.subdivision;
+            const widthMultiplier = subdivision >= 24 ? 1.3 : subdivision >= 16 ? 1.2 : 1.0;
+            // Minimum width per measure increased to ensure proper spacing
+            const measureWidth = Math.max(250, notesPerBar * baseWidthPerNote * widthMultiplier);
+            totalWidth += measureWidth;
+          });
+          
+          const leftMargin = isMobile ? 8 : 16;
+          const rightMargin = isMobile ? 8 : 16;
+          // Calculate total width needed - don't constrain to container width
+          calculatedStaveWidth = totalWidth; // Store for stave creation
+          rendererWidth = totalWidth + leftMargin + rightMargin + 50; // Add extra padding
+          
+          console.log('[Horizontal Scroll] Calculated width:', {
+            allBarDataLength: allBarData.length,
+            calculatedStaveWidth,
+            rendererWidth,
+            totalWidth,
+            rawContainerWidth
+          });
+        } else if (renderHorizontally) {
+          console.warn('[Horizontal Scroll] allBarData is empty!', { allBarDataLength: allBarData.length });
+        }
+        
         rendererRef.current.resize(rendererWidth, totalHeight);
         context = rendererRef.current.getContext();
+        
+        // For horizontal modes, ensure the SVG element has the correct width attribute
+        if (renderHorizontally && context && context.svg) {
+          const svgElement = context.svg;
+          svgElement.setAttribute('width', String(rendererWidth));
+          svgElement.style.width = `${rendererWidth}px`;
+          svgElement.style.maxWidth = 'none';
+          svgElement.style.minWidth = `${rendererWidth}px`;
+          console.log('[Horizontal Scroll] SVG width set to:', rendererWidth, 'actual SVG width:', svgElement.getAttribute('width'));
+        }
         if (!context) {
           console.error('Failed to get context from renderer');
           return;
@@ -499,11 +635,46 @@ export function Stave() {
           // For polyrhythms, we need extra space for two staves
           const hasPolyrhythmsInLine = lineBars.some(bar => bar.isPolyrhythm);
           const extraSpacing = hasPolyrhythmsInLine ? 100 : 0; // Extra space for second stave
-          const staveY = lineIndex * (lineSpacing + extraSpacing) + 36;
+          const staveY = lineIndex * (lineSpacing + extraSpacing) + 20; // Reduced from 36 for tighter spacing
         // Use full available width for each stave line
         const leftMargin = isMobile ? 8 : 16; // Reduced margins on mobile
         const rightMargin = isMobile ? 8 : 16;
-        const actualStaveWidth = staveWidth - leftMargin - rightMargin; // Full width minus margins
+        
+        // For horizontal mode, use pre-calculated width; for vertical, use container width
+        let actualStaveWidth: number;
+        if (renderHorizontally) {
+          // Use the pre-calculated width from renderer calculation
+          // This ensures the stave matches the renderer width and doesn't compress
+          // Fallback to a reasonable minimum if calculation failed
+          if (calculatedStaveWidth > 0) {
+            actualStaveWidth = calculatedStaveWidth;
+            console.log('[Horizontal Scroll] Using calculated width:', actualStaveWidth, 'for line', lineIndex, 'with', lineBars.length, 'bars');
+          } else {
+            // Fallback: calculate width for this line's bars
+            console.warn('[Horizontal Scroll] calculatedStaveWidth is 0, calculating per line');
+            const baseWidthPerNote = 30;
+            let lineWidth = 0;
+            lineBars.forEach((barData) => {
+              const notesPerBar = barData.totalNotesInBar;
+              const subdivision = barData.pattern.subdivision;
+              const widthMultiplier = subdivision >= 24 ? 1.2 : subdivision >= 16 ? 1.1 : 1.0;
+              const measureWidth = Math.max(180, notesPerBar * baseWidthPerNote * widthMultiplier);
+              lineWidth += measureWidth;
+            });
+            actualStaveWidth = lineWidth > 0 ? lineWidth : staveWidth;
+            console.log('[Horizontal Scroll] Fallback calculated width:', actualStaveWidth);
+          }
+        } else {
+          // Vertical mode: use container width
+          actualStaveWidth = staveWidth - leftMargin - rightMargin;
+        }
+        
+        // Safety check: ensure stave width is positive and reasonable
+        if (actualStaveWidth <= 0 || !isFinite(actualStaveWidth)) {
+          console.warn('[Horizontal Scroll] Invalid stave width:', actualStaveWidth, 'using fallback. renderHorizontally:', renderHorizontally, 'calculatedStaveWidth:', calculatedStaveWidth, 'lineBars.length:', lineBars.length, 'staveWidth:', staveWidth);
+          actualStaveWidth = Math.max(200, staveWidth - leftMargin - rightMargin);
+        }
+        
         const stave = new VF.Stave(leftMargin, staveY, actualStaveWidth);
 
         // Get first bar's time signature for this line
@@ -1195,6 +1366,17 @@ export function Stave() {
           // Use the first bar's beat value for the voice (typically 4)
           const [, beatValue] = firstBarTimeSig;
           
+          // Debug logging for horizontal mode
+          if (renderHorizontally) {
+            console.log('[Horizontal Scroll] Line', lineIndex, 'tickables:', {
+              lineTickablesCount: lineTickables.length,
+              lineBarsCount: lineBars.length,
+              totalBeats,
+              beatValue,
+              actualStaveWidth
+            });
+          }
+          
           // Create voice for this line
           const voice = new VF.Voice({
             num_beats: totalBeats,
@@ -1209,7 +1391,11 @@ export function Stave() {
             const formatter = new VF.Formatter();
             formatter.joinVoices([voice]);
             // Format to fit within the stave width, leaving space for clef and time signature
+            // For horizontal mode, use the full width (minus margins for clef/time sig)
             const formatWidth = Math.max(200, actualStaveWidth - 120); // Minimum 200px for formatting
+            if (renderHorizontally) {
+              console.log('[Horizontal Scroll] Formatting with width:', formatWidth, 'actualStaveWidth:', actualStaveWidth, 'tickables:', lineTickables.length);
+            }
             formatter.format([voice], formatWidth, { align_rests: false });
             voice.draw(context, stave);
             lineBeams.forEach((beam: any) => {
@@ -1373,6 +1559,25 @@ export function Stave() {
         if (container) {
           allMeasureNumbers.forEach(({ stave, timeSig, startMeasure, bars }) => {
             drawMeasureNumbers(container, stave, timeSig, startMeasure, bars);
+          });
+        }
+      }
+
+      // For horizontal modes, ensure SVG width is set correctly after all rendering is complete
+      if (renderHorizontally && staveRef.current && rendererWidth > rawContainerWidth) {
+        const svgElement = staveRef.current.querySelector('svg');
+        if (svgElement) {
+          svgElement.setAttribute('width', String(rendererWidth));
+          svgElement.style.width = `${rendererWidth}px`;
+          svgElement.style.maxWidth = 'none';
+          svgElement.style.minWidth = `${rendererWidth}px`;
+          console.log('[Horizontal Scroll] Final SVG width after rendering:', {
+            rendererWidth,
+            svgWidth: svgElement.getAttribute('width'),
+            computedWidth: svgElement.offsetWidth,
+            containerWidth: rawContainerWidth,
+            scrollWidth: staveRef.current.scrollWidth,
+            clientWidth: staveRef.current.clientWidth
           });
         }
       }
@@ -2153,18 +2358,22 @@ export function Stave() {
       }
       
       // Scroll to current note if animation is enabled
-      if (scrollAnimationEnabled) {
-        scrollToCurrentNote(targetGroup);
+      if (scrollMode !== 'none' || scrollAnimationEnabled) {
+        // Try to determine line index from note position
+        let lineIndex: number | undefined;
+        // This could be improved by tracking line indices during rendering
+        handleScrollAnimation(targetGroup, lineIndex);
       }
     } else if (targetGroup && alreadyHighlighted) {
       // Already highlighted all notes above, just scroll if needed
-      if (scrollAnimationEnabled) {
-        scrollToCurrentNote(targetGroup);
+      if (scrollMode !== 'none' || scrollAnimationEnabled) {
+        let lineIndex: number | undefined;
+        handleScrollAnimation(targetGroup, lineIndex);
       }
     } else {
       console.warn(`[Highlighting] Could not find note group for playbackPosition ${playbackPosition} (isPolyrhythmBar=${isPolyrhythmBar}, noteIndexInBar=${noteIndexInBar}, notesBeforeTargetBar=${notesBeforeTargetBar}, totalNoteGroups=${noteGroups.length})`);
     }
-  }, [playbackPosition, patterns, polyrhythmPatterns, scrollAnimationEnabled, isPlaying]);
+  }, [playbackPosition, patterns, polyrhythmPatterns, scrollAnimationEnabled, scrollMode, scrollSpeed, lookAheadDistance, isPlaying]);
 
   // Clear practice visual feedback when playback starts (MIDI and Microphone)
   // This should clear all colors from the previous session, including the last note
@@ -2903,8 +3112,318 @@ export function Stave() {
   }, [microphonePractice.actualHits.length, microphonePractice.enabled, microphonePractice.visualFeedback, microphonePractice.showTimingErrors, microphonePractice.expectedNotes, microphonePractice.accuracyWindow]);
   
   /**
+   * Find the scrollable container for the stave
+   */
+  function findScrollContainer(): HTMLElement | null {
+    if (!staveRef.current) return null;
+    
+    // Always use the stave surface itself as it has overflow: auto
+    const scrollContainer = staveRef.current;
+    
+    // Check if content is actually larger than container (allows scrolling)
+    const hasHorizontalScroll = scrollContainer.scrollWidth > scrollContainer.clientWidth;
+    const hasVerticalScroll = scrollContainer.scrollHeight > scrollContainer.clientHeight;
+    
+    // Return container if it can scroll in at least one direction
+    if (hasHorizontalScroll || hasVerticalScroll) {
+      return scrollContainer;
+    }
+    
+    // If content fits, we can still scroll programmatically (for smooth animations)
+    // Check if there's an SVG with content
+    const svgElement = scrollContainer.querySelector('svg');
+    if (svgElement) {
+      const svgRect = svgElement.getBoundingClientRect();
+      const containerRect = scrollContainer.getBoundingClientRect();
+      // If SVG is larger than container, return container for scrolling
+      if (svgRect.width > containerRect.width || svgRect.height > containerRect.height) {
+        return scrollContainer;
+      }
+    }
+    
+    return scrollContainer; // Return anyway to allow programmatic scrolling
+  }
+
+  /**
+   * Horizontal scroll mode with look-ahead buffer
+   * Note: This works with the current vertical layout by scrolling horizontally within each line.
+   * For true horizontal scrolling (all measures in one line), a major rendering refactor would be needed.
+   */
+  function scrollHorizontal(noteElement: SVGElement) {
+    const scrollContainer = findScrollContainer();
+    if (!scrollContainer) return;
+    
+    const svgElement = scrollContainer.querySelector('svg');
+    if (!svgElement) return;
+    
+    const noteRect = noteElement.getBoundingClientRect();
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const svgRect = svgElement.getBoundingClientRect();
+    
+    // Calculate note's absolute position in the SVG (including scroll)
+    const noteLeftAbsolute = noteRect.left - svgRect.left + scrollContainer.scrollLeft;
+    const noteCenterXAbsolute = noteLeftAbsolute + noteRect.width / 2;
+    
+    // Target position: keep note at 25% from left edge of viewport
+    const targetNotePosition = containerRect.width * 0.25;
+    const targetScrollLeft = noteCenterXAbsolute - targetNotePosition;
+    
+    // Clamp to valid scroll range
+    const maxScroll = Math.max(0, svgElement.scrollWidth - containerRect.width);
+    const clampedTarget = Math.min(maxScroll, Math.max(0, targetScrollLeft));
+    
+    // Update target scroll position continuously
+    targetScrollLeftRef.current = clampedTarget;
+    
+    // Start continuous smooth scroll animation if not already running
+    if (smoothScrollAnimationRef.current === null) {
+      const smoothScroll = () => {
+        const currentScroll = scrollContainer.scrollLeft;
+        const targetScroll = targetScrollLeftRef.current;
+        
+        // If no target, stop animating
+        if (targetScroll === null) {
+          smoothScrollAnimationRef.current = null;
+          return;
+        }
+        
+        const diff = targetScroll - currentScroll;
+        
+        // If we're very close to target, snap to it and continue
+        if (Math.abs(diff) < 0.5) {
+          scrollContainer.scrollLeft = targetScroll;
+        } else {
+          // Very slow, smooth interpolation: move only 2% of the distance each frame
+          // This creates a slow, continuous scroll
+          const scrollSpeed = 0.02; // Very slow for smooth continuous scrolling
+          const newScroll = currentScroll + (diff * scrollSpeed);
+          scrollContainer.scrollLeft = newScroll;
+        }
+        
+        // Continue animating (target will be updated as notes advance)
+        smoothScrollAnimationRef.current = requestAnimationFrame(smoothScroll);
+      };
+      
+      smoothScrollAnimationRef.current = requestAnimationFrame(smoothScroll);
+    }
+  }
+
+  /**
+   * Vertical scroll mode - line-by-line or smooth continuous
+   */
+  function scrollVertical(noteElement: SVGElement, lineIndex?: number) {
+    const scrollContainer = findScrollContainer();
+    if (!scrollContainer) return;
+    
+    const noteRect = noteElement.getBoundingClientRect();
+    const containerRect = scrollContainer.getBoundingClientRect();
+    
+    // Calculate note's position relative to container (including scroll)
+    const noteTop = noteRect.top - containerRect.top + scrollContainer.scrollTop;
+    const noteCenterY = noteTop + noteRect.height / 2;
+    const containerCenterY = containerRect.height / 2;
+    
+    // Target: keep note in upper portion of viewport (start scrolling earlier)
+    // Use 30% from top instead of center, so it starts scrolling after first line
+    const targetScrollTop = noteTop - (containerRect.height * 0.3);
+    const margin = 50; // Smaller margin to start scrolling earlier
+    const currentScrollTop = scrollContainer.scrollTop;
+    const scrollOffset = targetScrollTop - currentScrollTop;
+    
+    // Only scroll if offset is significant
+    if (Math.abs(scrollOffset) > margin) {
+      scrollContainer.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: getScrollBehavior(),
+      });
+    }
+  }
+
+  /**
+   * Fixed playhead mode - notation scrolls horizontally behind fixed playhead
+   * The playhead is a fixed vertical line at the center, and notes scroll to align with it
+   * Works with horizontal layout (all measures in one line)
+   */
+  function scrollFixedPlayhead(noteElement: SVGElement) {
+    const scrollContainer = findScrollContainer();
+    if (!scrollContainer) return;
+    
+    // Initialize playhead position if not set (center of viewport)
+    if (fixedPlayheadXRef.current === null) {
+      const containerRect = scrollContainer.getBoundingClientRect();
+      fixedPlayheadXRef.current = containerRect.width / 2;
+    }
+    
+    const svgElement = scrollContainer.querySelector('svg');
+    if (!svgElement) return;
+    
+    const noteRect = noteElement.getBoundingClientRect();
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const svgRect = svgElement.getBoundingClientRect();
+    
+    // Calculate note's absolute position in the SVG (including scroll)
+    const noteLeftAbsolute = noteRect.left - svgRect.left + scrollContainer.scrollLeft;
+    const noteCenterXAbsolute = noteLeftAbsolute + noteRect.width / 2;
+    
+    // Fixed playhead: align note center with the fixed playhead line (center of viewport)
+    const playheadX = fixedPlayheadXRef.current;
+    const targetScrollLeft = noteCenterXAbsolute - playheadX;
+    
+    // Clamp to valid scroll range
+    const maxScroll = Math.max(0, svgElement.scrollWidth - containerRect.width);
+    const clampedTarget = Math.min(maxScroll, Math.max(0, targetScrollLeft));
+    
+    // Update target scroll position continuously
+    targetScrollLeftRef.current = clampedTarget;
+    
+    // Start continuous smooth scroll animation if not already running
+    if (smoothScrollAnimationRef.current === null) {
+      const smoothScroll = () => {
+        const currentScroll = scrollContainer.scrollLeft;
+        const targetScroll = targetScrollLeftRef.current;
+        
+        // If no target, stop animating
+        if (targetScroll === null) {
+          smoothScrollAnimationRef.current = null;
+          return;
+        }
+        
+        const diff = targetScroll - currentScroll;
+        
+        // If we're very close to target, snap to it and continue
+        if (Math.abs(diff) < 0.5) {
+          scrollContainer.scrollLeft = targetScroll;
+        } else {
+          // Very slow, smooth interpolation: move only 2% of the distance each frame
+          // This creates a slow, continuous scroll
+          const scrollSpeed = 0.02; // Very slow for smooth continuous scrolling
+          const newScroll = currentScroll + (diff * scrollSpeed);
+          scrollContainer.scrollLeft = newScroll;
+        }
+        
+        // Continue animating (target will be updated as notes advance)
+        smoothScrollAnimationRef.current = requestAnimationFrame(smoothScroll);
+      };
+      
+      smoothScrollAnimationRef.current = requestAnimationFrame(smoothScroll);
+    }
+  }
+
+  /**
+   * Page turn mode - simulate page turns for long patterns
+   */
+  function scrollPageTurn(noteElement: SVGElement, lineIndex?: number) {
+    const scrollContainer = findScrollContainer();
+    if (!scrollContainer) return;
+    
+    // Calculate page size based on viewport
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const lineSpacing = 220;
+    const pageSize = Math.floor(containerRect.height / lineSpacing);
+    
+    if (pageSize <= 0) return;
+    
+    // Determine current line index
+    let currentLine = lineIndex ?? currentLineIndexRef.current;
+    if (lineIndex === undefined) {
+      const noteRect = noteElement.getBoundingClientRect();
+      const relativeY = noteRect.top - containerRect.top + scrollContainer.scrollTop;
+      currentLine = Math.floor(relativeY / lineSpacing);
+    }
+    
+    // Get total lines (approximate - could be improved)
+    const svgElement = scrollContainer.querySelector('svg');
+    if (!svgElement) return;
+    const totalHeight = svgElement.getBoundingClientRect().height;
+    const totalLines = Math.ceil(totalHeight / lineSpacing);
+    
+    // Calculate current page and position within page
+    const currentPage = Math.floor(currentLine / pageSize);
+    const positionInPage = pageSize > 0 ? (currentLine % pageSize) / pageSize : 0;
+    const maxPage = Math.floor((totalLines - 1) / pageSize);
+    
+    // Trigger page turn when 75% through current page
+    const shouldTurn = positionInPage >= 0.75 && currentPage < maxPage;
+    const nextPage = currentPage + 1;
+    
+    if (shouldTurn && nextPage !== currentPageRef.current) {
+      currentPageRef.current = nextPage;
+      
+      // Calculate scroll position for start of next page
+      const scrollTop = nextPage * pageSize * lineSpacing;
+      
+      // Add fade transition effect
+      if (!scrollContainer.style.transition) {
+        scrollContainer.style.transition = 'opacity 0.3s ease';
+      }
+      scrollContainer.style.opacity = '0.6';
+      
+      setTimeout(() => {
+        scrollContainer.scrollTo({
+          top: Math.max(0, scrollTop),
+          behavior: getScrollBehavior(),
+        });
+        
+        setTimeout(() => {
+          scrollContainer.style.opacity = '1';
+        }, 250);
+      }, 200);
+    }
+  }
+
+  /**
+   * Main scroll animation dispatcher
+   */
+  function handleScrollAnimation(noteElement: SVGElement, lineIndex?: number) {
+    if (!noteElement || scrollMode === 'none') return;
+    
+    // Cancel any pending scroll animation
+    if (scrollAnimationFrameRef.current !== null) {
+      cancelAnimationFrame(scrollAnimationFrameRef.current);
+    }
+    
+    // Use requestAnimationFrame for smooth scrolling
+    scrollAnimationFrameRef.current = requestAnimationFrame(() => {
+      try {
+        // For horizontal mode, check if this is the first note and reset scroll if needed
+        if (scrollMode === 'horizontal' && playbackPosition === 0) {
+          const scrollContainer = findScrollContainer();
+          if (scrollContainer && scrollContainer.scrollLeft > 0) {
+            // Reset to beginning when starting playback
+            scrollContainer.scrollTo({ left: 0, behavior: 'auto' });
+            scrollAnimationFrameRef.current = null;
+            return;
+          }
+        }
+        
+        switch (scrollMode) {
+          case 'horizontal':
+            scrollHorizontal(noteElement);
+            break;
+          case 'vertical':
+            scrollVertical(noteElement, lineIndex);
+            break;
+          case 'fixed-playhead':
+            scrollFixedPlayhead(noteElement);
+            break;
+          case 'page-turn':
+            scrollPageTurn(noteElement, lineIndex);
+            break;
+          case 'none':
+            // No scrolling
+            break;
+        }
+      } catch (error) {
+        console.error('[Scroll Animation] Error in scroll mode:', scrollMode, error);
+      }
+      scrollAnimationFrameRef.current = null;
+    });
+  }
+  
+  /**
    * Scroll to the current note during playback
    * Based on WordPress plugin's scrollToCurrentNote function
+   * @deprecated Use handleScrollAnimation instead
    */
   function scrollToCurrentNote(noteElement: SVGElement) {
     if (!staveRef.current || !scrollAnimationEnabled) return;
@@ -2940,19 +3459,119 @@ export function Stave() {
     const margin = 50; // Minimum margin from edges
     const scrollOffset = noteCenterX - containerCenterX;
     
-    // Only scroll if note is outside the visible area (with some margin)
-    if (Math.abs(scrollOffset) > margin) {
-      // Smooth scroll
-      scrollContainer.scrollBy({
-        left: scrollOffset,
-        behavior: 'smooth'
-      });
-    }
+      // Only scroll if note is outside the visible area (with some margin)
+      if (Math.abs(scrollOffset) > margin) {
+        // Smooth scroll
+        scrollContainer.scrollBy({
+          left: scrollOffset,
+          behavior: getScrollBehavior(),
+        });
+      }
   }
 
+  // Cleanup animation frames on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(scrollAnimationFrameRef.current);
+      }
+      if (smoothScrollAnimationRef.current !== null) {
+        cancelAnimationFrame(smoothScrollAnimationRef.current);
+      }
+    };
+  }, []);
+
+  // Ensure SVG can be wider than container in horizontal modes
+  useEffect(() => {
+    if (!staveRef.current || (scrollMode !== 'horizontal' && scrollMode !== 'fixed-playhead')) {
+      return;
+    }
+
+    // Use a small delay to ensure SVG is rendered
+    const timeoutId = setTimeout(() => {
+      const svgElement = staveRef.current?.querySelector('svg');
+      if (svgElement) {
+        // Get the actual width from the SVG viewBox or width attribute
+        const svgWidth = svgElement.getAttribute('width');
+        const viewBox = svgElement.getAttribute('viewBox');
+        let actualWidth = svgWidth ? parseFloat(svgWidth) : null;
+        
+        if (!actualWidth && viewBox) {
+          const viewBoxValues = viewBox.split(' ');
+          if (viewBoxValues.length >= 3) {
+            actualWidth = parseFloat(viewBoxValues[2]);
+          }
+        }
+        
+        // Remove any width constraints on the SVG and ensure it can be wider than container
+        svgElement.style.maxWidth = 'none';
+        svgElement.style.minWidth = '100%'; // At least as wide as container
+        
+        // If we have an actual width, use it; otherwise let it be auto
+        if (actualWidth && actualWidth > 0) {
+          svgElement.style.width = `${actualWidth}px`;
+        } else {
+          svgElement.style.width = 'auto';
+        }
+        
+        // Ensure parent container allows horizontal overflow
+        if (svgElement.parentElement) {
+          svgElement.parentElement.style.overflowX = 'auto';
+          svgElement.parentElement.style.overflowY = 'auto';
+          svgElement.parentElement.style.width = '100%'; // Container takes full width
+        }
+        
+        // Ensure the stave surface container allows overflow
+        if (staveRef.current) {
+          staveRef.current.style.overflowX = 'auto';
+          staveRef.current.style.overflowY = 'auto';
+        }
+        
+        console.log('[Horizontal Scroll] SVG width set:', {
+          svgWidth: actualWidth,
+          computedWidth: svgElement.offsetWidth,
+          scrollWidth: staveRef.current?.scrollWidth,
+          clientWidth: staveRef.current?.clientWidth
+        });
+      }
+    }, 100); // Small delay to ensure rendering is complete
+    
+    return () => clearTimeout(timeoutId);
+  }, [scrollMode, renderKey]); // Re-run when scroll mode or content changes
+
+  // Determine if we need horizontal scrolling
+  const needsHorizontalScroll = scrollMode === 'horizontal' || scrollMode === 'fixed-playhead';
+  
   return (
-    <div className="dpgen-stave" style={{ width: '100%', overflow: 'hidden' }}>
-      <div ref={staveRef} className="dpgen-stave__surface" style={{ width: '100%', overflow: 'hidden', maxWidth: '100%' }} />
+    <div className="dpgen-stave" style={{ width: '100%', overflow: needsHorizontalScroll ? 'visible' : 'hidden', position: 'relative' }}>
+      {/* Fixed playhead indicator */}
+      {scrollMode === 'fixed-playhead' && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: 0,
+            bottom: 0,
+            width: '2px',
+            backgroundColor: 'var(--dpgen-primary, #3b82f6)',
+            zIndex: 1000,
+            pointerEvents: 'none',
+            transform: 'translateX(-50%)',
+          }}
+        />
+      )}
+      <div 
+        ref={staveRef} 
+        className="dpgen-stave__surface" 
+        style={{ 
+          width: needsHorizontalScroll ? 'auto' : '100%', 
+          height: '100%',
+          overflow: 'auto', 
+          maxWidth: needsHorizontalScroll ? 'none' : '100%', // Allow overflow in horizontal modes
+          maxHeight: '70vh', // Limit height to allow vertical scrolling
+          minWidth: needsHorizontalScroll ? '100%' : 'auto', // Ensure minimum width
+        }} 
+      />
     </div>
   );
 }
@@ -3827,7 +4446,7 @@ function drawMeasureNumbers(container: HTMLElement, stave: any, timeSignature: [
     // Create text element
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     text.setAttribute('x', String(measureX));
-    text.setAttribute('y', String(staveY - 15));
+    text.setAttribute('y', String(staveY - 8)); // Reduced from 15 for tighter spacing above stave
     text.setAttribute('fill', '#64748b');
     text.setAttribute('font-family', 'Inter, sans-serif');
     text.setAttribute('font-size', '12');

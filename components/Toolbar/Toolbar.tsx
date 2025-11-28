@@ -61,6 +61,7 @@ export function Toolbar() {
   const [showHelp, setShowHelp] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [apiSyncEnabled, setApiSyncEnabled] = useState(false);
+  const [scrollModeDropdownOpen, setScrollModeDropdownOpen] = useState(false);
   
   // Load presets for the dropdown
   const { presets, loading: presetsLoading } = usePresets();
@@ -130,6 +131,12 @@ export function Toolbar() {
   const showPolyrhythmShapes = useStore((state) => state.showPolyrhythmShapes);
   const polyrhythmDisplayMode = useStore((state) => state.polyrhythmDisplayMode);
   const practicePadMode = useStore((state) => state.practicePadMode);
+  const scrollMode = useStore((state) => state.scrollMode);
+  const scrollSpeed = useStore((state) => state.scrollSpeed);
+  const lookAheadDistance = useStore((state) => state.lookAheadDistance);
+  const setScrollMode = useStore((state) => state.setScrollMode);
+  const setScrollSpeed = useStore((state) => state.setScrollSpeed);
+  const setLookAheadDistance = useStore((state) => state.setLookAheadDistance);
   const midiPractice = useStore((state) => state.midiPractice);
   const midiPracticeEnabled = useStore((state) => state.midiPractice.enabled);
   const microphonePractice = useStore((state) => state.microphonePractice);
@@ -1196,6 +1203,118 @@ export function Toolbar() {
           title="Toggle dark mode"
           icon={darkMode ? 'fas fa-sun' : 'fas fa-moon'}
         />
+        <ToolbarDropdown
+          buttonIcon="fas fa-scroll"
+          buttonTitle="Scroll Mode"
+          controlledOpen={scrollModeDropdownOpen}
+          onOpenChange={setScrollModeDropdownOpen}
+        >
+          <div style={{ padding: '0.5rem', minWidth: '200px' }}>
+            <div style={{ marginBottom: '0.75rem', fontWeight: 600, fontSize: '0.875rem' }}>
+              Scroll Mode
+            </div>
+            {(['none', 'horizontal', 'vertical', 'fixed-playhead', 'page-turn'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => {
+                  setScrollMode(mode);
+                  setScrollModeDropdownOpen(false);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '0.5rem',
+                  textAlign: 'left',
+                  background: scrollMode === mode ? 'var(--dpgen-primary, #3b82f6)' : 'transparent',
+                  color: scrollMode === mode ? 'white' : 'var(--dpgen-text, #1f2937)',
+                  border: 'none',
+                  borderRadius: '0.25rem',
+                  cursor: 'pointer',
+                  marginBottom: '0.25rem',
+                  fontSize: '0.875rem',
+                }}
+                onMouseEnter={(e) => {
+                  if (scrollMode !== mode) {
+                    e.currentTarget.style.background = 'var(--dpgen-bg-hover, #f3f4f6)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (scrollMode !== mode) {
+                    e.currentTarget.style.background = 'transparent';
+                  }
+                }}
+              >
+                {mode === 'none' && 'None'}
+                {mode === 'horizontal' && 'Horizontal Scroll'}
+                {mode === 'vertical' && 'Vertical Scroll'}
+                {mode === 'fixed-playhead' && 'Fixed Playhead'}
+                {mode === 'page-turn' && 'Page Turn'}
+              </button>
+            ))}
+            {scrollMode !== 'none' && (
+              <>
+                <div style={{ marginTop: '1rem', marginBottom: '0.75rem', fontWeight: 600, fontSize: '0.875rem', borderTop: '1px solid var(--dpgen-border, #e5e7eb)', paddingTop: '0.75rem' }}>
+                  Scroll Speed
+                </div>
+                {(['slow', 'medium', 'fast'] as const).map((speed) => (
+                  <button
+                    key={speed}
+                    type="button"
+                    onClick={() => {
+                      setScrollSpeed(speed);
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '0.5rem',
+                      textAlign: 'left',
+                      background: scrollSpeed === speed ? 'var(--dpgen-primary, #3b82f6)' : 'transparent',
+                      color: scrollSpeed === speed ? 'white' : 'var(--dpgen-text, #1f2937)',
+                      border: 'none',
+                      borderRadius: '0.25rem',
+                      cursor: 'pointer',
+                      marginBottom: '0.25rem',
+                      fontSize: '0.875rem',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (scrollSpeed !== speed) {
+                        e.currentTarget.style.background = 'var(--dpgen-bg-hover, #f3f4f6)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (scrollSpeed !== speed) {
+                        e.currentTarget.style.background = 'transparent';
+                      }
+                    }}
+                  >
+                    {speed.charAt(0).toUpperCase() + speed.slice(1)}
+                  </button>
+                ))}
+                {scrollMode === 'horizontal' && (
+                  <>
+                    <div style={{ marginTop: '1rem', marginBottom: '0.75rem', fontWeight: 600, fontSize: '0.875rem', borderTop: '1px solid var(--dpgen-border, #e5e7eb)', paddingTop: '0.75rem' }}>
+                      Look-Ahead Distance
+                    </div>
+                    <div style={{ padding: '0.5rem 0' }}>
+                      <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        value={lookAheadDistance}
+                        onChange={(e) => setLookAheadDistance(parseInt(e.target.value, 10))}
+                        style={{ width: '100%' }}
+                      />
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--dpgen-muted, #6b7280)' }}>
+                        {lookAheadDistance} measure{lookAheadDistance !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </ToolbarDropdown>
         <Tooltip content="Keyboard shortcuts (?)">
           <ToolbarButton
             onClick={() => setShowKeyboardShortcuts(true)}
