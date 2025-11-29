@@ -17,6 +17,7 @@ export interface PatternSlice {
   addPattern: (pattern: Pattern) => void;
   removePattern: (id: number) => void;
   updatePattern: (id: number, updates: Partial<Pattern>) => void;
+  updateAllPatterns: (updates: Partial<Pattern>) => void;
   duplicatePattern: (id: number) => void;
   clearPatterns: () => void;
   setPatterns: (patterns: Pattern[]) => void;
@@ -57,6 +58,11 @@ export const createPatternSlice: StateCreator<PatternSlice> = (set, get) => ({
       patterns: state.patterns.map((p) =>
         p.id === id ? { ...p, ...updates } : p
       ),
+    })),
+
+  updateAllPatterns: (updates) =>
+    set((state) => ({
+      patterns: state.patterns.map((p) => ({ ...p, ...updates })),
     })),
 
   duplicatePattern: (id) => {

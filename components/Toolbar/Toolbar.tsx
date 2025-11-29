@@ -31,7 +31,7 @@ import { ApiSyncSettingsModal } from '../PracticeMode/ApiSyncSettingsModal';
 import { MIDIRecording } from '../PracticeMode/MIDIRecording';
 import { MIDIMappingEditor } from '../PracticeMode/MIDIMappingEditor';
 import { usePresets } from '@/hooks/usePresets';
-import { parseTimeSignature, buildAccentIndices, parseNumberList } from '@/lib/utils/patternUtils';
+import { parseTimeSignature, buildAccentIndices, parseNumberList, parseTokens, formatList } from '@/lib/utils/patternUtils';
 import { exportPDF, exportPNG, exportSVG, exportMIDI, exportPatternCollection, importPatternCollection, sharePatternURL } from '@/lib/utils/exportUtils';
 import { useMIDIRecording } from '@/hooks/useMIDIRecording';
 import { useMIDIDevices } from '@/hooks/useMIDIDevices';
@@ -543,6 +543,69 @@ export function Toolbar() {
 
     const [beats, beatType] = parseTimeSignature(preset.timeSignature);
     
+    // Check if this is a combined preset that should be split into individual patterns
+    const isCombinedPreset = preset.id === '16th-note-grid-all-combinations-combined' || 
+                             (preset.tags && preset.tags.includes('combined'));
+    
+    if (isCombinedPreset && preset.id === '16th-note-grid-all-combinations-combined') {
+      // Split the combined preset into 14 individual patterns
+      // Each pattern is 16 positions (4 bars × 4 beats)
+      const drumTokens = parseTokens(preset.drumPattern);
+      const stickingTokens = parseTokens(preset.stickingPattern);
+      const phraseValues = parseNumberList(preset.phrase);
+      
+      // The combined pattern has 14 individual patterns, each stored as 64 positions (4 bars × 4 beats × 4 positions per beat)
+      // But we only need the base 4-position pattern - the system will repeat it based on repeat: 4
+      const patternsPerCombination = 14;
+      const positionsPerPatternInCombined = 64; // How it's stored in the combined preset
+      const basePatternLength = 4; // The actual pattern length we want (one beat)
+      
+      const individualPatternNames = [
+        'S S S S', '- S S S', 'S - S S', 'S S - S', 'S S S -',
+        'S S - -', 'S - S -', 'S - - S', '- S - S', '- - S S',
+        'S - - -', '- S - -', '- - S -', '- - - S'
+      ];
+      
+      for (let i = 0; i < patternsPerCombination; i++) {
+        const startPos = i * positionsPerPatternInCombined;
+        // Extract only the first 4 positions (the base pattern) - it repeats 16 times in the combined preset
+        const patternDrumTokens = drumTokens.slice(startPos, startPos + basePatternLength);
+        const patternStickingTokens = stickingTokens.slice(startPos, startPos + basePatternLength);
+        
+        // Phrase is always "4 4 4 4" (4 beats, 4 notes per beat)
+        const patternPhraseValues = [4, 4, 4, 4];
+        
+        const patternDrumPattern = formatList(patternDrumTokens);
+        const patternStickingPattern = formatList(patternStickingTokens);
+        const patternPhrase = formatList(patternPhraseValues);
+        const patternAccentIndices = buildAccentIndices(patternPhraseValues);
+        
+        const pattern = {
+          id: 0, // Will be replaced by addPattern
+          timeSignature: preset.timeSignature,
+          beats,
+          beatType,
+          subdivision: preset.subdivision,
+          phrase: patternPhrase,
+          drumPattern: patternDrumPattern,
+          stickingPattern: patternStickingPattern,
+          repeat: 4, // Each individual pattern repeats 4 times (4 bars)
+          accentIndices: patternAccentIndices,
+          leftFoot: false,
+          rightFoot: false,
+          _presetName: `16th Note Grid: ${individualPatternNames[i]}`,
+          _presetDescription: `From combined preset: ${individualPatternNames[i]}`,
+          _presetAccents: patternAccentIndices,
+        };
+        
+        addPattern(pattern);
+      }
+      
+      saveToHistory();
+      return;
+    }
+    
+    // Regular preset loading (non-combined)
     // Parse phrase and calculate accent indices (first note of each group)
     const phraseValues = parseNumberList(preset.phrase);
     const accentIndices = buildAccentIndices(phraseValues);

@@ -16,6 +16,10 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { usePracticeStats } from '@/hooks/usePracticeStats';
 import { PlaybackProgress } from '@/components/shared/PlaybackProgress';
 import { useStore } from '@/store/useStore';
+import { buildAccentIndices, parseNumberList } from '@/lib/utils/patternUtils';
+
+// Import store directly to access getState outside of components
+const getStoreState = () => useStore.getState();
 import { PracticeStats } from '@/components/PracticeMode/PracticeStats';
 import { PatternLibrary } from '@/components/PracticeMode/PatternLibrary';
 import { AutoSyncWrapper } from '@/components/shared/AutoSyncWrapper';
@@ -51,6 +55,9 @@ export default function Home() {
   const setTempoRampEnd = useStore((state) => state.setTempoRampEnd);
   const setTempoRampSteps = useStore((state) => state.setTempoRampSteps);
   const setProgressiveMode = useStore((state) => state.setProgressiveMode);
+  const addPattern = useStore((state) => state.addPattern);
+  const setPatterns = useStore((state) => state.setPatterns);
+  const setBPM = useStore((state) => state.setBPM);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Load persisted UI settings synchronously on mount (client-side only)
@@ -183,7 +190,67 @@ export default function Home() {
   
   // Track practice statistics
   usePracticeStats();
-  
+
+  // Load patterns from URL hash on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#pattern=')) {
+      try {
+        const encoded = hash.substring(9); // Remove '#pattern='
+        // Restore URL-safe base64 (replace - with +, _ with /, add padding if needed)
+        const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+        // Add padding if needed
+        const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+        const decoded = atob(padded);
+        const shareData = JSON.parse(decoded);
+        
+        if (shareData.patterns && Array.isArray(shareData.patterns)) {
+          // Import patterns - batch them to avoid multiple re-renders
+          const patternsToAdd = shareData.patterns.map((p: any, index: number) => {
+            // Calculate accent indices from phrase (needed for stave rendering)
+            const phraseValues = parseNumberList(p.phr || '');
+            const accentIndices = buildAccentIndices(phraseValues);
+            
+            return {
+              id: Date.now() + index,
+              timeSignature: p.ts || '4/4',
+              subdivision: p.sub || 16,
+              phrase: p.phr || '',
+              drumPattern: p.drum || '',
+              stickingPattern: p.stick || '',
+              leftFoot: p.lf || false,
+              rightFoot: p.rf || false,
+              repeat: p.rep || 1,
+              _presetAccents: accentIndices, // Required for stave rendering
+            };
+          });
+          
+          // Get current patterns and add new ones all at once
+          // This ensures the stave component gets all patterns in one update
+          const currentPatterns = getStoreState().patterns;
+          setPatterns([...currentPatterns, ...patternsToAdd]);
+          
+          // Set BPM if provided
+          if (shareData.bpm) {
+            setBPM(shareData.bpm);
+          }
+          
+          // Clear the hash to prevent re-importing on refresh
+          window.history.replaceState(null, '', window.location.pathname);
+          
+          // Force a resize event after a delay to ensure stave container is properly sized
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+          }, 300);
+        }
+      } catch (error) {
+        console.error('Failed to import patterns from URL:', error);
+      }
+    }
+  }, [addPattern, setBPM]);
+
   // Initialize progress tracking (ToastProvider is now in root layout)
 
   return (
@@ -231,12 +298,14 @@ export default function Home() {
           </div>
           
           {/* Stave Component */}
-          <div className="lg:col-span-2 dpgen-stave-column" style={{ minWidth: 0, overflow: 'hidden', width: '100%', position: 'relative' }}>
-            <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+          <div className="lg:col-span-2 dpgen-stave-column" style={{ minWidth: 0, overflow: 'hidden', width: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+            <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
               <h2 className="text-2xl font-semibold mb-4">Music Notation</h2>
-              <Stave />
-              {settingsLoaded && <VisualMetronome />}
-              {settingsLoaded && <PolyrhythmShapes />}
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                <Stave />
+                {settingsLoaded && <VisualMetronome />}
+                {settingsLoaded && <PolyrhythmShapes />}
+              </div>
             </div>
           </div>
         </div>

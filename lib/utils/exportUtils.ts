@@ -621,7 +621,7 @@ export function sharePatternURL(patterns: Pattern[], bpm: number): void {
     return;
   }
   
-  // Encode patterns and settings into URL
+  // Encode patterns and settings into URL with compression
   const shareData = {
     patterns: patterns.map(p => ({
       ts: p.timeSignature,
@@ -637,7 +637,15 @@ export function sharePatternURL(patterns: Pattern[], bpm: number): void {
     highlight: 'accent' // Default highlight mode
   };
   
-  const encoded = btoa(JSON.stringify(shareData));
+  // Minify JSON by removing all whitespace
+  const minifiedJson = JSON.stringify(shareData).replace(/\s+/g, '');
+  
+  // Use URL-safe base64 encoding (replace + with -, / with _, remove padding)
+  const encoded = btoa(minifiedJson)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  
   const shareUrl = `${window.location.origin}${window.location.pathname}#pattern=${encoded}`;
   
   navigator.clipboard.writeText(shareUrl).then(() => {

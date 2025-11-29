@@ -46,6 +46,7 @@ export function usePlayback() {
   const tempoRampEnd = useStore((state) => state.tempoRampEnd);
   const tempoRampSteps = useStore((state) => state.tempoRampSteps);
   const progressiveMode = useStore((state) => state.progressiveMode);
+  const infiniteLoop = useStore((state) => state.infiniteLoop);
   
   // Audio
   const audioBuffers = useStore((state) => state.audioBuffers);
@@ -349,10 +350,13 @@ export function usePlayback() {
 
   /**
    * Play a metronome click with different sound types
+   * @param isAccent - Whether this is an accent click
+   * @param forcePlay - If true, play even when clickMode is 'none' (for count-in)
    */
-  const playClick = useCallback(async (isAccent: boolean = false) => {
+  const playClick = useCallback(async (isAccent: boolean = false, forcePlay: boolean = false) => {
     // Don't play clicks if clickMode is 'none' or silent practice mode
-    if (!audioContextRef.current || clickMode === 'none' || silentPracticeMode) {
+    // Exception: forcePlay allows count-in to play even when clickMode is 'none'
+    if (!audioContextRef.current || (!forcePlay && clickMode === 'none') || silentPracticeMode) {
       return;
     }
 
@@ -365,12 +369,20 @@ export function usePlayback() {
       }
       
       // Ensure context is running - if not, try to resume again
-      if (ctx.state !== 'running') {
-        console.warn('[Playback] Audio context not running, attempting to resume. State:', ctx.state);
+      const currentState = ctx.state;
+      if (currentState !== 'running' && currentState !== 'suspended') {
+        // Context is closed or in an unexpected state
+        console.error('[Playback] AudioContext in unexpected state:', currentState);
+        return;
+      }
+      
+      if (currentState !== 'running') {
+        console.warn('[Playback] Audio context not running, attempting to resume. State:', currentState);
         try {
           await ctx.resume();
-          if (ctx.state !== 'running') {
-            console.error('[Playback] Failed to resume AudioContext, state:', ctx.state);
+          const newState = ctx.state;
+          if (newState !== 'running') {
+            console.error('[Playback] Failed to resume AudioContext, state:', newState);
             return;
           }
         } catch (error) {
@@ -1197,6 +1209,26 @@ export function usePlayback() {
               }
             }
 
+            // Add foot pulse sounds (even on rests) - check if this is a beat position
+            if (playDrumSounds && !metronomeOnlyMode && !silentPracticeMode && isBeat) {
+              // Left foot (hi-hat pedal) - add 'H' sound
+              if (pattern.leftFoot) {
+                if (!sounds.includes('H')) {
+                  sounds.push('H');
+                }
+              }
+              
+              // Right foot (kick) - add 'K' sound if not already present from voicing
+              if (pattern.rightFoot) {
+                const hasKickInVoicing = voicingTokens.some(token => 
+                  token.toUpperCase() === 'K' || token.toUpperCase().includes('K')
+                );
+                if (!hasKickInVoicing && !sounds.includes('K')) {
+                  sounds.push('K');
+                }
+              }
+            }
+
             // Schedule ALL notes (even if no sounds) so we can update playback position for visual feedback
             scheduledNotes.push({
               time,
@@ -1299,8 +1331,9 @@ export function usePlayback() {
 
   /**
    * Schedule playback
+   * @param presetStartTime - Optional start time for seamless loop restarts. If provided, uses this instead of calculating a new start time.
    */
-  const schedulePlayback = useCallback(async () => {
+  const schedulePlayback = useCallback(async (presetStartTime?: number) => {
     // console.log('schedulePlayback called');
     
     if (!audioContextRef.current) {
@@ -1375,7 +1408,8 @@ export function usePlayback() {
           if (audioContextRef.current && isPlayingRef.current) {
             const isAccent = i === 0 && clickMode === 'beats';
             // console.log(`Playing count-in click ${i + 1}`);
-            playClick(isAccent);
+            // Force play count-in even when clickMode is 'none'
+            playClick(isAccent, true);
             
             // After the last click, deactivate count-in (slight delay to ensure it happens after)
             if (i === 3) {
@@ -1403,7 +1437,12 @@ export function usePlayback() {
       setMicrophoneCountInActive(false);
     }
 
-    startTimeRef.current = currentTime + startOffset;
+    // Use preset start time for seamless loop restarts, otherwise calculate normally
+    if (presetStartTime !== undefined) {
+      startTimeRef.current = presetStartTime;
+    } else {
+      startTimeRef.current = currentTime + startOffset;
+    }
     // console.log('Playback start time set:', startTimeRef.current.toFixed(3), 'Current time:', currentTime.toFixed(3), 'Offset:', startOffset.toFixed(3));
     noteIndexRef.current = 0;
     
@@ -1411,36 +1450,52 @@ export function usePlayback() {
     // console.log('First note time:', scheduledNotes[0]?.time, 'Last note time:', scheduledNotes[scheduledNotes.length - 1]?.time);
 
     // Schedule all notes using setTimeout
-    // Calculate all timeouts relative to the initial currentTime for consistency
+    // For loop restarts with presetStartTime, use presetStartTime as the reference point
+    // to ensure the first note plays at the exact time the previous loop ended
+    // For new playback, use currentTime as the reference
+    const schedulingTime = presetStartTime !== undefined 
+      ? presetStartTime  // Use preset time as reference for seamless looping
+      : currentTime;      // Use current time for new playback
+    
     scheduledNotes.forEach((note, idx) => {
       const noteAbsoluteTime = startTimeRef.current! + note.time;
-      const timeoutMs = (noteAbsoluteTime - currentTime) * 1000;
+      // Calculate timeout relative to schedulingTime
+      // For presetStartTime, this ensures notes play at the correct absolute times
+      // For new playback, this ensures notes play relative to when we started scheduling
+      const timeoutMs = (noteAbsoluteTime - schedulingTime) * 1000;
       
       if (idx < 4) {
         // console.log(`Scheduling note ${idx} (globalNoteIndex=${note.noteIndex}): noteTime=${note.time.toFixed(3)}s, absoluteTime=${noteAbsoluteTime.toFixed(3)}s, timeoutMs=${timeoutMs.toFixed(1)}ms`);
       }
       
-      if (timeoutMs >= 0 && timeoutMs < 60000) { // Cap at 60 seconds to avoid issues
-        const timeoutId = setTimeout(() => {
-          if (!isPlayingRef.current || !audioContextRef.current) {
-            // console.log('Playback stopped or AudioContext not available');
-            return;
-          }
+      // Allow small negative timeouts (up to -100ms) for seamless looping - these notes should play immediately
+      // This handles cases where presetStartTime is slightly in the past due to setTimeout delays
+      // For notes beyond 50 seconds, use chunked scheduling to avoid browser timeout limits
+      if (timeoutMs >= -100) {
+        let timeoutId: NodeJS.Timeout;
+        const CHUNK_SIZE_MS = 50000; // 50 seconds - safe margin below browser limits
+        
+        if (timeoutMs < CHUNK_SIZE_MS) {
+          // Standard scheduling for notes within 50 seconds
+          timeoutId = setTimeout(() => {
+            if (!isPlayingRef.current || !audioContextRef.current) {
+              return;
+            }
 
-          // Verify timing accuracy
-          const actualTime = audioContextRef.current.currentTime;
-          const expectedTime = noteAbsoluteTime;
-          const timingError = Math.abs((actualTime - expectedTime) * 1000);
-          if (idx < 4) {
-            // console.log(`Note ${idx} fired: expected=${expectedTime.toFixed(3)}s, actual=${actualTime.toFixed(3)}s, error=${timingError.toFixed(1)}ms`);
-          }
+            // Verify timing accuracy
+            const actualTime = audioContextRef.current.currentTime;
+            const expectedTime = noteAbsoluteTime;
+            const timingError = Math.abs((actualTime - expectedTime) * 1000);
+            if (idx < 4) {
+              // console.log(`Note ${idx} fired: expected=${expectedTime.toFixed(3)}s, actual=${actualTime.toFixed(3)}s, error=${timingError.toFixed(1)}ms`);
+            }
 
-          // Update playback position for visual feedback (always, even if no sounds)
-          // For polyrhythms, also log the hand and note info for debugging
-          if (note.hand !== undefined) {
-            console.log(`[Playback] Note ${idx}: noteIndex=${note.noteIndex}, hand=${note.hand}, sounds=[${note.sounds.join(',')}]`);
-          }
-          setPlaybackPosition(note.noteIndex);
+            // Update playback position for visual feedback (always, even if no sounds)
+            // For polyrhythms, also log the hand and note info for debugging
+            if (note.hand !== undefined) {
+              console.log(`[Playback] Note ${idx}: noteIndex=${note.noteIndex}, hand=${note.hand}, sounds=[${note.sounds.join(',')}]`);
+            }
+            setPlaybackPosition(note.noteIndex);
           
           // Update current beat for visual metronome (only on beat notes)
           if (note.isBeat) {
@@ -1556,12 +1611,14 @@ export function usePlayback() {
               const storeForLoop = useStore.getState();
               const currentLoopValue = storeForLoop.currentLoop;
               const loopCountValue = storeForLoop.loopCount;
+              const infiniteLoopValue = storeForLoop.infiniteLoop;
               
               if (storeForLoop.tempoRamping) {
-                console.log(`[Tempo Ramp] Loop restart check - currentLoop: ${currentLoopValue}, loopCount: ${loopCountValue}, should loop: ${currentLoopValue + 1 < loopCountValue}`);
+                console.log(`[Tempo Ramp] Loop restart check - currentLoop: ${currentLoopValue}, loopCount: ${loopCountValue}, infiniteLoop: ${infiniteLoopValue}, should loop: ${infiniteLoopValue || currentLoopValue + 1 < loopCountValue}`);
               }
               
-              if (currentLoopValue + 1 < loopCountValue) {
+              // Continue looping if infinite loop is enabled, or if we haven't reached the loop count
+              if (infiniteLoopValue || currentLoopValue + 1 < loopCountValue) {
                 const nextLoop = currentLoopValue + 1;
                 
                 // Clear highlighting before starting next loop
@@ -1583,13 +1640,11 @@ export function usePlayback() {
                 // Reset count-in flag so count-in only happens on first loop
                 isCountInRef.current = false;
                 
-                // Calculate gap between loops: wait one full beat duration for clean transition
-                // This prevents the "1and2and3and41" effect where loops merge together
-                // Use the NEXT loop's BPM for the gap calculation (since we're transitioning to it)
-                // Read fresh values from store to avoid stale closure issues
-                const storeForGap = useStore.getState();
-                const nextLoopBPM = storeForGap.tempoRamping ? getCurrentBPM(nextLoop) : storeForGap.bpm;
-                const beatDurationMs = 60000 / nextLoopBPM; // One beat in milliseconds
+                // Calculate when the next loop should start: immediately after the last note
+                // The last note finishes at: startTimeRef.current + note.time
+                // Store the pattern duration to recalculate the exact start time when restarting
+                const patternDuration = note.time; // This is the time of the last note relative to loop start
+                const loopStartTime = startTimeRef.current!; // Store the start time of the current loop
                 
                 // Store timeout ID in a ref to prevent it from being cleared
                 // This ensures the timeout fires even if useEffect runs
@@ -1603,14 +1658,22 @@ export function usePlayback() {
                   }
                   
                   if (isPlayingRef.current && audioContextRef.current) {
-                    // Verify we have the updated loop value before scheduling
-                    console.log(`[Tempo Ramp] Restarting loop ${storeAtRestart.currentLoop}, BPM: ${storeAtRestart.bpm}, Loop BPM: ${getCurrentBPM(storeAtRestart.currentLoop)}`);
-                    schedulePlayback();
+                    // Recalculate the exact start time for the next loop
+                    // The next loop should start exactly one pattern duration after the previous loop started
+                    // This ensures seamless looping with correct BPM timing
+                    const nextLoopStartTime = loopStartTime + patternDuration;
+                    const currentAudioTime = audioContextRef.current.currentTime;
+                    
+                    // Use the calculated start time even if it's slightly in the past
+                    // This maintains the correct BPM timing. Notes with small negative timeouts
+                    // (up to -100ms) will still play immediately, maintaining seamless looping
+                    console.log(`[Tempo Ramp] Restarting loop ${storeAtRestart.currentLoop}, BPM: ${storeAtRestart.bpm}, Loop BPM: ${getCurrentBPM(storeAtRestart.currentLoop)}, startTime: ${nextLoopStartTime.toFixed(3)} (current: ${currentAudioTime.toFixed(3)}, diff: ${((nextLoopStartTime - currentAudioTime) * 1000).toFixed(1)}ms)`);
+                    schedulePlayback(nextLoopStartTime);
                   } else {
                     console.log(`[Tempo Ramp] Restart cancelled - isPlaying: ${isPlayingRef.current}, audioContext: ${!!audioContextRef.current}`);
                   }
-                }, beatDurationMs);
-                console.log(`[Tempo Ramp] Scheduled restart timeout ${restartTimeoutId} for ${beatDurationMs}ms (next loop: ${nextLoop}), total timeouts: ${timeoutsRef.current.length}`);
+                }, 0); // Schedule immediately - the timing is handled by presetStartTime
+                console.log(`[Tempo Ramp] Scheduled restart timeout ${restartTimeoutId} (next loop: ${nextLoop}), total timeouts: ${timeoutsRef.current.length}`);
                 timeoutsRef.current.push(restartTimeoutId);
                 console.log(`[Tempo Ramp] Added timeout to array, total timeouts now: ${timeoutsRef.current.length}`);
               } else {
@@ -1637,6 +1700,166 @@ export function usePlayback() {
           }
         }, Math.max(0, timeoutMs));
         timeoutsRef.current.push(timeoutId);
+        } else {
+          // Chunked scheduling for notes beyond 50 seconds
+          // Schedule in 50-second chunks to avoid browser timeout limits
+          const chunks = Math.floor(timeoutMs / CHUNK_SIZE_MS);
+          const remainingMs = timeoutMs % CHUNK_SIZE_MS;
+          
+          // Schedule the first chunk
+          const firstChunkTimeout = CHUNK_SIZE_MS;
+          timeoutId = setTimeout(() => {
+            if (!isPlayingRef.current || !audioContextRef.current) {
+              return;
+            }
+            
+            // Recursively schedule remaining chunks
+            const scheduleRemainingChunks = (chunkIndex: number, remainingTime: number) => {
+              if (chunkIndex >= chunks) {
+                // Last chunk - schedule the actual note
+                if (remainingTime > 0 && remainingTime < CHUNK_SIZE_MS) {
+                  const finalTimeoutId = setTimeout(() => {
+                    if (!isPlayingRef.current || !audioContextRef.current) {
+                      return;
+                    }
+                    
+                    // Play the note
+                    const actualTime = audioContextRef.current.currentTime;
+                    const expectedTime = noteAbsoluteTime;
+                    const timingError = Math.abs((actualTime - expectedTime) * 1000);
+                    
+                    setPlaybackPosition(note.noteIndex);
+                    
+                    if (note.isBeat) {
+                      const setCurrentBeat = useStore.getState().setCurrentBeat;
+                      let noteIndexInPattern = note.noteIndex;
+                      let notesPerBeat = 4;
+                      
+                      for (const pattern of patterns) {
+                        const notesPerBar = getNotesPerBarForPattern(pattern);
+                        const [numerator, denominator] = parseTimeSignature(pattern.timeSignature || '4/4');
+                        const totalNotes = notesPerBar * (pattern.repeat || 1);
+                        
+                        if (noteIndexInPattern < totalNotes) {
+                          const localNoteIndex = noteIndexInPattern % notesPerBar;
+                          if (pattern._advancedMode && pattern._perBeatSubdivisions) {
+                            const timeSignatureStr = `${numerator}/${denominator}`;
+                            const notePositions = calculateNotePositionsFromPerBeatSubdivisions(timeSignatureStr, pattern._perBeatSubdivisions);
+                            const notePosition = notePositions[localNoteIndex];
+                            const beatIndex = Math.floor(notePosition);
+                            setCurrentBeat((beatIndex % numerator) + 1);
+                          } else {
+                            notesPerBeat = Math.max(1, pattern.subdivision / denominator);
+                            const beatIndex = Math.floor(localNoteIndex / notesPerBeat);
+                            setCurrentBeat((beatIndex % numerator) + 1);
+                          }
+                          break;
+                        }
+                        noteIndexInPattern -= totalNotes;
+                      }
+                    }
+                    
+                    if (note.sounds.length > 0) {
+                      let clickPlayed = false;
+                      const currentPolyrhythmClickMode = useStore.getState().polyrhythmClickMode;
+                      const isPolyrhythmNote = note.hand !== undefined;
+                      let shouldPlayClick = true;
+                      
+                      if (isPolyrhythmNote) {
+                        if (currentPolyrhythmClickMode === 'none' || currentPolyrhythmClickMode === 'metronome-only') {
+                          shouldPlayClick = false;
+                        } else {
+                          if (currentPolyrhythmClickMode === 'right-only' && note.hand !== 'right' && note.hand !== 'both') {
+                            shouldPlayClick = false;
+                          } else if (currentPolyrhythmClickMode === 'left-only' && note.hand !== 'left' && note.hand !== 'both') {
+                            shouldPlayClick = false;
+                          }
+                        }
+                      }
+                      
+                      for (const sound of note.sounds) {
+                        if (sound === 'click') {
+                          if (!clickPlayed && shouldPlayClick) {
+                            const isAccent = (sound as any).__isAccent || note.hasAccent || false;
+                            playClick(isAccent);
+                            clickPlayed = true;
+                          }
+                        } else {
+                          playDrumSound(sound);
+                        }
+                      }
+                    }
+                    
+                    noteIndexRef.current = note.noteIndex;
+                    
+                    if (idx === scheduledNotes.length - 1) {
+                      const store = useStore.getState();
+                      const checkLoopTimeoutId = setTimeout(() => {
+                        if (!isPlayingRef.current || !audioContextRef.current) {
+                          return;
+                        }
+                        const storeForLoop = useStore.getState();
+                        const currentLoopValue = storeForLoop.currentLoop;
+                        const loopCountValue = storeForLoop.loopCount;
+                        const infiniteLoopValue = storeForLoop.infiniteLoop;
+                        
+                        if (infiniteLoopValue || currentLoopValue + 1 < loopCountValue) {
+                          const nextLoop = currentLoopValue + 1;
+                          setPlaybackPosition(null);
+                          noteIndexRef.current = 0;
+                          const storeForBPM = useStore.getState();
+                          if (storeForBPM.tempoRamping) {
+                            const loopBPM = getCurrentBPM(nextLoop);
+                            setBPM(loopBPM);
+                          }
+                          setCurrentLoop(nextLoop);
+                          isCountInRef.current = false;
+                          const patternDuration = note.time;
+                          const loopStartTime = startTimeRef.current!;
+                          const restartTimeoutId = setTimeout(() => {
+                            if (isPlayingRef.current && audioContextRef.current) {
+                              const nextLoopStartTime = loopStartTime + patternDuration;
+                              schedulePlayback(nextLoopStartTime);
+                            }
+                          }, 0);
+                          timeoutsRef.current.push(restartTimeoutId);
+                        } else {
+                          if (progressiveMode) {
+                            evaluateProgressiveMode();
+                          }
+                          setTimeout(() => {
+                            setIsPlaying(false);
+                            setCurrentLoop(0);
+                            setPlaybackPosition(null);
+                            const setCurrentBeat = useStore.getState().setCurrentBeat;
+                            setCurrentBeat(0);
+                            isCountInRef.current = false;
+                            noteIndexRef.current = 0;
+                          }, 200);
+                        }
+                      }, 50);
+                      timeoutsRef.current.push(checkLoopTimeoutId);
+                    }
+                  }, Math.max(0, remainingTime));
+                  timeoutsRef.current.push(finalTimeoutId);
+                }
+                return;
+              }
+              
+              // Schedule next chunk
+              const chunkTimeoutId = setTimeout(() => {
+                if (!isPlayingRef.current || !audioContextRef.current) {
+                  return;
+                }
+                scheduleRemainingChunks(chunkIndex + 1, remainingTime);
+              }, CHUNK_SIZE_MS);
+              timeoutsRef.current.push(chunkTimeoutId);
+            };
+            
+            scheduleRemainingChunks(1, remainingMs);
+          }, firstChunkTimeout);
+          timeoutsRef.current.push(timeoutId);
+        }
       } else if (timeoutMs < 0) {
         console.warn(`Note ${idx} is in the past (timeoutMs=${timeoutMs.toFixed(1)}ms), skipping`);
       }

@@ -59,6 +59,7 @@ export interface PlaybackSlice {
   tempoRampEnd: number;
   tempoRampSteps: number;
   progressiveMode: boolean;
+  infiniteLoop: boolean;
 
   // Actions
   setBPM: (bpm: number) => void;
@@ -86,6 +87,7 @@ export interface PlaybackSlice {
   setTempoRampEnd: (bpm: number) => void;
   setTempoRampSteps: (steps: number) => void;
   setProgressiveMode: (enabled: boolean) => void;
+  setInfiniteLoop: (enabled: boolean) => void;
 }
 
 export const createPlaybackSlice: StateCreator<PlaybackSlice> = (set) => ({
@@ -119,6 +121,7 @@ export const createPlaybackSlice: StateCreator<PlaybackSlice> = (set) => ({
   tempoRampEnd: 120,
   tempoRampSteps: 4,
   progressiveMode: false,
+  infiniteLoop: false,
 
   // Actions
   setBPM: (bpm) => {
@@ -240,6 +243,10 @@ export const createPlaybackSlice: StateCreator<PlaybackSlice> = (set) => ({
   setProgressiveMode: (enabled) => {
     set({ progressiveMode: enabled });
     savePlaybackSettings({ progressiveMode: enabled });
+  },
+  setInfiniteLoop: (enabled) => {
+    set({ infiniteLoop: enabled });
+    savePlaybackSettings({ infiniteLoop: enabled });
   },
 });
 

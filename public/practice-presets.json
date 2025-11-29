@@ -1,5 +1,5 @@
 {
-  "version": "1.7",
+  "version": "1.29",
   "presets": [
     {
       "id": "beginner-single-stroke-quarter",
@@ -4121,6 +4121,308 @@
       "bpm": 125,
       "repeat": 4,
       "difficulty": 4
+    },
+    {
+      "id": "16th-note-grid-ssss",
+      "name": "16th Note Grid: S S S S",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: S S S S. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S S",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 5
+    },
+    {
+      "id": "16th-note-grid--sss",
+      "name": "16th Note Grid: - S S S",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: - S S S. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "- S S S",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "16th-note-grid-s-ss",
+      "name": "16th Note Grid: S - S S",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: S - S S. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S - S S",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "16th-note-grid-ss-s",
+      "name": "16th Note Grid: S S - S",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: S S - S. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S - S",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "16th-note-grid-sss-",
+      "name": "16th Note Grid: S S S -",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: S S S -. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S S -",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 4
+    },
+    {
+      "id": "16th-note-grid-ss--",
+      "name": "16th Note Grid: S S - -",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: S S - -. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S S - -",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "16th-note-grid-s-s-",
+      "name": "16th Note Grid: S - S -",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: S - S -. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S - S -",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "16th-note-grid-s--s",
+      "name": "16th Note Grid: S - - S",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: S - - S. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S - - S",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "16th-note-grid--s-s",
+      "name": "16th Note Grid: - S - S",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: - S - S. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "- S - S",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "16th-note-grid---ss",
+      "name": "16th Note Grid: - - S S",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: - - S S. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "- - S S",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 3
+    },
+    {
+      "id": "16th-note-grid-s---",
+      "name": "16th Note Grid: S - - -",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: S - - -. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "S - - -",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "16th-note-grid--s--",
+      "name": "16th Note Grid: - S - -",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: - S - -. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "- S - -",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "16th-note-grid---s-",
+      "name": "16th Note Grid: - - S -",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: - - S -. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "- - S -",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "16th-note-grid----s",
+      "name": "16th Note Grid: - - - S",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "systematic"
+      ],
+      "description": "16th note grid pattern: - - - S. Voicing matches pattern. Sticking: R L R L. Add kick pulse in advanced settings if desired.",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4",
+      "drumPattern": "- - - S",
+      "stickingPattern": "R L R L",
+      "bpm": 100,
+      "repeat": 4,
+      "difficulty": 2
+    },
+    {
+      "id": "16th-note-grid-all-combinations-combined",
+      "name": "16th Note Grid - All Combinations (Combined)",
+      "category": "rhythmic-grid",
+      "subcategory": "systematic",
+      "tags": [
+        "16th-notes",
+        "rhythmic-grid",
+        "all-combinations",
+        "systematic",
+        "combined"
+      ],
+      "description": "Complete 16th note rhythmic grid with all 14 combinations in sequence. Starts with 4 notes, then 3 notes (4 patterns), then 2 notes (5 patterns), then 1 note (4 patterns). Each variation is 4 bars. Kick pulse on beats 1, 2, 3, 4. Snare sticking: R L R L. Total: 56 bars (14 patterns × 4 bars each).",
+      "timeSignature": "4/4",
+      "subdivision": 16,
+      "phrase": "4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4",
+      "drumPattern": "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S S - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S - - S S S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S - - - S",
+      "stickingPattern": "R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L R L",
+      "bpm": 100,
+      "repeat": 1,
+      "difficulty": 3
     }
   ]
 }

@@ -57,25 +57,38 @@ export function QuickControlPanel({
   const clickSoundType = useStore((state) => state.clickSoundType);
   const countInEnabled = useStore((state) => state.countInEnabled);
   const loopCount = useStore((state) => state.loopCount);
+  const infiniteLoop = useStore((state) => state.infiniteLoop);
   const metronomeOnlyMode = useStore((state) => state.metronomeOnlyMode);
   const volumes = useStore((state) => state.volumes);
   const tempoRamping = useStore((state) => state.tempoRamping);
   const tempoRampStart = useStore((state) => state.tempoRampStart);
   const tempoRampEnd = useStore((state) => state.tempoRampEnd);
   const tempoRampSteps = useStore((state) => state.tempoRampSteps);
+  const patterns = useStore((state) => state.patterns);
 
   // Store actions
   const setPlayDrumSounds = useStore((state) => state.setPlayDrumSounds);
   const setClickSoundType = useStore((state) => state.setClickSoundType);
   const setCountInEnabled = useStore((state) => state.setCountInEnabled);
   const setLoopCount = useStore((state) => state.setLoopCount);
+  const setInfiniteLoop = useStore((state) => state.setInfiniteLoop);
   const setVolume = useStore((state) => state.setVolume);
   const setTempoRamping = useStore((state) => state.setTempoRamping);
   const setTempoRampStart = useStore((state) => state.setTempoRampStart);
   const setTempoRampEnd = useStore((state) => state.setTempoRampEnd);
   const setTempoRampSteps = useStore((state) => state.setTempoRampSteps);
+  const updateAllPatterns = useStore((state) => state.updateAllPatterns);
+  const saveToHistory = useStore((state) => state.saveToHistory);
 
   const masterVolume = Math.max(volumes.snare || 0, volumes.kick || 0, volumes.hiHat || 0, volumes.click || 0) || 1.0;
+
+  // Check if any patterns have left/right foot enabled
+  const hasLeftFoot = patterns.some((p) => p.leftFoot);
+  const hasRightFoot = patterns.some((p) => p.rightFoot);
+  
+  // Check if all patterns have left/right foot enabled
+  const allLeftFoot = patterns.length > 0 && patterns.every((p) => p.leftFoot);
+  const allRightFoot = patterns.length > 0 && patterns.every((p) => p.rightFoot);
 
   const handleToggle = () => {
     setCollapsed(!collapsed);
@@ -325,28 +338,44 @@ export function QuickControlPanel({
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--dpgen-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <i className="fas fa-sync" />
-              Loop ({loopCount}x)
+              <i className="fas fa-infinity" />
+              Infinite Loop
             </label>
-            <input
-              type="number"
-              value={loopCount}
-              onChange={(e) => setLoopCount(parseInt(e.target.value, 10) || 1)}
-              min="1"
-              max="100"
-              style={{
-                width: '60px',
-                padding: '0.25rem 0.5rem',
-                borderRadius: '6px',
-                border: '1px solid var(--dpgen-border)',
-                background: 'var(--dpgen-bg)',
-                color: 'var(--dpgen-text)',
-                fontSize: '0.75rem',
-                textAlign: 'center',
-              }}
-              className="dpgen-input"
-            />
+            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={infiniteLoop}
+                onChange={(e) => setInfiniteLoop(e.target.checked)}
+              />
+              <span className="dpgen-toggle-slider" />
+            </label>
           </div>
+          {!infiniteLoop && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--dpgen-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <i className="fas fa-sync" />
+                Loop ({loopCount}x)
+              </label>
+              <input
+                type="number"
+                value={loopCount}
+                onChange={(e) => setLoopCount(parseInt(e.target.value, 10) || 1)}
+                min="1"
+                max="100"
+                style={{
+                  width: '60px',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--dpgen-border)',
+                  background: 'var(--dpgen-bg)',
+                  color: 'var(--dpgen-text)',
+                  fontSize: '0.75rem',
+                  textAlign: 'center',
+                }}
+                className="dpgen-input"
+              />
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--dpgen-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <i className="fas fa-chart-line" />
@@ -417,6 +446,54 @@ export function QuickControlPanel({
             </label>
           </div>
         </div>
+
+        {/* Foot Pulse Controls */}
+        {patterns.length > 0 && (
+          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--dpgen-border)' }}>
+            <div style={{ marginBottom: '0.75rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--dpgen-text)' }}>
+              <i className="fas fa-drum" style={{ marginRight: '0.5rem' }} />
+              Foot Pulse (All Patterns)
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--dpgen-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <i className="fas fa-shoe-prints" style={{ transform: 'scaleX(-1)' }} />
+                  Left Foot
+                  <span style={{ fontSize: '0.65rem', color: 'var(--dpgen-muted)', marginLeft: '0.25rem' }}>(Hi-Hat)</span>
+                </label>
+                <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={allLeftFoot}
+                    onChange={(e) => {
+                      updateAllPatterns({ leftFoot: e.target.checked });
+                      saveToHistory();
+                    }}
+                  />
+                  <span className="dpgen-toggle-slider" />
+                </label>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--dpgen-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <i className="fas fa-shoe-prints" />
+                  Right Foot
+                  <span style={{ fontSize: '0.65rem', color: 'var(--dpgen-muted)', marginLeft: '0.25rem' }}>(Kick)</span>
+                </label>
+                <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={allRightFoot}
+                    onChange={(e) => {
+                      updateAllPatterns({ rightFoot: e.target.checked });
+                      saveToHistory();
+                    }}
+                  />
+                  <span className="dpgen-toggle-slider" />
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* More Settings Links */}
         <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--dpgen-border)' }}>

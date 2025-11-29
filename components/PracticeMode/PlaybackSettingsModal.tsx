@@ -20,6 +20,7 @@ export function PlaybackSettingsModal({ onClose }: PlaybackSettingsModalProps) {
   const slowMotionSpeed = useStore((state) => state.slowMotionSpeed);
   const playBackwards = useStore((state) => state.playBackwards);
   const loopCount = useStore((state) => state.loopCount);
+  const infiniteLoop = useStore((state) => state.infiniteLoop);
   const loopMeasures = useStore((state) => state.loopMeasures);
   const tempoRamping = useStore((state) => state.tempoRamping);
   const tempoRampStart = useStore((state) => state.tempoRampStart);
@@ -34,6 +35,7 @@ export function PlaybackSettingsModal({ onClose }: PlaybackSettingsModalProps) {
   const setSlowMotionSpeed = useStore((state) => state.setSlowMotionSpeed);
   const setPlayBackwards = useStore((state) => state.setPlayBackwards);
   const setLoopCount = useStore((state) => state.setLoopCount);
+  const setInfiniteLoop = useStore((state) => state.setInfiniteLoop);
   const setLoopMeasures = useStore((state) => state.setLoopMeasures);
   const setTempoRamping = useStore((state) => state.setTempoRamping);
   const setTempoRampStart = useStore((state) => state.setTempoRampStart);
@@ -194,24 +196,42 @@ export function PlaybackSettingsModal({ onClose }: PlaybackSettingsModalProps) {
             </p>
           </div>
 
-          {/* Loop Count */}
+          {/* Infinite Loop */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-label" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block', fontWeight: 600 }}>
-              Loop Count
+            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <span style={{ flex: 1 }}>Infinite Loop</span>
+              <input
+                type="checkbox"
+                checked={infiniteLoop}
+                onChange={(e) => setInfiniteLoop(e.target.checked)}
+              />
+              <span className="dpgen-toggle-slider" />
             </label>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              value={loopCount}
-              onChange={(e) => setLoopCount(parseInt(e.target.value, 10) || 1)}
-              className="dpgen-input"
-              style={{ width: '100%' }}
-            />
             <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-              Number of times to repeat the pattern
+              Continuously loop the pattern until stopped manually
             </p>
           </div>
+
+          {/* Loop Count */}
+          {!infiniteLoop && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label className="dpgen-label" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block', fontWeight: 600 }}>
+                Loop Count
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={loopCount}
+                onChange={(e) => setLoopCount(parseInt(e.target.value, 10) || 1)}
+                className="dpgen-input"
+                style={{ width: '100%' }}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
+                Number of times to repeat the pattern
+              </p>
+            </div>
+          )}
 
           {/* Loop Measures */}
           <div style={{ marginBottom: '1.5rem' }}>

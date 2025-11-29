@@ -20,8 +20,12 @@ export const usePresets = () => {
         setError(null);
         
         // Load both JSON presets and custom presets from localStorage
+        // Add cache-busting query parameter to ensure fresh data
+        const cacheBuster = `?v=${Date.now()}`;
         const [jsonResponse, customPresets] = await Promise.all([
-          fetch('/practice-presets.json'),
+          fetch(`/practice-presets.json${cacheBuster}`, {
+            cache: 'no-store', // Prevent browser caching
+          }),
           Promise.resolve(loadCustomPresets()),
         ]);
         

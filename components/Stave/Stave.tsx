@@ -3565,10 +3565,11 @@ export function Stave() {
         className="dpgen-stave__surface" 
         style={{ 
           width: needsHorizontalScroll ? 'auto' : '100%', 
-          height: '100%',
+          height: 'auto',
+          minHeight: '400px',
+          maxHeight: '70vh', // Limit height to allow vertical scrolling
           overflow: 'auto', 
           maxWidth: needsHorizontalScroll ? 'none' : '100%', // Allow overflow in horizontal modes
-          maxHeight: '70vh', // Limit height to allow vertical scrolling
           minWidth: needsHorizontalScroll ? '100%' : 'auto', // Ensure minimum width
         }} 
       />
@@ -3720,55 +3721,83 @@ function buildNotes({
     // Rest is now "-" to match sticking pattern code
     const isRest = voicingTokens.length === 0 || voicingTokens.every((token) => token === '-' || token === 'R');
 
+    const keys: string[] = [];
+    
     if (isRest) {
+      // For rest notes, start with the rest position
+      keys.push('b/4');
+    } else {
+      // For non-rest notes, process voicing tokens
+      for (const token of voicingTokens) {
+        // Ignore rest tokens (both "-" and legacy "R")
+        if (token !== '-' && token !== 'R') {
+          // Normalize two-letter codes to single letters for VexFlow compatibility
+          // VexFlow percussion clef appears to have issues with two-letter token names
+          // Since M and I work when used directly, always normalize Ht/Mt to I/M
+          let normalizedToken = token.toUpperCase();
+          if (normalizedToken === 'HT') normalizedToken = 'I'; // High tom -> I (inner/high)
+          else if (normalizedToken === 'MT') normalizedToken = 'M'; // Mid tom -> M (mid)
+          // For single-letter tokens, keep them as-is (already uppercase from toUpperCase())
+          // For other tokens, convert to uppercase for lookup
+          else if (token.length === 1) normalizedToken = token.toUpperCase();
+          else normalizedToken = token.toUpperCase();
+          
+          // Look up in keyMap using the normalized token
+          // M and I are confirmed to work with VexFlow percussion clef
+          const position = keyMap[normalizedToken];
+          if (position) {
+            keys.push(position);
+          }
+        }
+      }
+
+      if (keys.length === 0) {
+        keys.push(keyMap.S);
+      }
+    }
+
+    // Add foot pulses for both rest and non-rest notes
+    const isQuarterPosition = i % notesPerBeat === 0;
+    let hasFootPulse = false;
+
+    if (leftFoot && isQuarterPosition) {
+      keys.push('d/4/x');
+      hasFootPulse = true;
+    }
+
+    const hasKick = drumToken.toUpperCase().includes('K');
+    if (rightFoot && isQuarterPosition && !hasKick) {
+      keys.push(keyMap.K);
+      hasFootPulse = true;
+    }
+
+    // Create the note (rest or regular)
+    // If we have foot pulses, create a regular note (not a rest) so foot pulse keys render correctly
+    if (isRest && !hasFootPulse) {
+      // Pure rest note (no foot pulses)
       const restNote = new VF.StaveNote({
         clef: 'percussion',
-        keys: ['b/4'],
+        keys,
         duration: `${noteDuration}r`,
       });
       rawNotes.push(restNote);
       noteDurations.push(noteDuration); // Store duration for rest notes too
       noteBeats.push(currentBeat); // Store beat number for rest notes too
       continue;
-    }
-
-    const keys: string[] = [];
-    for (const token of voicingTokens) {
-      // Ignore rest tokens (both "-" and legacy "R")
-      if (token !== '-' && token !== 'R') {
-        // Normalize two-letter codes to single letters for VexFlow compatibility
-        // VexFlow percussion clef appears to have issues with two-letter token names
-        // Since M and I work when used directly, always normalize Ht/Mt to I/M
-        let normalizedToken = token.toUpperCase();
-        if (normalizedToken === 'HT') normalizedToken = 'I'; // High tom -> I (inner/high)
-        else if (normalizedToken === 'MT') normalizedToken = 'M'; // Mid tom -> M (mid)
-        // For single-letter tokens, keep them as-is (already uppercase from toUpperCase())
-        // For other tokens, convert to uppercase for lookup
-        else if (token.length === 1) normalizedToken = token.toUpperCase();
-        else normalizedToken = token.toUpperCase();
-        
-        // Look up in keyMap using the normalized token
-        // M and I are confirmed to work with VexFlow percussion clef
-        const position = keyMap[normalizedToken];
-        if (position) {
-          keys.push(position);
-        }
-      }
-    }
-
-    if (keys.length === 0) {
-      keys.push(keyMap.S);
-    }
-
-    const isQuarterPosition = i % notesPerBeat === 0;
-
-    if (leftFoot && isQuarterPosition) {
-      keys.push('d/4/x');
-    }
-
-    const hasKick = drumToken.toUpperCase().includes('K');
-    if (rightFoot && isQuarterPosition && !hasKick) {
-      keys.push(keyMap.K);
+    } else if (isRest && hasFootPulse) {
+      // Rest with foot pulses - create a regular note with foot pulse keys
+      // Remove the rest position key since we have actual notes to show
+      const footPulseKeys = keys.filter(key => key !== 'b/4');
+      const staveNote = new VF.StaveNote({
+        clef: 'percussion',
+        keys: footPulseKeys.length > 0 ? footPulseKeys : ['b/4'], // Fallback to rest if somehow no keys
+        duration: noteDuration, // Regular note duration (not rest)
+        stem_direction: -1,
+      });
+      rawNotes.push(staveNote);
+      noteDurations.push(noteDuration);
+      noteBeats.push(currentBeat);
+      continue;
     }
 
     const staveNote = new VF.StaveNote({
