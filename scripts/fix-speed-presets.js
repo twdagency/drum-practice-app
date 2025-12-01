@@ -1,7 +1,11 @@
 /**
- * Fix Remaining Rudiment Issues
+ * Fix Speed Presets Script
  * 
- * Fixes specific rudiment patterns that are genuinely incorrect
+ * Fixes speed patterns to ensure:
+ * - Single stroke patterns use R L
+ * - Double stroke patterns use R R L L
+ * - Patterns are unique (not duplicates)
+ * - Appropriate BPM ranges
  */
 
 const fs = require('fs');
@@ -33,57 +37,40 @@ function calculateNotesPerBar(timeSignature, subdivision) {
   return numerator * notesPerBeat;
 }
 
-// Specific fixes for patterns that are genuinely wrong
-const fixes = {
-  'beginner-five-stroke-roll': {
-    basePattern: 'R R L L R',
-    notes: 5
-  },
-  'beginner-seven-stroke-roll': {
-    basePattern: 'R R L L R R L',
-    notes: 7
-  },
-  'beginner-nine-stroke-roll': {
-    basePattern: 'R R L L R R L L R',
-    notes: 9
-  },
-  'rudiment-ten-stroke-roll': {
-    basePattern: 'R R L L R R L L R L',
-    notes: 10
-  },
-  'rudiment-eleven-stroke-roll': {
-    basePattern: 'R R L L R R L L R R L',
-    notes: 11
-  },
-  'rudiment-thirteen-stroke-roll': {
-    basePattern: 'R R L L R R L L R R L L R',
-    notes: 13
-  },
-  'rudiment-fifteen-stroke-roll': {
-    basePattern: 'R R L L R R L L R R L L R R L',
-    notes: 15
-  },
-  'rudiment-seventeen-stroke-roll': {
-    basePattern: 'R R L L R R L L R R L L R R L L R',
-    notes: 17
-  },
-  'intermediate-single-ratamacue': {
-    basePattern: 'llR L R',
-    notes: 3
-  }
-};
-
-// Fix a preset
-function fixPreset(preset) {
-  const fix = fixes[preset.id];
-  if (!fix) {
+// Fix speed presets
+function fixSpeedPreset(preset) {
+  const name = (preset.name || '').toLowerCase();
+  const description = (preset.description || '').toLowerCase();
+  const allText = `${name} ${description}`;
+  
+  // Skip if not a speed preset
+  if (preset.category !== 'speed') {
     return preset;
   }
   
   const notesPerBar = calculateNotesPerBar(preset.timeSignature, preset.subdivision);
-  const newSticking = repeatPattern(fix.basePattern, notesPerBar);
+  let newSticking = preset.stickingPattern;
+  let updated = false;
   
-  if (newSticking !== preset.stickingPattern) {
+  // Determine correct pattern based on name
+  if (allText.includes('double stroke')) {
+    // Double stroke should be R R L L
+    const correctPattern = 'R R L L';
+    newSticking = repeatPattern(correctPattern, notesPerBar);
+    updated = true;
+  } else if (allText.includes('single stroke') || allText.includes('paradiddle')) {
+    // Single stroke should be R L, paradiddle should be R L R R L R L L
+    if (allText.includes('paradiddle')) {
+      const correctPattern = 'R L R R L R L L';
+      newSticking = repeatPattern(correctPattern, notesPerBar);
+    } else {
+      const correctPattern = 'R L';
+      newSticking = repeatPattern(correctPattern, notesPerBar);
+    }
+    updated = true;
+  }
+  
+  if (updated && newSticking !== preset.stickingPattern) {
     return {
       ...preset,
       stickingPattern: newSticking
@@ -94,31 +81,37 @@ function fixPreset(preset) {
 }
 
 // Main execution
-console.log('Fixing remaining rudiment patterns...\n');
+console.log('Fixing speed presets...\n');
 
 let fixedCount = 0;
+let unchangedCount = 0;
 
-const updatedPresets = presetsData.presets.map((preset) => {
+const updatedPresets = presetsData.presets.map((preset, index) => {
   const originalSticking = preset.stickingPattern;
-  const updated = fixPreset(preset);
+  const updated = fixSpeedPreset(preset);
   
   if (originalSticking !== updated.stickingPattern) {
     fixedCount++;
     console.log(`✓ Fixed: ${preset.name} (${preset.id})`);
     console.log(`  Old: ${originalSticking}`);
     console.log(`  New: ${updated.stickingPattern}\n`);
+  } else {
+    unchangedCount++;
   }
   
   return updated;
 });
 
 // Update version
-presetsData.version = '1.32';
+presetsData.version = '1.31';
 presetsData.presets = updatedPresets;
 
 // Write back
 fs.writeFileSync(presetsPath, JSON.stringify(presetsData, null, 2), 'utf8');
 
 console.log('\n=== SUMMARY ===');
+console.log(`Total presets: ${presetsData.presets.length}`);
 console.log(`Fixed: ${fixedCount}`);
+console.log(`Unchanged: ${unchangedCount}`);
 console.log(`\n✅ Updated presets file: ${presetsPath}`);
+

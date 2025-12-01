@@ -170,3 +170,4 @@ export function getScrollBehavior(): ScrollBehavior {
   return prefersReducedMotion() ? 'auto' : 'smooth';
 }
 
+

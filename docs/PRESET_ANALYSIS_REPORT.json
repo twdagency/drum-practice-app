@@ -1,0 +1,842 @@
+{
+  "summary": {
+    "totalPresets": 212,
+    "duplicates": 54,
+    "missingFlams": 0,
+    "incorrectSticking": 31,
+    "excessiveAccents": 1,
+    "missingAccents": 0,
+    "incorrectSubdivision": 0,
+    "nameMismatch": 0
+  },
+  "issues": {
+    "duplicates": [
+      {
+        "preset1": {
+          "id": "beginner-paradiddle-eighth",
+          "name": "Single Paradiddle (Eighth Notes)"
+        },
+        "preset2": {
+          "id": "beginner-quarter-paradiddle",
+          "name": "Paradiddle (Quarter Notes)"
+        },
+        "signature": "S S S S S S S S|r l r r l r l l|8|4/4|0"
+      },
+      {
+        "preset1": {
+          "id": "beginner-eighth-double-stroke",
+          "name": "Double Stroke (Eighth Notes)"
+        },
+        "preset2": {
+          "id": "beginner-double-stroke-eighth",
+          "name": "Double Stroke Roll (Eighth Notes)"
+        },
+        "signature": "S S S S S S S S|r r l l r r l l|8|4/4|0,2,4,6"
+      },
+      {
+        "preset1": {
+          "id": "coordination-double-stroke-basic",
+          "name": "Coordination: Double Stroke Basic"
+        },
+        "preset2": {
+          "id": "beginner-double-stroke-eighth",
+          "name": "Double Stroke Roll (Eighth Notes)"
+        },
+        "signature": "S S S S S S S S|r r l l r r l l|8|4/4|0,2,4,6"
+      },
+      {
+        "preset1": {
+          "id": "intermediate-phrase-variation-1",
+          "name": "Phrase Variation: 6+6+4"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-1",
+          "name": "Phrase Variation: 3+1"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|l r l r l r l r l r l r l r l r|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "coordination-paradiddle-basic",
+          "name": "Coordination: Paradiddle Basic"
+        },
+        "preset2": {
+          "id": "beginner-quarter-paradiddle",
+          "name": "Paradiddle (Quarter Notes)"
+        },
+        "signature": "S S S S S S S S|r l r r l r l l|8|4/4|0"
+      },
+      {
+        "preset1": {
+          "id": "coordination-sixteenth-basic",
+          "name": "Coordination: Sixteenth Notes Basic"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-2",
+          "name": "Phrase Variation: 2+2+4"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "coordination-paradiddle-variations",
+          "name": "Paradiddle Variations"
+        },
+        "preset2": {
+          "id": "beginner-paradiddle",
+          "name": "Single Paradiddle"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r r l r l l r l r r l r l l|16|4/4|0,8"
+      },
+      {
+        "preset1": {
+          "id": "intermediate-hihat-paradiddle",
+          "name": "Hi-Hat Paradiddle"
+        },
+        "preset2": {
+          "id": "beginner-hihat-paradiddle",
+          "name": "Beginner: Hi-Hat Paradiddle"
+        },
+        "signature": "H H H H H H H H H H H H H H H H|r l r r l r l l r l r r l r l l|16|4/4|0,8"
+      },
+      {
+        "preset1": {
+          "id": "groove-pop-rock",
+          "name": "Groove: Pop Rock"
+        },
+        "preset2": {
+          "id": "groove-basic-rock-hihat",
+          "name": "Groove: Basic Rock (Hi-Hat)"
+        },
+        "signature": "H+K H H S H+K H H S H+K H H S H+K H H S|k l r l k l r l k l r l k l r l|16|4/4|4,12"
+      },
+      {
+        "preset1": {
+          "id": "coordination-paradiddle-variations",
+          "name": "Coordination: Paradiddle Variations"
+        },
+        "preset2": {
+          "id": "beginner-paradiddle",
+          "name": "Single Paradiddle"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r r l r l l r l r r l r l l|16|4/4|0,8"
+      },
+      {
+        "preset1": {
+          "id": "intermediate-mixed-subdivision-1",
+          "name": "Mixed Subdivision: 16th-8th Pattern"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-2",
+          "name": "Phrase Variation: 2+2+4"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "intermediate-flam-tap",
+          "name": "Flam Tap Pattern"
+        },
+        "preset2": {
+          "id": "beginner-basic-accent",
+          "name": "Basic Accent Pattern"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|lr rl r l lr rl r l lr rl r l lr rl r l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "intermediate-flam-accent",
+          "name": "Flam Accent"
+        },
+        "preset2": {
+          "id": "beginner-basic-accent",
+          "name": "Basic Accent Pattern"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|lr rl r l lr rl r l lr rl r l lr rl r l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "independence-hand-foot-basic",
+          "name": "Independence: Hand-Foot Basic"
+        },
+        "preset2": {
+          "id": "independence-hand-foot-pattern-1",
+          "name": "Independence: Hand-Foot Pattern 1"
+        },
+        "signature": "S K S K S K S K S K S K S K S K|l k l k l k l k l k l k l k l k|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "independence-snare-kick-simultaneous",
+          "name": "Independence: Snare + Kick (Simultaneous)"
+        },
+        "preset2": {
+          "id": "independence-snare-kick-simultaneous",
+          "name": "Independence: Snare + Kick (Simultaneous)"
+        },
+        "signature": "S+K H S+K H S+K H S+K H S+K H S+K H S+K H S+K H|k r k r k r k r k r k r k r k r|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "intermediate-mixed-subdivision-2",
+          "name": "Mixed Subdivision: Quarter-16th Pattern"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-2",
+          "name": "Phrase Variation: 2+2+4"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "technique-finger-fives",
+          "name": "Finger Technique: Fives"
+        },
+        "preset2": {
+          "id": "beginner-five-stroke-roll",
+          "name": "Five Stroke Roll"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r r l l r r r l l r r r l l r r|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "independence-triple-coordination",
+          "name": "Independence: Triple Coordination"
+        },
+        "preset2": {
+          "id": "independence-triple-coordination",
+          "name": "Independence: Triple Coordination"
+        },
+        "signature": "H+K H S H+K H S H+K H S H+K H S H+K H S H+K|lllr llll r l lllr llll r l lllr llll r l lllr llll r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "independence-hand-foot-advanced",
+          "name": "Independence: Hand-Foot Advanced"
+        },
+        "preset2": {
+          "id": "independence-hand-foot-pattern-2",
+          "name": "Independence: Hand-Foot Pattern 2"
+        },
+        "signature": "K S K S K S K S K S K S K S K S|k l k r k l k r k l k r k l k r|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "coordination-double-paradiddle",
+          "name": "Coordination: Double Paradiddle"
+        },
+        "preset2": {
+          "id": "intermediate-double-paradiddle",
+          "name": "Double Paradiddle"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r r l r l r l l r l r l|16|4/4|0,8"
+      },
+      {
+        "preset1": {
+          "id": "coordination-triple-paradiddle",
+          "name": "Coordination: Triple Paradiddle"
+        },
+        "preset2": {
+          "id": "intermediate-triple-paradiddle",
+          "name": "Triple Paradiddle"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r r l r l r l r l l|16|4/4|0,8"
+      },
+      {
+        "preset1": {
+          "id": "coordination-complex-rudiment-combination",
+          "name": "Coordination: Complex Rudiment Combination"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-2",
+          "name": "Phrase Variation: 2+2+4"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "speed-single-stroke-slow",
+          "name": "Speed: Single Stroke Slow"
+        },
+        "preset2": {
+          "id": "beginner-single-stroke-eighth",
+          "name": "Single Stroke Roll (Eighth Notes)"
+        },
+        "signature": "S S S S S S S S|r l r l r l r l|8|4/4|0,2,4,6"
+      },
+      {
+        "preset1": {
+          "id": "speed-single-stroke-moderate",
+          "name": "Speed: Single Stroke Moderate"
+        },
+        "preset2": {
+          "id": "beginner-single-stroke-eighth",
+          "name": "Single Stroke Roll (Eighth Notes)"
+        },
+        "signature": "S S S S S S S S|r l r l r l r l|8|4/4|0,2,4,6"
+      },
+      {
+        "preset1": {
+          "id": "speed-single-stroke-sixteenth",
+          "name": "Speed: Single Stroke Sixteenth"
+        },
+        "preset2": {
+          "id": "beginner-single-stroke-roll",
+          "name": "Single Stroke Roll"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "speed-double-stroke-basic",
+          "name": "Speed: Double Stroke Basic"
+        },
+        "preset2": {
+          "id": "beginner-double-stroke-eighth",
+          "name": "Double Stroke Roll (Eighth Notes)"
+        },
+        "signature": "S S S S S S S S|r r l l r r l l|8|4/4|0,2,4,6"
+      },
+      {
+        "preset1": {
+          "id": "speed-single-stroke-accelerating",
+          "name": "Speed: Single Stroke Accelerating"
+        },
+        "preset2": {
+          "id": "beginner-single-stroke-roll",
+          "name": "Single Stroke Roll"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "speed-double-stroke-sixteenth",
+          "name": "Speed: Double Stroke Sixteenth"
+        },
+        "preset2": {
+          "id": "beginner-double-stroke-roll",
+          "name": "Double Stroke Roll"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r r l l r r l l r r l l r r l l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "speed-paradiddle-speed",
+          "name": "Speed: Paradiddle Speed"
+        },
+        "preset2": {
+          "id": "beginner-paradiddle",
+          "name": "Single Paradiddle"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r r l r l l r l r r l r l l|16|4/4|0,8"
+      },
+      {
+        "preset1": {
+          "id": "rudiment-seventeen-stroke-roll",
+          "name": "Seventeen Stroke Roll"
+        },
+        "preset2": {
+          "id": "beginner-double-stroke-roll",
+          "name": "Double Stroke Roll"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r r l l r r l l r r l l r r l l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "speed-single-stroke-fast",
+          "name": "Speed: Single Stroke Fast"
+        },
+        "preset2": {
+          "id": "beginner-single-stroke-roll",
+          "name": "Single Stroke Roll"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "advanced-lesson-25",
+          "name": "Lesson 25"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-1",
+          "name": "Phrase Variation: 3+1"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|l r l r l r l r l r l r l r l r|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "rudiment-flam-paradiddle-diddle-alt",
+          "name": "Flam Paradiddle-Diddle (Alt)"
+        },
+        "preset2": {
+          "id": "intermediate-flam-paradiddle-diddle",
+          "name": "Flam Paradiddle-Diddle"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|lr rl r r l l lr rl r r l l lr rl r r|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "rudiment-flam-tap-five",
+          "name": "Flam Tap Five"
+        },
+        "preset2": {
+          "id": "coordination-flam-taps",
+          "name": "Coordination: Flam Taps"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|lr rl r l lr rl r l lr rl r l lr rl r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "rudiment-lesson-25-alt",
+          "name": "Lesson 25 (Alt Pattern)"
+        },
+        "preset2": {
+          "id": "advanced-phrase-variation-1",
+          "name": "Phrase Variation: 5+5+3+3"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r r l r r l r r l r r l r r|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "speed-double-stroke-fast",
+          "name": "Speed: Double Stroke Fast"
+        },
+        "preset2": {
+          "id": "beginner-double-stroke-roll",
+          "name": "Double Stroke Roll"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r r l l r r l l r r l l r r l l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "speed-paradiddle-fast",
+          "name": "Speed: Paradiddle Fast"
+        },
+        "preset2": {
+          "id": "beginner-paradiddle",
+          "name": "Single Paradiddle"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r r l r l l r l r r l r l l|16|4/4|0,8"
+      },
+      {
+        "preset1": {
+          "id": "advanced-mixed-subdivision-complex",
+          "name": "Mixed Subdivision: Complex Pattern"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-2",
+          "name": "Phrase Variation: 2+2+4"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "advanced-complex-rudiment",
+          "name": "Complex Rudiment Combination"
+        },
+        "preset2": {
+          "id": "intermediate-flam-paradiddle",
+          "name": "Flam Paradiddle"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|lr rl r r l r l l lr rl r r l r l l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "advanced-inverted-flam-tap",
+          "name": "Inverted Flam Tap"
+        },
+        "preset2": {
+          "id": "coordination-flam-taps",
+          "name": "Coordination: Flam Taps"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|lr rl r l lr rl r l lr rl r l lr rl r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "advanced-flam-drag",
+          "name": "Flam Drag"
+        },
+        "preset2": {
+          "id": "beginner-basic-accent",
+          "name": "Basic Accent Pattern"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|lr rl r l lr rl r l lr rl r l lr rl r l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "rudiment-triple-ratamacue-alt",
+          "name": "Triple Ratamacue (Alt)"
+        },
+        "preset2": {
+          "id": "advanced-triple-ratamacue",
+          "name": "Triple Ratamacue"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|lllr llll r l lllr llll r l lllr llll r l lllr llll r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "advanced-combination-rudiments",
+          "name": "Advanced Combination Rudiments"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-2",
+          "name": "Phrase Variation: 2+2+4"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "speed-extreme-single-stroke",
+          "name": "Speed: Extreme Single Stroke"
+        },
+        "preset2": {
+          "id": "beginner-single-stroke-roll",
+          "name": "Single Stroke Roll"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "speed-extreme-double-stroke",
+          "name": "Speed: Extreme Double Stroke"
+        },
+        "preset2": {
+          "id": "beginner-double-stroke-roll",
+          "name": "Double Stroke Roll"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r r l l r r l l r r l l r r l l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "warmup-single-stroke-4",
+          "name": "Warm-up: Single Stroke (Quarter Notes)"
+        },
+        "preset2": {
+          "id": "beginner-single-stroke-quarter",
+          "name": "Single Stroke Roll (Quarter Notes)"
+        },
+        "signature": "S S S S|r l r l|4|4/4|0,2"
+      },
+      {
+        "preset1": {
+          "id": "warmup-single-stroke-8",
+          "name": "Warm-up: Single Stroke (Eighth Notes)"
+        },
+        "preset2": {
+          "id": "beginner-single-stroke-eighth",
+          "name": "Single Stroke Roll (Eighth Notes)"
+        },
+        "signature": "S S S S S S S S|r l r l r l r l|8|4/4|0,2,4,6"
+      },
+      {
+        "preset1": {
+          "id": "warmup-single-stroke-12",
+          "name": "Warm-up: Single Stroke (Triplet Notes)"
+        },
+        "preset2": {
+          "id": "speed-triplet-single-stroke",
+          "name": "Speed: Triplet Single Stroke"
+        },
+        "signature": "S S S S S S S S S S S S|r l r l r l r l r l r l|12|4/4|0,3,6,9"
+      },
+      {
+        "preset1": {
+          "id": "warmup-single-stroke-32",
+          "name": "Warm-up: Single Stroke (32nd Notes)"
+        },
+        "preset2": {
+          "id": "speed-thirty-second-notes",
+          "name": "Speed: Thirty-Second Notes"
+        },
+        "signature": "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l r l r l r l r l r l r l r l r l|32|4/4|0,8,16,24"
+      },
+      {
+        "preset1": {
+          "id": "warmup-mixed-subdivision",
+          "name": "Warm-up: Mixed Subdivision"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-2",
+          "name": "Phrase Variation: 2+2+4"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "warmup-full-rudiment-set",
+          "name": "Warm-up: Full Rudiment Set"
+        },
+        "preset2": {
+          "id": "beginner-phrase-variation-1",
+          "name": "Phrase Variation: 3+1"
+        },
+        "signature": "S S S S S S S S S S S S S S S S|l r l r l r l r l r l r l r l r|16|4/4|none"
+      },
+      {
+        "preset1": {
+          "id": "famous-beat-enter-sandman",
+          "name": "Famous Beat: Enter Sandman"
+        },
+        "preset2": {
+          "id": "famous-beat-when-the-levee",
+          "name": "Famous Beat: When the Levee Breaks"
+        },
+        "signature": "K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H|k r r l k r r l k r r l k r r l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "famous-beat-back-in-black",
+          "name": "Famous Beat: Back in Black"
+        },
+        "preset2": {
+          "id": "famous-beat-when-the-levee",
+          "name": "Famous Beat: When the Levee Breaks"
+        },
+        "signature": "K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H|k r r l k r r l k r r l k r r l|16|4/4|0,4,8,12"
+      },
+      {
+        "preset1": {
+          "id": "famous-beat-sweet-child",
+          "name": "Famous Beat: Sweet Child O' Mine"
+        },
+        "preset2": {
+          "id": "famous-beat-when-the-levee",
+          "name": "Famous Beat: When the Levee Breaks"
+        },
+        "signature": "K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H|k r r l k r r l k r r l k r r l|16|4/4|0,4,8,12"
+      }
+    ],
+    "missingFlams": [],
+    "incorrectSticking": [
+      {
+        "id": "beginner-five-stroke-roll",
+        "name": "Five Stroke Roll",
+        "rudiment": "five stroke roll",
+        "current": "R R L L R R R L L R R R L L R R",
+        "expected": "R R L L R"
+      },
+      {
+        "id": "beginner-six-stroke-roll",
+        "name": "Six Stroke Roll",
+        "rudiment": "six stroke roll",
+        "current": "R R L L R L R R L L R L R R L L",
+        "expected": "R R L L R L"
+      },
+      {
+        "id": "beginner-seven-stroke-roll",
+        "name": "Seven Stroke Roll",
+        "rudiment": "seven stroke roll",
+        "current": "R R L L R R L R R L L R R L R R",
+        "expected": "R R L L R R L"
+      },
+      {
+        "id": "beginner-nine-stroke-roll",
+        "name": "Nine Stroke Roll",
+        "rudiment": "nine stroke roll",
+        "current": "R R L L R R L L R R R L L R R L",
+        "expected": "R R L L R R L L R"
+      },
+      {
+        "id": "beginner-triplet-paradiddle",
+        "name": "Triplet Paradiddle",
+        "rudiment": "paradiddle",
+        "current": "R L R R L R L L R L R R",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "intermediate-paradiddle-diddle",
+        "name": "Paradiddle-Diddle",
+        "rudiment": "paradiddle",
+        "current": "R L R R L L R L R R L L R L R R",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "intermediate-double-paradiddle",
+        "name": "Double Paradiddle",
+        "rudiment": "paradiddle",
+        "current": "R L R L R R L R L R L L R L R L",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "rudiment-ten-stroke-roll",
+        "name": "Ten Stroke Roll",
+        "rudiment": "ten stroke roll",
+        "current": "R R L L R R L L R L R R L L R R",
+        "expected": "R R L L R R L L R L"
+      },
+      {
+        "id": "rudiment-eleven-stroke-roll",
+        "name": "Eleven Stroke Roll",
+        "rudiment": "eleven stroke roll",
+        "current": "R R L L R R L L R R L R R L L R",
+        "expected": "R R L L R R L L R R L"
+      },
+      {
+        "id": "intermediate-flam-tap",
+        "name": "Flam Tap Pattern",
+        "rudiment": "flam",
+        "current": "lR rL R L lR rL R L lR rL R L lR rL R L",
+        "expected": "lR"
+      },
+      {
+        "id": "intermediate-triple-paradiddle",
+        "name": "Triple Paradiddle",
+        "rudiment": "paradiddle",
+        "current": "R L R L R L R R L R L R L R L L",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "intermediate-flam-accent",
+        "name": "Flam Accent",
+        "rudiment": "flam",
+        "current": "lR rL R L lR rL R L lR rL R L lR rL R L",
+        "expected": "lR"
+      },
+      {
+        "id": "intermediate-flam-paradiddle",
+        "name": "Flam Paradiddle",
+        "rudiment": "paradiddle",
+        "current": "lR rL R R L R L L lR rL R R L R L L",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "rudiment-thirteen-stroke-roll",
+        "name": "Thirteen Stroke Roll",
+        "rudiment": "thirteen stroke roll",
+        "current": "R R L L R R L L R R L L R R R L",
+        "expected": "R R L L R R L L R R L L R"
+      },
+      {
+        "id": "rudiment-fifteen-stroke-roll",
+        "name": "Fifteen Stroke Roll",
+        "rudiment": "fifteen stroke roll",
+        "current": "R R L L R R L L R R L L R R L R",
+        "expected": "R R L L R R L L R R L L R R L"
+      },
+      {
+        "id": "coordination-flam-taps",
+        "name": "Coordination: Flam Taps",
+        "rudiment": "flam",
+        "current": "lR rL R L lR rL R L lR rL R L lR rL R L",
+        "expected": "lR"
+      },
+      {
+        "id": "intermediate-flam-paradiddle-diddle",
+        "name": "Flam Paradiddle-Diddle",
+        "rudiment": "paradiddle",
+        "current": "lR rL R R L L lR rL R R L L lR rL R R",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "coordination-inverted-paradiddle",
+        "name": "Coordination: Inverted Paradiddle",
+        "rudiment": "paradiddle",
+        "current": "R L L R L R R L R L L R L R R L",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "coordination-double-paradiddle",
+        "name": "Coordination: Double Paradiddle",
+        "rudiment": "paradiddle",
+        "current": "R L R L R R L R L R L L R L R L",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "coordination-triple-paradiddle",
+        "name": "Coordination: Triple Paradiddle",
+        "rudiment": "paradiddle",
+        "current": "R L R L R L R R L R L R L R L L",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "rudiment-seventeen-stroke-roll",
+        "name": "Seventeen Stroke Roll",
+        "rudiment": "seventeen stroke roll",
+        "current": "R R L L R R L L R R L L R R L L",
+        "expected": "R R L L R R L L R R L L R R L L R"
+      },
+      {
+        "id": "rudiment-flam-paradiddle-diddle-alt",
+        "name": "Flam Paradiddle-Diddle (Alt)",
+        "rudiment": "paradiddle",
+        "current": "lR rL R R L L lR rL R R L L lR rL R R",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "rudiment-flam-tap-five",
+        "name": "Flam Tap Five",
+        "rudiment": "flam",
+        "current": "lR rL R L lR rL R L lR rL R L lR rL R L",
+        "expected": "lR"
+      },
+      {
+        "id": "advanced-drag-paradiddle",
+        "name": "Drag Paradiddle",
+        "rudiment": "paradiddle",
+        "current": "llR lllL lllR lllR lllL lllR lllL lllL llR lllL lllR lllR lllL lllR lllL lllL",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "advanced-complex-rudiment",
+        "name": "Complex Rudiment Combination",
+        "rudiment": "paradiddle",
+        "current": "lR rL R R L R L L lR rL R R L R L L",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "advanced-inverted-flam-tap",
+        "name": "Inverted Flam Tap",
+        "rudiment": "flam",
+        "current": "lR rL R L lR rL R L lR rL R L lR rL R L",
+        "expected": "lR"
+      },
+      {
+        "id": "advanced-single-dragadiddle",
+        "name": "Single Dragadiddle",
+        "rudiment": "paradiddle",
+        "current": "llR L R R L L llR L R R L L llR L R R",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "rudiment-single-flammed-mill",
+        "name": "Single Flammed Mill",
+        "rudiment": "flam",
+        "current": "lR rL lR rL lR rL lR rL lR rL lR rL lR rL lR rL",
+        "expected": "lR"
+      },
+      {
+        "id": "advanced-ruff-paradiddle",
+        "name": "Ruff Paradiddle",
+        "rudiment": "paradiddle",
+        "current": "lllR L R R L R L L lllR L R R L R L L",
+        "expected": "R L R R L R L L"
+      },
+      {
+        "id": "advanced-flamacue",
+        "name": "Flamacue",
+        "rudiment": "flam",
+        "current": "lR rL R L lR rL R L lR rL R L lR rL R L",
+        "expected": "lR"
+      },
+      {
+        "id": "advanced-flam-drag",
+        "name": "Flam Drag",
+        "rudiment": "flam",
+        "current": "lR rL R L lR rL R L lR rL R L lR rL R L",
+        "expected": "lR"
+      }
+    ],
+    "excessiveAccents": [
+      {
+        "id": "intermediate-accent-every-other",
+        "name": "Accent Pattern - Every Other",
+        "accentCount": 8,
+        "noteCount": 8
+      }
+    ],
+    "missingAccents": [],
+    "incorrectSubdivision": [],
+    "nameMismatch": [],
+    "other": []
+  }
+}

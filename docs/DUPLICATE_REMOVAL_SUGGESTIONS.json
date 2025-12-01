@@ -1,0 +1,593 @@
+{
+  "suggestions": [
+    {
+      "keep": {
+        "id": "beginner-double-stroke-eighth",
+        "name": "Double Stroke Roll (Eighth Notes)",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "beginner-eighth-double-stroke",
+          "name": "Double Stroke (Eighth Notes)",
+          "category": "beginner"
+        },
+        {
+          "id": "coordination-double-stroke-basic",
+          "name": "Coordination: Double Stroke Basic",
+          "category": "coordination"
+        },
+        {
+          "id": "speed-double-stroke-basic",
+          "name": "Speed: Double Stroke Basic",
+          "category": "speed"
+        }
+      ],
+      "signature": "S S S S S S S S|r r l l r r l l|8|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-phrase-variation-2",
+        "name": "Phrase Variation: 2+2+4",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "beginner-single-stroke-roll",
+          "name": "Single Stroke Roll",
+          "category": "beginner"
+        },
+        {
+          "id": "coordination-sixteenth-basic",
+          "name": "Coordination: Sixteenth Notes Basic",
+          "category": "coordination"
+        },
+        {
+          "id": "coordination-complex-rudiment-combination",
+          "name": "Coordination: Complex Rudiment Combination",
+          "category": "coordination"
+        },
+        {
+          "id": "intermediate-mixed-subdivision-1",
+          "name": "Mixed Subdivision: 16th-8th Pattern",
+          "category": "intermediate"
+        },
+        {
+          "id": "intermediate-mixed-subdivision-2",
+          "name": "Mixed Subdivision: Quarter-16th Pattern",
+          "category": "intermediate"
+        },
+        {
+          "id": "advanced-combination-rudiments",
+          "name": "Advanced Combination Rudiments",
+          "category": "advanced"
+        },
+        {
+          "id": "advanced-mixed-subdivision-complex",
+          "name": "Mixed Subdivision: Complex Pattern",
+          "category": "advanced"
+        },
+        {
+          "id": "speed-single-stroke-fast",
+          "name": "Speed: Single Stroke Fast",
+          "category": "speed"
+        },
+        {
+          "id": "speed-extreme-single-stroke",
+          "name": "Speed: Extreme Single Stroke",
+          "category": "speed"
+        },
+        {
+          "id": "speed-single-stroke-sixteenth",
+          "name": "Speed: Single Stroke Sixteenth",
+          "category": "speed"
+        },
+        {
+          "id": "speed-single-stroke-accelerating",
+          "name": "Speed: Single Stroke Accelerating",
+          "category": "speed"
+        },
+        {
+          "id": "warmup-mixed-subdivision",
+          "name": "Warm-up: Mixed Subdivision",
+          "category": "warmup"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-single-stroke-eighth",
+        "name": "Single Stroke Roll (Eighth Notes)",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "coordination-eighth-notes",
+          "name": "Coordination: Eighth Notes",
+          "category": "coordination"
+        },
+        {
+          "id": "speed-single-stroke-slow",
+          "name": "Speed: Single Stroke Slow",
+          "category": "speed"
+        },
+        {
+          "id": "speed-single-stroke-moderate",
+          "name": "Speed: Single Stroke Moderate",
+          "category": "speed"
+        },
+        {
+          "id": "warmup-single-stroke-8",
+          "name": "Warm-up: Single Stroke (Eighth Notes)",
+          "category": "warmup"
+        }
+      ],
+      "signature": "S S S S S S S S|r l r l r l r l|8|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-phrase-variation-1",
+        "name": "Phrase Variation: 3+1",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "intermediate-phrase-variation-1",
+          "name": "Phrase Variation: 6+6+4",
+          "category": "intermediate"
+        },
+        {
+          "id": "advanced-lesson-25",
+          "name": "Lesson 25",
+          "category": "advanced"
+        },
+        {
+          "id": "warmup-full-rudiment-set",
+          "name": "Warm-up: Full Rudiment Set",
+          "category": "warmup"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|l r l r l r l r l r l r l r l r|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-paradiddle-eighth",
+        "name": "Single Paradiddle (Eighth Notes)",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "coordination-paradiddle-basic",
+          "name": "Coordination: Paradiddle Basic",
+          "category": "coordination"
+        }
+      ],
+      "signature": "S S S S S S S S|r l r r l r l l|8|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-paradiddle",
+        "name": "Single Paradiddle",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "coordination-paradiddle-variations",
+          "name": "Paradiddle Variations",
+          "category": "coordination"
+        },
+        {
+          "id": "coordination-paradiddle-variations",
+          "name": "Coordination: Paradiddle Variations",
+          "category": "coordination"
+        },
+        {
+          "id": "advanced-complex-rudiment",
+          "name": "Complex Rudiment Combination",
+          "category": "advanced"
+        },
+        {
+          "id": "speed-paradiddle-fast",
+          "name": "Speed: Paradiddle Fast",
+          "category": "speed"
+        },
+        {
+          "id": "speed-paradiddle-speed",
+          "name": "Speed: Paradiddle Speed",
+          "category": "speed"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|r l r r l r l l r l r r l r l l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-hihat-paradiddle",
+        "name": "Beginner: Hi-Hat Paradiddle",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "intermediate-hihat-paradiddle",
+          "name": "Hi-Hat Paradiddle",
+          "category": "intermediate"
+        }
+      ],
+      "signature": "H H H H H H H H H H H H H H H H|r l r r l r l l r l r r l r l l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "groove-pop-rock",
+        "name": "Groove: Pop Rock",
+        "category": "grooves"
+      },
+      "remove": [
+        {
+          "id": "groove-basic-rock-hihat",
+          "name": "Groove: Basic Rock (Hi-Hat)",
+          "category": "grooves"
+        }
+      ],
+      "signature": "H+K H H S H+K H H S H+K H H S H+K H H S|k l r l k l r l k l r l k l r l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-basic-accent",
+        "name": "Basic Accent Pattern",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "intermediate-flam-accent",
+          "name": "Flam Accent",
+          "category": "intermediate"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|lr rl r l lr rl r l lr rl r l lr rl r l|16|4/4|0,4,8,12"
+    },
+    {
+      "keep": {
+        "id": "independence-hand-foot-basic",
+        "name": "Independence: Hand-Foot Basic",
+        "category": "independence"
+      },
+      "remove": [
+        {
+          "id": "independence-hand-foot-pattern-1",
+          "name": "Independence: Hand-Foot Pattern 1",
+          "category": "independence"
+        }
+      ],
+      "signature": "S K S K S K S K S K S K S K S K|l k l k l k l k l k l k l k l k|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "independence-hihat-kick",
+        "name": "Independence: Hi-Hat + Kick",
+        "category": "independence"
+      },
+      "remove": [
+        {
+          "id": "groove-jazz-hihat",
+          "name": "Groove: Jazz with Hi-Hat",
+          "category": "grooves"
+        }
+      ],
+      "signature": "H+K H H H+K H H H+K H H H+K H H H+K H H H+K|k r l k r l k r l k r l k r l k|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "coordination-flam-taps",
+        "name": "Coordination: Flam Taps",
+        "category": "coordination"
+      },
+      "remove": [
+        {
+          "id": "intermediate-flam-tap",
+          "name": "Flam Tap Pattern",
+          "category": "intermediate"
+        },
+        {
+          "id": "rudiment-flam-tap-five",
+          "name": "Flam Tap Five",
+          "category": "advanced"
+        },
+        {
+          "id": "advanced-inverted-flam-tap",
+          "name": "Inverted Flam Tap",
+          "category": "advanced"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|lr rl r l lr rl r l lr rl r l lr rl r l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "independence-hihat-kick",
+        "name": "Independence: Hi-Hat + Kick",
+        "category": "independence"
+      },
+      "remove": [
+        {
+          "id": "groove-funk-hihat",
+          "name": "Groove: Funk with Hi-Hat",
+          "category": "grooves"
+        }
+      ],
+      "signature": "H+K H H H+K H H H+K H H H+K H H H+K H H H+K|k l r k l r k l r k l r k l r k|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "independence-snare-kick-simultaneous",
+        "name": "Independence: Snare + Kick (Simultaneous)",
+        "category": "independence"
+      },
+      "remove": [],
+      "signature": "S+K H S+K H S+K H S+K H S+K H S+K H S+K H S+K H|k r k r k r k r k r k r k r k r|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-five-stroke-roll",
+        "name": "Five Stroke Roll",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "technique-finger-fives",
+          "name": "Finger Technique: Fives",
+          "category": "technique"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|r r l l r r r l l r r r l l r r|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "independence-triple-coordination",
+        "name": "Independence: Triple Coordination",
+        "category": "independence"
+      },
+      "remove": [],
+      "signature": "H+K H S H+K H S H+K H S H+K H S H+K H S H+K|lllr llll r l lllr llll r l lllr llll r l lllr llll r l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "independence-hand-foot-advanced",
+        "name": "Independence: Hand-Foot Advanced",
+        "category": "independence"
+      },
+      "remove": [
+        {
+          "id": "independence-hand-foot-pattern-2",
+          "name": "Independence: Hand-Foot Pattern 2",
+          "category": "independence"
+        }
+      ],
+      "signature": "K S K S K S K S K S K S K S K S|k l k r k l k r k l k r k l k r|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "coordination-double-paradiddle",
+        "name": "Coordination: Double Paradiddle",
+        "category": "coordination"
+      },
+      "remove": [
+        {
+          "id": "intermediate-double-paradiddle",
+          "name": "Double Paradiddle",
+          "category": "intermediate"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|r l r l r r l r l r l l r l r l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "independence-hand-foot-advanced",
+        "name": "Independence: Hand-Foot Advanced",
+        "category": "independence"
+      },
+      "remove": [
+        {
+          "id": "groove-basic-rock",
+          "name": "Groove: Basic Rock",
+          "category": "grooves"
+        }
+      ],
+      "signature": "K S K S K S K S K S K S K S K S|k l k l k l k l k l k l k l k l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "coordination-triple-paradiddle",
+        "name": "Coordination: Triple Paradiddle",
+        "category": "coordination"
+      },
+      "remove": [
+        {
+          "id": "intermediate-triple-paradiddle",
+          "name": "Triple Paradiddle",
+          "category": "intermediate"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|r l r l r l r r l r l r l r l l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-double-stroke-roll",
+        "name": "Double Stroke Roll",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "rudiment-seventeen-stroke-roll",
+          "name": "Seventeen Stroke Roll",
+          "category": "advanced"
+        },
+        {
+          "id": "speed-double-stroke-fast",
+          "name": "Speed: Double Stroke Fast",
+          "category": "speed"
+        },
+        {
+          "id": "speed-extreme-double-stroke",
+          "name": "Speed: Extreme Double Stroke",
+          "category": "speed"
+        },
+        {
+          "id": "speed-double-stroke-sixteenth",
+          "name": "Speed: Double Stroke Sixteenth",
+          "category": "speed"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|r r l l r r l l r r l l r r l l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "intermediate-flam-paradiddle-diddle",
+        "name": "Flam Paradiddle-Diddle",
+        "category": "intermediate"
+      },
+      "remove": [
+        {
+          "id": "rudiment-flam-paradiddle-diddle-alt",
+          "name": "Flam Paradiddle-Diddle (Alt)",
+          "category": "advanced"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|lr rl r r l l lr rl r r l l lr rl r r|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "rudiment-lesson-25-alt",
+        "name": "Lesson 25 (Alt Pattern)",
+        "category": "advanced"
+      },
+      "remove": [
+        {
+          "id": "advanced-phrase-variation-1",
+          "name": "Phrase Variation: 5+5+3+3",
+          "category": "advanced"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|r l r r l r r l r r l r r l r r|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "advanced-drag-paradiddle",
+        "name": "Drag Paradiddle",
+        "category": "advanced"
+      },
+      "remove": [
+        {
+          "id": "advanced-single-dragadiddle",
+          "name": "Single Dragadiddle",
+          "category": "advanced"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|llr l r r l r l l llr l r r l r l l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-32nd-basic",
+        "name": "Basic 32nd Notes",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "speed-thirty-second-notes",
+          "name": "Speed: Thirty-Second Notes",
+          "category": "speed"
+        },
+        {
+          "id": "warmup-single-stroke-32",
+          "name": "Warm-up: Single Stroke (32nd Notes)",
+          "category": "warmup"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S S|r l r l r l r l r l r l r l r l r l r l r l r l r l r l r l r l|32|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "intermediate-accent-every-other",
+        "name": "Accent Pattern - Every Other",
+        "category": "intermediate"
+      },
+      "remove": [
+        {
+          "id": "advanced-flam-drag",
+          "name": "Flam Drag",
+          "category": "advanced"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|lr rl r l lr rl r l lr rl r l lr rl r l|16|4/4|0,2,4,6,8,10,12,14"
+    },
+    {
+      "keep": {
+        "id": "advanced-triple-ratamacue",
+        "name": "Triple Ratamacue",
+        "category": "advanced"
+      },
+      "remove": [
+        {
+          "id": "rudiment-triple-ratamacue-alt",
+          "name": "Triple Ratamacue (Alt)",
+          "category": "advanced"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S S S S S|lllr llll r l lllr llll r l lllr llll r l lllr llll r l|16|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "beginner-single-stroke-quarter",
+        "name": "Single Stroke Roll (Quarter Notes)",
+        "category": "beginner"
+      },
+      "remove": [
+        {
+          "id": "warmup-single-stroke-4",
+          "name": "Warm-up: Single Stroke (Quarter Notes)",
+          "category": "warmup"
+        }
+      ],
+      "signature": "S S S S|r l r l|4|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "speed-triplet-single-stroke",
+        "name": "Speed: Triplet Single Stroke",
+        "category": "speed"
+      },
+      "remove": [
+        {
+          "id": "warmup-single-stroke-12",
+          "name": "Warm-up: Single Stroke (Triplet Notes)",
+          "category": "warmup"
+        }
+      ],
+      "signature": "S S S S S S S S S S S S|r l r l r l r l r l r l|12|4/4|none"
+    },
+    {
+      "keep": {
+        "id": "famous-beat-sweet-child",
+        "name": "Famous Beat: Sweet Child O' Mine",
+        "category": "famous-beats"
+      },
+      "remove": [
+        {
+          "id": "famous-beat-back-in-black",
+          "name": "Famous Beat: Back in Black",
+          "category": "famous-beats"
+        },
+        {
+          "id": "famous-beat-enter-sandman",
+          "name": "Famous Beat: Enter Sandman",
+          "category": "famous-beats"
+        },
+        {
+          "id": "famous-beat-when-the-levee",
+          "name": "Famous Beat: When the Levee Breaks",
+          "category": "famous-beats"
+        }
+      ],
+      "signature": "K+H H H S+H K+H H H S+H K+H H H S+H K+H H H S+H|k r r l k r r l k r r l k r r l|16|4/4|0,4,8,12"
+    }
+  ],
+  "totalDuplicates": 60
+}
