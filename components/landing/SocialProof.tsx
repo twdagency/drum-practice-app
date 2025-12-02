@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Users, Music2, Drum, Star, Sparkles } from 'lucide-react';
 
 interface Testimonial {
   quote: string;
@@ -13,7 +14,7 @@ interface Testimonial {
 interface Statistic {
   value: string;
   label: string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }
 
 const testimonials: Testimonial[] = [
@@ -44,10 +45,10 @@ const testimonials: Testimonial[] = [
 ];
 
 const statistics: Statistic[] = [
-  { value: '1,000+', label: 'Active Users', icon: '👥' },
-  { value: '10,000+', label: 'Patterns Created', icon: '🎵' },
-  { value: '50,000+', label: 'Practice Sessions', icon: '🥁' },
-  { value: '4.9/5', label: 'Average Rating', icon: '⭐' },
+  { value: '1,000+', label: 'Active Users', Icon: Users },
+  { value: '10,000+', label: 'Patterns Created', Icon: Music2 },
+  { value: '50,000+', label: 'Practice Sessions', Icon: Drum },
+  { value: '4.9/5', label: 'Average Rating', Icon: Star },
 ];
 
 export function SocialProof() {
@@ -134,19 +135,26 @@ export function SocialProof() {
       <div className="max-w-7xl mx-auto">
         {/* Statistics Section */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-16 md:mb-24">
-          {statistics.map((stat, index) => (
-            <div
-              key={index}
-              className="stat-card group relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-all duration-500 hover:scale-105 hover:border-white/20"
-            >
-              <div className="text-4xl mb-3">{stat.icon}</div>
-              <div className="stat-value text-4xl md:text-5xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                {stat.value}
+          {statistics.map((stat, index) => {
+            const IconComponent = stat.Icon;
+            return (
+              <div
+                key={index}
+                className="stat-card group relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-2xl p-6 text-center hover:bg-slate-900/60 hover:border-slate-700/50 transition-all duration-700"
+              >
+                <div className="flex justify-center mb-4">
+                  <div className="bg-slate-900/50 rounded-xl p-3 border border-slate-800/50 group-hover:border-slate-700/50 transition-all duration-500">
+                    <IconComponent className="w-6 h-6 text-slate-400 group-hover:text-slate-200 transition-colors duration-500" strokeWidth={1.5} />
+                  </div>
+                </div>
+                <div className="stat-value text-4xl md:text-5xl font-semibold text-white mb-2 tracking-tight">
+                  {stat.value}
+                </div>
+                <div className="text-slate-400 text-sm font-medium group-hover:text-slate-300 transition-colors duration-500">{stat.label}</div>
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-800/0 to-slate-900/0 group-hover:from-slate-800/20 group-hover:to-slate-900/20 rounded-2xl transition-all duration-700"></div>
               </div>
-              <div className="text-white/60 text-sm font-medium">{stat.label}</div>
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity"></div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Testimonials Section */}
@@ -163,42 +171,39 @@ export function SocialProof() {
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="testimonial-card group relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 hover:bg-white/10 transition-all duration-500 hover:scale-105 hover:border-white/20"
+              className="testimonial-card group relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-2xl p-6 hover:bg-slate-900/60 hover:border-slate-700/50 transition-all duration-700"
             >
               {/* Rating Stars */}
               {testimonial.rating && (
                 <div className="flex gap-1 mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <svg
+                    <Star
                       key={i}
-                      className="w-5 h-5 text-yellow-400"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
+                      className="w-4 h-4 text-slate-500 fill-slate-500 group-hover:text-slate-400 group-hover:fill-slate-400 transition-colors duration-500"
+                      strokeWidth={1.5}
+                    />
                   ))}
                 </div>
               )}
 
               {/* Quote */}
-              <p className="text-white/80 leading-relaxed mb-6 text-sm">
+              <p className="text-slate-300 leading-relaxed mb-6 text-sm group-hover:text-slate-200 transition-colors duration-500">
                 "{testimonial.quote}"
               </p>
 
               {/* Author */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700/50 flex items-center justify-center text-slate-300 font-semibold text-sm group-hover:border-slate-600/50 transition-colors duration-500">
                   {testimonial.author.charAt(0)}
                 </div>
                 <div>
-                  <div className="text-white font-semibold text-sm">{testimonial.author}</div>
-                  <div className="text-white/50 text-xs">{testimonial.role}</div>
+                  <div className="text-white font-medium text-sm group-hover:text-slate-100 transition-colors duration-500">{testimonial.author}</div>
+                  <div className="text-slate-500 text-xs group-hover:text-slate-400 transition-colors duration-500">{testimonial.role}</div>
                 </div>
               </div>
 
-              {/* Hover Gradient */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity"></div>
+              {/* Subtle Hover Gradient */}
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-800/0 to-slate-900/0 group-hover:from-slate-800/20 group-hover:to-slate-900/20 rounded-2xl transition-all duration-700"></div>
             </div>
           ))}
         </div>

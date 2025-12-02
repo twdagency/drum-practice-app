@@ -75,14 +75,14 @@ function PricingContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-black py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-4xl font-semibold text-white mb-4 tracking-tight">
             Choose Your Plan
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
+          <p className="text-xl text-slate-400">
             Unlock unlimited patterns, advanced features, and professional tools
           </p>
         </div>
@@ -90,10 +90,10 @@ function PricingContent() {
         {/* Message Display */}
         {message && (
           <div className="max-w-2xl mx-auto mb-8">
-            <div className={`p-4 rounded-lg ${
+            <div className={`p-4 rounded-xl border ${
               message.includes('canceled') 
-                ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200'
-                : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+                ? 'bg-slate-900/60 border-slate-800/50 text-slate-300'
+                : 'bg-slate-900/60 border-slate-800/50 text-slate-300'
             }`}>
               {message}
             </div>
@@ -103,45 +103,45 @@ function PricingContent() {
         {/* Pricing Cards */}
         {plans.length === 0 ? (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading plans...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600 mx-auto"></div>
+            <p className="mt-4 text-slate-400">Loading plans...</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {/* Free Tier */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 border-2 border-gray-200 dark:border-gray-700">
+          <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border border-slate-800/50">
             <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-2xl font-semibold text-white mb-2">
                 Free
               </h3>
-              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
+              <div className="text-4xl font-semibold text-white mb-1 tracking-tight">
                 £0
               </div>
-              <p className="text-gray-600 dark:text-gray-400">Forever</p>
+              <p className="text-slate-400 text-sm">Forever</p>
             </div>
             <ul className="space-y-3 mb-8">
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-slate-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                <span className="text-gray-700 dark:text-gray-300">5 patterns</span>
+                <span className="text-slate-300 text-sm">5 patterns</span>
               </li>
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-slate-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                <span className="text-gray-700 dark:text-gray-300">Basic practice modes</span>
+                <span className="text-slate-300 text-sm">Basic practice modes</span>
               </li>
               <li className="flex items-start">
-                <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-slate-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                <span className="text-gray-700 dark:text-gray-300">Progress tracking</span>
+                <span className="text-slate-300 text-sm">Progress tracking</span>
               </li>
             </ul>
             <Link
               href="/app"
-              className="block w-full text-center py-3 px-6 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="block w-full text-center py-3.5 px-6 bg-slate-800/50 border border-slate-700/50 rounded-xl text-slate-200 font-medium hover:bg-slate-800/70 hover:border-slate-600/50 transition-all"
             >
               Get Started Free
             </Link>
@@ -151,31 +151,31 @@ function PricingContent() {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 border-2 ${
+              className={`bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border ${
                 plan.popular
-                  ? 'border-blue-500 dark:border-blue-400 relative'
-                  : 'border-gray-200 dark:border-gray-700'
-              }`}
+                  ? 'border-slate-700/50 shadow-2xl shadow-slate-900/50 relative'
+                  : 'border-slate-800/50'
+              } hover:border-slate-700/70 transition-all duration-500 group`}
             >
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+                  <span className="bg-slate-800 text-slate-200 px-5 py-1.5 rounded-full text-xs font-medium border border-slate-700/50 shadow-lg backdrop-blur-sm">
                     Most Popular
                   </span>
                 </div>
               )}
               
               <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-2xl font-semibold text-white mb-2">
                   {plan.name}
                 </h3>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                <div className="text-4xl font-semibold text-white mb-1 tracking-tight">
                   £{plan.price.toFixed(2)}
                 </div>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-slate-400 text-sm">
                   per {plan.interval === 'month' ? 'month' : 'year'}
                   {plan.interval === 'year' && (
-                    <span className="block text-sm text-green-600 dark:text-green-400 mt-1">
+                    <span className="block text-sm text-slate-400 mt-1">
                       Save 17% vs monthly
                     </span>
                   )}
@@ -185,10 +185,10 @@ function PricingContent() {
               <ul className="space-y-3 mb-8">
                 {plan.features.map((feature, index) => (
                   <li key={index} className="flex items-start">
-                    <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-slate-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                    <span className="text-slate-300 text-sm">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -196,10 +196,10 @@ function PricingContent() {
               <button
                 onClick={() => handleCheckout(plan)}
                 disabled={loading === plan.id}
-                className={`w-full py-3 px-6 rounded-lg font-medium transition-colors ${
+                className={`w-full py-3.5 px-6 rounded-xl font-medium text-sm transition-all duration-300 ${
                   plan.popular
-                    ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                    : 'bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white'
+                    ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-lg shadow-slate-900/20'
+                    : 'bg-slate-800/50 border border-slate-700/50 text-slate-200 hover:bg-slate-800/70 hover:border-slate-600/50'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {loading === plan.id ? 'Processing...' : 'Subscribe'}
@@ -211,31 +211,31 @@ function PricingContent() {
 
         {/* FAQ Section */}
         <div className="max-w-3xl mx-auto mt-16">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+          <h2 className="text-2xl font-semibold text-white mb-8 text-center tracking-tight">
             Frequently Asked Questions
           </h2>
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-medium text-white mb-2">
                 Can I cancel anytime?
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-slate-400">
                 Yes, you can cancel your subscription at any time. You'll continue to have access until the end of your billing period.
               </p>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-medium text-white mb-2">
                 Do you offer a free trial?
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-slate-400">
                 We offer a free tier with limited features. Paid plans may include a free trial period - check during checkout.
               </p>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-medium text-white mb-2">
                 What payment methods do you accept?
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-slate-400">
                 We accept all major credit cards, debit cards, and other payment methods through Stripe.
               </p>
             </div>
@@ -246,7 +246,7 @@ function PricingContent() {
         <div className="text-center mt-12">
           <Link
             href="/app"
-            className="text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-slate-400 hover:text-slate-200 transition-colors"
           >
             ← Back to App
           </Link>
@@ -259,10 +259,10 @@ function PricingContent() {
 export default function PricingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-black flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600 mx-auto"></div>
+          <p className="mt-4 text-slate-400">Loading...</p>
         </div>
       </div>
     }>
