@@ -5,13 +5,14 @@
 
 'use client';
 
+import { Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { SignUpModal } from '@/components/auth/SignUpModal';
 
-export default function SignInPage() {
+function SignInContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -77,6 +78,21 @@ export default function SignInPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black via-slate-950 to-black">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600 mx-auto"></div>
+          <p className="mt-4 text-slate-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 }
 
