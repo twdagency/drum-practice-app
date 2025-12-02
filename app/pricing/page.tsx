@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { getAllPlans } from '@/lib/stripe/plans';
 import { SubscriptionPlan } from '@/lib/stripe/types';
 import Link from 'next/link';
 
@@ -13,7 +12,22 @@ function PricingContent() {
   const { data: session, status } = useSession();
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string>('');
-  const plans = getAllPlans();
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+
+  // Fetch plans from API (so we get server-side environment variables)
+  useEffect(() => {
+    fetch('/api/stripe/plans')
+      .then(res => res.json())
+      .then(data => {
+        if (data.plans) {
+          setPlans(data.plans);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load plans:', err);
+        setMessage('Failed to load pricing plans. Please refresh the page.');
+      });
+  }, []);
 
   useEffect(() => {
     // Check for canceled parameter
@@ -87,8 +101,14 @@ function PricingContent() {
         )}
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {/* Free Tier */}
+        {plans.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading plans...</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {/* Free Tier */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 border-2 border-gray-200 dark:border-gray-700">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -186,7 +206,8 @@ function PricingContent() {
               </button>
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* FAQ Section */}
         <div className="max-w-3xl mx-auto mt-16">
