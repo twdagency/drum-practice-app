@@ -38,9 +38,14 @@ import { useMIDIDevices } from '@/hooks/useMIDIDevices';
 import { convertMIDIRecordingToPattern } from '@/lib/utils/midiRecordingUtils';
 import { startCountIn, stopCountIn, startMetronome, stopMetronome } from '@/lib/utils/midiRecordingManager';
 import { isApiSyncEnabled } from '@/lib/utils/patternSync';
+import { AuthButton } from '@/components/auth/AuthButton';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export function Toolbar() {
   const { showToast } = useToast();
+  const { data: session } = useSession();
+  const router = useRouter();
   const [midiPracticeOpen, setMidiPracticeOpen] = useState(false);
   const [microphonePracticeOpen, setMicrophonePracticeOpen] = useState(false);
   const [showPresetsBrowser, setShowPresetsBrowser] = useState(false);
@@ -62,6 +67,7 @@ export function Toolbar() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [apiSyncEnabled, setApiSyncEnabled] = useState(false);
   const [scrollModeDropdownOpen, setScrollModeDropdownOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Load presets for the dropdown
   const { presets, loading: presetsLoading } = usePresets();
@@ -85,6 +91,20 @@ export function Toolbar() {
       };
     }
   }, []);
+
+  // Check if user is admin
+  useEffect(() => {
+    if (session?.user) {
+      fetch('/api/admin/check')
+        .then(res => res.json())
+        .then(data => {
+          setIsAdmin(data.isAdmin || false);
+        })
+        .catch(() => setIsAdmin(false));
+    } else {
+      setIsAdmin(false);
+    }
+  }, [session]);
   
   // MIDI Recording
   const { devices: midiDevices, access: midiAccess } = useMIDIDevices();
@@ -1390,6 +1410,24 @@ export function Toolbar() {
             icon="fas fa-question-circle"
           />
         </Tooltip>
+      </ToolbarGroup>
+
+      <ToolbarDivider />
+
+      {/* Authentication */}
+      <ToolbarGroup>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <AuthButton />
+          {isAdmin && (
+            <Tooltip content="Admin Dashboard">
+              <ToolbarButton
+                onClick={() => router.push('/admin')}
+                title="Admin Dashboard"
+                icon="fas fa-shield-alt"
+              />
+            </Tooltip>
+          )}
+        </div>
       </ToolbarGroup>
       
       {/* MIDI Practice Modal */}

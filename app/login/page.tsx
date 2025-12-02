@@ -6,7 +6,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { SignUpModal } from '@/components/auth/SignUpModal';
@@ -14,14 +14,17 @@ import { SignUpModal } from '@/components/auth/SignUpModal';
 export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showSignIn, setShowSignIn] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
 
+  const callbackUrl = searchParams?.get('callbackUrl') || '/app';
+
   useEffect(() => {
     if (status === 'authenticated') {
-      router.push('/');
+      router.push(callbackUrl);
     }
-  }, [status, router]);
+  }, [status, router, callbackUrl]);
 
   if (status === 'loading') {
     return (

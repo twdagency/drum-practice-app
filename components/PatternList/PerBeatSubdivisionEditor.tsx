@@ -53,15 +53,15 @@ export function PerBeatSubdivisionEditor({
             Per-Beat Subdivisions
           </label>
           {hasCorrectBeats ? (
-            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 rounded-md">
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
               {numerator} beats • {notesPerBar} notes
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 rounded-md">
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
               {perBeatSubdivisions.length} of {numerator} beats
@@ -79,7 +79,7 @@ export function PerBeatSubdivisionEditor({
           return (
             <div 
               key={index} 
-              className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700/50 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+              className="per-beat-card flex items-center gap-3 p-3 bg-white dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700/50 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
             >
               <div className="flex items-center justify-center w-10 h-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold text-sm">
                 {index + 1}

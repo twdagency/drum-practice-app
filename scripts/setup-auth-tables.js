@@ -6,46 +6,65 @@
  */
 
 const { Pool } = require('pg');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
 
-// Try to load .env.local
-try {
-  const envPath = path.join(process.cwd(), '.env.local');
-  if (fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, 'utf-8');
-    const envLines = envContent.split('\n');
-    for (const line of envLines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const match = trimmed.match(/^DATABASE_URL\s*=\s*(.+)$/);
-      if (match) {
-        let value = match[1].trim();
-        if ((value.startsWith('"') && value.endsWith('"')) || 
-            (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-        process.env.DATABASE_URL = value;
-        break;
-      }
-    }
-  }
-} catch (error) {
-  // Ignore errors
-}
+// Load .env.local using dotenv
+require('dotenv').config({ path: path.join(process.cwd(), '.env.local') });
 
 async function setupAuthTables() {
-  const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/drum_practice_app';
+  let databaseUrl = process.env.DATABASE_URL;
   
-  if (!process.env.DATABASE_URL) {
-    console.warn('⚠️  DATABASE_URL not set. Using default.');
+  if (!databaseUrl) {
+    console.error('❌ DATABASE_URL not found in .env.local');
+    console.error('Please set DATABASE_URL in your .env.local file');
+    console.error('');
+    console.error('Debug: All env vars loaded:', Object.keys(process.env).filter(k => k.includes('DATABASE')).join(', '));
+    process.exit(1);
+  }
+  
+  // Clean up: remove any whitespace, newlines, carriage returns
+  databaseUrl = databaseUrl.trim().replace(/\r\n/g, '').replace(/\n/g, '').replace(/\r/g, '');
+  
+  // Clean up if it includes "DATABASE_URL=" prefix (shouldn't happen with dotenv, but just in case)
+  if (databaseUrl.startsWith('DATABASE_URL=')) {
+    databaseUrl = databaseUrl.replace(/^DATABASE_URL=\s*/, '');
+  }
+  
+  // Remove any quotes
+  if ((databaseUrl.startsWith('"') && databaseUrl.endsWith('"')) || 
+      (databaseUrl.startsWith("'") && databaseUrl.endsWith("'"))) {
+    databaseUrl = databaseUrl.slice(1, -1).trim();
+  }
+  
+  // Validate URL format
+  if (!databaseUrl.startsWith('postgresql://') && !databaseUrl.startsWith('postgres://')) {
+    console.error('❌ Invalid DATABASE_URL format');
+    console.error('Current value (first 100 chars):', databaseUrl.substring(0, 100));
+    console.error('Value length:', databaseUrl.length);
+    console.error('Expected format: postgresql://user:password@host:port/database');
+    console.error('');
+    console.error('Debug info:');
+    console.error('- Starts with postgresql://:', databaseUrl.startsWith('postgresql://'));
+    console.error('- Starts with postgres://:', databaseUrl.startsWith('postgres://'));
+    console.error('- First 20 chars:', JSON.stringify(databaseUrl.substring(0, 20)));
+    console.error('');
+    console.error('Make sure your .env.local has:');
+    console.error('DATABASE_URL=postgresql://user:password@host:port/database');
+    console.error('(No quotes, no DATABASE_URL= prefix in the value, on a single line)');
+    process.exit(1);
   }
   
   console.log('Setting up authentication tables...');
-  console.log('Connection:', databaseUrl.replace(/:[^:@]+@/, ':****@'));
+  // Mask password in output
+  const maskedUrl = databaseUrl.replace(/:\/\/[^:]+:[^@]+@/, '://****:****@');
+  console.log('Connection:', maskedUrl);
   console.log('');
   
-  const pool = new Pool({ connectionString: databaseUrl });
+  const pool = new Pool({ 
+    connectionString: databaseUrl,
+    ssl: databaseUrl.includes('supabase') || databaseUrl.includes('pooler') ? { rejectUnauthorized: false } : false
+  });
   
   try {
     // Read auth schema file

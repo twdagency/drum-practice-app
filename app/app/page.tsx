@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Toolbar } from '@/components/Toolbar/Toolbar';
 import { PatternList } from '@/components/PatternList/PatternList';
@@ -28,6 +30,8 @@ import { QuickControlPanel } from '@/components/shared/QuickControlPanel';
 import { AuthButton } from '@/components/auth/AuthButton';
 
 export default function App() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const darkMode = useStore((state) => state.darkMode);
   const polyrhythmPatterns = useStore((state) => state.polyrhythmPatterns);
   const setShowVisualMetronome = useStore((state) => state.setShowVisualMetronome);
@@ -62,6 +66,7 @@ export default function App() {
 
   // Load persisted UI settings synchronously on mount (client-side only)
   // Check localStorage immediately if on client
+  // IMPORTANT: All hooks must be called before any conditional returns
   useEffect(() => {
     if (typeof window === 'undefined') {
       setSettingsLoaded(true);
@@ -249,7 +254,33 @@ export default function App() {
         console.error('Failed to import patterns from URL:', error);
       }
     }
-  }, [addPattern, setBPM]);
+  }, [addPattern, setBPM, setPatterns]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === 'loading') return; // Still loading
+    
+    if (status === 'unauthenticated' || !session) {
+      router.push('/login?callbackUrl=/app');
+    }
+  }, [status, session, router]);
+
+  // Show loading state while checking auth
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600 mx-auto"></div>
+          <p className="mt-4 text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render app if not authenticated (redirect will happen)
+  if (!session) {
+    return null;
+  }
 
   // Initialize progress tracking (ToastProvider is now in root layout)
 

@@ -1477,6 +1477,78 @@ export function Stave() {
                     noteIndexInLine++;
                   }
                 });
+                
+                // Absolutely position all sticking annotations to the same Y coordinate
+                // Calculate absolute positions based on stave position in SVG coordinate system
+                const allStaves = svgElement.querySelectorAll('.vf-stave') as NodeListOf<SVGElement>;
+                allStaves.forEach((staveEl) => {
+                  // Get stave bounding box in SVG coordinates
+                  const staveBBox = staveEl.getBBox();
+                  if (staveBBox) {
+                    // Calculate absolute Y position below stave - same for ALL annotations
+                    // Use getBBox which gives us coordinates in the SVG's coordinate system
+                    const absoluteY = staveBBox.y + staveBBox.height + 30; // 30px below stave bottom
+                    
+                    // Find all note groups that are within this stave's Y range
+                    const allNoteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+                    allNoteGroups.forEach((noteGroup) => {
+                      // Check if this note is within this stave's vertical range
+                      const noteBBox = noteGroup.getBBox();
+                      const noteCenterY = noteBBox.y + (noteBBox.height / 2);
+                      const isInStave = noteCenterY >= staveBBox.y && noteCenterY <= staveBBox.y + staveBBox.height;
+                      
+                      if (isInStave) {
+                        const annotationGroup = noteGroup.querySelector('.vf-annotation') as SVGGElement;
+                        const annotation = noteGroup.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
+                        
+                        if (annotation) {
+                          // Find notehead for absolute X positioning
+                          let absoluteX = noteBBox.x + (noteBBox.width / 2); // Default fallback
+                          
+                          const circles = noteGroup.querySelectorAll('circle, ellipse');
+                          if (circles.length > 0) {
+                            const notehead = circles[0] as SVGCircleElement | SVGEllipseElement;
+                            try {
+                              const cx = parseFloat(notehead.getAttribute('cx') || '0');
+                              if (cx > 0) {
+                                absoluteX = cx;
+                              } else {
+                                const noteheadBBox = notehead.getBBox();
+                                absoluteX = noteheadBBox.x + (noteheadBBox.width / 2);
+                              }
+                            } catch (e) {
+                              // Use default
+                            }
+                          } else {
+                            const noteheadPath = noteGroup.querySelector('path[data-name="notehead"]') as SVGPathElement;
+                            if (noteheadPath) {
+                              try {
+                                const noteheadBBox = noteheadPath.getBBox();
+                                absoluteX = noteheadBBox.x + (noteheadBBox.width / 2);
+                              } catch (e) {
+                                // Use default
+                              }
+                            }
+                          }
+                          
+                          // Set absolute positions - override any transforms or relative positioning
+                          annotation.setAttribute('x', absoluteX.toString());
+                          annotation.setAttribute('y', absoluteY.toString());
+                          annotation.setAttribute('text-anchor', 'middle');
+                          annotation.setAttribute('dominant-baseline', 'hanging');
+                          
+                          // Remove transforms from both annotation group and text element
+                          if (annotationGroup) {
+                            annotationGroup.removeAttribute('transform');
+                            annotationGroup.style.transform = 'none';
+                          }
+                          annotation.removeAttribute('transform');
+                          annotation.style.transform = 'none';
+                        }
+                      }
+                    });
+                  }
+                });
               }
             }
           } catch (error) {
@@ -3702,15 +3774,17 @@ function buildNotes({
       }
     }
 
-    // Add accent if needed
+    // Add accent if needed - position below the note
     if (accentIndices.includes(i)) {
       try {
         const accent = new VF.Articulation('a>');
-        // Don't set position - let VexFlow use default
-        // The error suggests setPosition is causing issues with the draw method
-        // Set Y shift if method exists
+        // Position accent below the note instead of above
         if (typeof accent.setYShift === 'function') {
-          accent.setYShift(-8);
+          accent.setYShift(25); // Positive value positions it below the note
+        }
+        // Use setPosition to ensure it's below
+        if (typeof accent.setPosition === 'function') {
+          accent.setPosition(4); // Position 4 = below note
         }
         staveNote.addModifier(accent, 0);
       } catch (e) {
@@ -4065,12 +4139,15 @@ function buildPolyrhythmNotes({
         stem_direction: 1, // Upward stems
       });
       
-      // Add accent if either hand has one
+      // Add accent if either hand has one - position below the note
       if (hasAccent) {
         try {
           const accent = new VF.Articulation('a>');
           if (typeof accent.setYShift === 'function') {
-            accent.setYShift(-8);
+            accent.setYShift(25); // Positive value positions it below
+          }
+          if (typeof accent.setPosition === 'function') {
+            accent.setPosition(4); // Position 4 = below note
           }
           note.addModifier(accent, 0);
         } catch (e) {
@@ -4104,12 +4181,15 @@ function buildPolyrhythmNotes({
         stem_direction: 1, // Upward stems
       });
       
-      // Add accent if right hand has one
+      // Add accent if right hand has one - position below the note
       if (hasRightAccent) {
         try {
           const accent = new VF.Articulation('a>');
           if (typeof accent.setYShift === 'function') {
-            accent.setYShift(-8);
+            accent.setYShift(25); // Positive value positions it below
+          }
+          if (typeof accent.setPosition === 'function') {
+            accent.setPosition(4); // Position 4 = below note
           }
           note.addModifier(accent, 0);
         } catch (e) {
@@ -4163,12 +4243,15 @@ function buildPolyrhythmNotes({
       stem_direction: 1, // Upward stems
     });
       
-      // Add accent if left hand has one
+      // Add accent if left hand has one - position below the note
       if (hasLeftAccent) {
         try {
           const accent = new VF.Articulation('a>');
           if (typeof accent.setYShift === 'function') {
-            accent.setYShift(-8);
+            accent.setYShift(25); // Positive value positions it below
+          }
+          if (typeof accent.setPosition === 'function') {
+            accent.setPosition(4); // Position 4 = below note
           }
           note.addModifier(accent, 0);
         } catch (e) {
