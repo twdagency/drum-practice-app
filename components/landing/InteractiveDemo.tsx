@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { Music, Piano, Target, BarChart3, Drum } from 'lucide-react';
 
 interface DemoTab {
   id: string;
   label: string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   title: string;
   description: string;
   highlights: string[];
@@ -15,7 +16,7 @@ const demoData: DemoTab[] = [
   {
     id: 'notation',
     label: 'Notation',
-    icon: '🎵',
+    Icon: Music,
     title: 'Professional Notation',
     description: 'Create and view drum patterns with professional VexFlow notation. Export to multiple formats.',
     highlights: [
@@ -28,7 +29,7 @@ const demoData: DemoTab[] = [
   {
     id: 'practice',
     label: 'Practice',
-    icon: '🎹',
+    Icon: Piano,
     title: 'MIDI & Microphone Practice',
     description: 'Practice with MIDI drum pads or use your microphone for real-time feedback and accuracy analysis.',
     highlights: [
@@ -41,7 +42,7 @@ const demoData: DemoTab[] = [
   {
     id: 'patterns',
     label: 'Patterns',
-    icon: '🎯',
+    Icon: Target,
     title: 'Custom Pattern Creation',
     description: 'Build custom patterns with voicing, sticking, accents, ghost notes, and ornaments.',
     highlights: [
@@ -54,7 +55,7 @@ const demoData: DemoTab[] = [
   {
     id: 'progress',
     label: 'Progress',
-    icon: '📊',
+    Icon: BarChart3,
     title: 'Track Your Improvement',
     description: 'Monitor your practice sessions with detailed statistics, accuracy metrics, and progress goals.',
     highlights: [
@@ -123,6 +124,7 @@ export function InteractiveDemo() {
   }, [activeTab]);
 
   const activeDemo = demoData.find((tab) => tab.id === activeTab) || demoData[0];
+  const ActiveIcon = activeDemo.Icon;
 
   return (
     <section ref={sectionRef} className="relative py-24 md:py-32 px-4 sm:px-6 lg:px-8">
@@ -136,23 +138,23 @@ export function InteractiveDemo() {
           </p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-12 overflow-hidden">
+        <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/50 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-12 overflow-hidden">
           {/* Tab Navigation */}
           <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 md:mb-8 border-b border-white/10 pb-4 md:pb-6 overflow-x-auto">
             {demoData.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`group relative px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 whitespace-nowrap ${
+                className={`group relative px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 whitespace-nowrap flex items-center gap-2 ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-purple-500/50'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                    ? 'bg-slate-800/60 text-slate-200 border border-slate-700/50 shadow-lg'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
                 }`}
               >
-                <span className="mr-2 text-lg sm:text-xl">{tab.icon}</span>
+                <tab.Icon className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} />
                 {tab.label}
                 {activeTab === tab.id && (
-                  <div className="absolute -bottom-2 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400"></div>
+                  <div className="absolute -bottom-2 left-0 right-0 h-0.5 bg-slate-500"></div>
                 )}
               </button>
             ))}
@@ -162,7 +164,11 @@ export function InteractiveDemo() {
           <div ref={contentRef} className="grid md:grid-cols-2 gap-6 md:gap-8 items-center">
             {/* Text Content */}
             <div>
-              <div className="text-4xl sm:text-5xl mb-3 md:mb-4">{activeDemo.icon}</div>
+              <div className="mb-3 md:mb-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                  <ActiveIcon className="w-8 h-8 sm:w-10 sm:h-10 text-slate-300" strokeWidth={1.5} />
+                </div>
+              </div>
               <h3 className="text-2xl sm:text-3xl font-black text-white mb-3 md:mb-4">{activeDemo.title}</h3>
               <p className="text-white/70 text-base md:text-lg mb-4 md:mb-6 leading-relaxed">
                 {activeDemo.description}
@@ -189,55 +195,84 @@ export function InteractiveDemo() {
 
             {/* Visual Preview */}
             <div className="relative">
-              <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-2xl p-8 border border-white/10 shadow-2xl">
+              <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/30 shadow-2xl">
                 {/* Mockup Interface */}
                 <div className="space-y-4">
                   {/* Feature-specific mockup */}
                   {activeTab === 'notation' && (
-                    <div className="relative">
-                      {/* Staff Lines */}
-                      <div className="flex flex-col gap-6 py-8">
-                        {[0, 1, 2, 3, 4].map((line) => (
+                    <div className="relative min-h-[250px] flex items-center justify-center">
+                      {/* Time Signature - Top Left */}
+                      <div className="absolute top-4 left-4 text-slate-300 font-semibold text-sm">
+                        4/4
+                      </div>
+
+                      {/* Staff Lines - Horizontal */}
+                      <div className="absolute inset-0 flex flex-col justify-center">
+                        {/* Main horizontal line connecting all notes */}
+                        <div className="h-px bg-slate-400/40 mx-8"></div>
+                        {/* Two fainter lines above */}
+                        <div className="h-px bg-slate-500/20 mx-8 mb-6"></div>
+                        <div className="h-px bg-slate-500/20 mx-8 mb-12"></div>
+                      </div>
+
+                      {/* Drum Notes - Matching actual app layout */}
+                      <div className="flex items-center justify-center gap-8 sm:gap-12">
+                        {['K', 'S', 'T', 'H'].map((drum, index) => (
                           <div
-                            key={line}
-                            className="h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                          />
+                            key={drum}
+                            className="flex flex-col items-center relative"
+                          >
+                            {/* Circular Note Head - Glowing purple/blue gradient */}
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-purple-500/90 via-blue-500/90 to-purple-600/90 border-2 border-white/20 shadow-lg shadow-purple-500/30"></div>
+                            
+                            {/* Vertical Stem - Light blue line */}
+                            <div className="w-0.5 h-16 sm:h-20 bg-gradient-to-b from-blue-400/70 via-blue-300/50 to-transparent mt-[-2px]"></div>
+                            
+                            {/* Horizontal connection line */}
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 w-20 sm:w-24 h-px bg-blue-400/40"></div>
+                            
+                            {/* Drum Label */}
+                            <div className="text-xs sm:text-sm text-slate-300 font-medium mt-2">
+                              {drum}
+                            </div>
+                          </div>
                         ))}
                       </div>
-                      {/* Notes */}
-                      <div className="absolute inset-0 flex items-center justify-around">
-                        {['K', 'S', 'T', 'H'].map((note) => (
+
+                      {/* Step Indicators - Bottom Center */}
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                        {[1, 2, 3, 4].map((step, index) => (
                           <div
-                            key={note}
-                            className="flex flex-col items-center gap-2"
-                          >
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 border-2 border-white/50"></div>
-                            <div className="w-1 h-12 bg-gradient-to-b from-blue-300 to-transparent"></div>
-                          </div>
+                            key={step}
+                            className={`w-2 h-2 rounded-full ${
+                              index >= 2 
+                                ? 'bg-purple-400 shadow-md shadow-purple-500/50' 
+                                : 'bg-slate-600/50'
+                            }`}
+                          />
                         ))}
                       </div>
                     </div>
                   )}
 
                   {activeTab === 'practice' && (
-                    <div className="grid grid-cols-4 gap-4">
-                      {['Kick', 'Snare', 'Hi-Hat', 'Tom'].map((pad, index) => (
-                        <div
-                          key={pad}
-                          className="aspect-square bg-gradient-to-br from-purple-600/30 to-blue-600/30 rounded-xl border border-white/20 flex flex-col items-center justify-center hover:scale-105 transition-transform"
-                          style={{
-                            animation: `pulse 2s ease-in-out ${index * 0.3}s infinite`,
-                          }}
-                        >
-                          <div className="text-2xl mb-2">🥁</div>
-                          <div className="text-xs text-white/60">{pad}</div>
-                        </div>
-                      ))}
+                    <div className="min-h-[250px] flex items-center justify-center">
+                      <div className="grid grid-cols-4 gap-3 sm:gap-4 w-full max-w-md">
+                        {['Kick', 'Snare', 'Hi-Hat', 'Tom'].map((pad, index) => (
+                          <div
+                            key={pad}
+                            className="aspect-square bg-slate-800/50 rounded-lg border border-slate-700/50 flex flex-col items-center justify-center hover:bg-slate-800/70 hover:border-slate-600/50 transition-all"
+                          >
+                            <Drum className="w-6 h-6 sm:w-8 sm:h-8 text-slate-400 mb-2" strokeWidth={1.5} />
+                            <div className="text-xs text-slate-300 font-medium">{pad}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
                   {activeTab === 'patterns' && (
-                    <div className="space-y-3">
+                    <div className="min-h-[250px] space-y-2">
                       {[
                         { name: 'Single Stroke Roll', difficulty: 'Easy' },
                         { name: 'Paradiddle', difficulty: 'Medium' },
@@ -245,45 +280,48 @@ export function InteractiveDemo() {
                       ].map((pattern) => (
                         <div
                           key={pattern.name}
-                          className="bg-white/5 rounded-lg p-4 border border-white/10 hover:bg-white/10 transition-colors"
+                          className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50 hover:bg-slate-800/70 hover:border-slate-600/50 transition-all"
                         >
                           <div className="flex justify-between items-center">
-                            <span className="text-white font-medium">{pattern.name}</span>
-                            <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
+                            <span className="text-slate-200 font-medium text-sm">{pattern.name}</span>
+                            <span className="text-xs px-2 py-1 bg-slate-700/50 text-slate-300 rounded border border-slate-600/50">
                               {pattern.difficulty}
                             </span>
                           </div>
                         </div>
                       ))}
+                      <div className="pt-2 text-center">
+                        <div className="text-xs text-slate-400">+ 172 more patterns</div>
+                      </div>
                     </div>
                   )}
 
                   {activeTab === 'progress' && (
-                    <div className="space-y-4">
-                      <div className="bg-white/5 rounded-lg p-4">
-                        <div className="flex justify-between mb-2">
-                          <span className="text-white/60 text-sm">This Week</span>
-                          <span className="text-white font-bold">12h 30m</span>
+                    <div className="min-h-[250px] space-y-4">
+                      <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                        <div className="flex justify-between mb-3">
+                          <span className="text-slate-400 text-sm font-medium">This Week</span>
+                          <span className="text-slate-200 font-semibold">12h 30m</span>
                         </div>
-                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                            className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
                             style={{ width: '75%' }}
                           ></div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-black text-white mb-1">98%</div>
-                          <div className="text-xs text-white/60">Accuracy</div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
+                          <div className="text-xl font-semibold text-slate-200 mb-1">98%</div>
+                          <div className="text-xs text-slate-400">Accuracy</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-black text-white mb-1">7</div>
-                          <div className="text-xs text-white/60">Day Streak</div>
+                        <div className="text-center bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
+                          <div className="text-xl font-semibold text-slate-200 mb-1">7</div>
+                          <div className="text-xs text-slate-400">Day Streak</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-black text-white mb-1">42</div>
-                          <div className="text-xs text-white/60">Sessions</div>
+                        <div className="text-center bg-slate-800/30 rounded-lg p-3 border border-slate-700/30">
+                          <div className="text-xl font-semibold text-slate-200 mb-1">42</div>
+                          <div className="text-xs text-slate-400">Sessions</div>
                         </div>
                       </div>
                     </div>

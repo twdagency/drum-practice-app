@@ -28,6 +28,7 @@ export default function LandingPage() {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -56,15 +57,28 @@ export default function LandingPage() {
       // Animate hero elements on load
       const tl = gsap.timeline();
       
+      // Badge animation
+      if (badgeRef.current) {
+        tl.from(badgeRef.current, {
+          y: -20,
+          opacity: 0,
+          scale: 0.8,
+          duration: 0.8,
+          ease: 'back.out(1.7)',
+        });
+      }
+      
+      // Title animation
       if (titleRef.current) {
         tl.from(titleRef.current, {
           y: 100,
           opacity: 0,
           duration: 1.2,
           ease: 'power4.out',
-        });
+        }, '-=0.3');
       }
       
+      // Subtitle animation
       if (subtitleRef.current) {
         tl.from(subtitleRef.current, {
           y: 60,
@@ -74,6 +88,7 @@ export default function LandingPage() {
         }, '-=0.5');
       }
       
+      // CTA buttons animation
       if (ctaRef.current && ctaRef.current.children.length > 0) {
         tl.from(Array.from(ctaRef.current.children), {
           y: 40,
@@ -135,19 +150,78 @@ export default function LandingPage() {
         });
       }
 
-      // Features scroll animations
+      // Features scroll animations with sophisticated effects
       const featureCards = document.querySelectorAll('.feature-card');
       if (featureCards.length > 0) {
         featureCards.forEach((card: Element, index: number) => {
           if (card) {
+            const cardEl = card as HTMLElement;
+            const tl = gsap.timeline({
+              scrollTrigger: {
+                trigger: cardEl,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse',
+              },
+            });
+            
+            // Staggered entrance with rotation and scale
+            tl.from(cardEl, {
+              y: 80,
+              opacity: 0,
+              scale: 0.9,
+              rotationX: -15,
+              transformOrigin: 'center center',
+              duration: 1,
+              ease: 'power3.out',
+              delay: index * 0.08,
+            });
+          }
+        });
+      }
+
+      // Pricing cards animation with morphing effects
+      const pricingCards = document.querySelectorAll('.pricing-card');
+      if (pricingCards.length > 0) {
+        pricingCards.forEach((card: Element, index: number) => {
+          if (card) {
+            const cardEl = card as HTMLElement;
+            const tl = gsap.timeline({
+              scrollTrigger: {
+                trigger: cardEl,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse',
+              },
+            });
+            
+            // Sophisticated entrance with perspective
+            tl.from(cardEl, {
+              y: 100,
+              opacity: 0,
+              scale: 0.85,
+              rotationY: -10,
+              transformPerspective: 1000,
+              duration: 1.2,
+              ease: 'power4.out',
+              delay: index * 0.12,
+            });
+          }
+        });
+      }
+
+      // Animate SocialProof section elements
+      const statCards = document.querySelectorAll('.stat-card');
+      if (statCards.length > 0) {
+        statCards.forEach((card: Element, index: number) => {
+          if (card) {
             gsap.from(card as HTMLElement, {
               scrollTrigger: {
                 trigger: card as HTMLElement,
-                start: 'top 80%',
+                start: 'top 85%',
                 toggleActions: 'play none none reverse',
               },
-              y: 60,
+              y: 50,
               opacity: 0,
+              scale: 0.95,
               duration: 0.8,
               ease: 'power3.out',
               delay: index * 0.1,
@@ -156,10 +230,10 @@ export default function LandingPage() {
         });
       }
 
-      // Pricing cards animation
-      const pricingCards = document.querySelectorAll('.pricing-card');
-      if (pricingCards.length > 0) {
-        pricingCards.forEach((card: Element, index: number) => {
+      // Animate testimonial cards
+      const testimonialCards = document.querySelectorAll('.testimonial-card');
+      if (testimonialCards.length > 0) {
+        testimonialCards.forEach((card: Element, index: number) => {
           if (card) {
             gsap.from(card as HTMLElement, {
               scrollTrigger: {
@@ -167,11 +241,54 @@ export default function LandingPage() {
                 start: 'top 85%',
                 toggleActions: 'play none none reverse',
               },
-              scale: 0.8,
+              y: 60,
               opacity: 0,
-              duration: 0.6,
-              ease: 'back.out(1.7)',
+              duration: 0.9,
+              ease: 'power3.out',
               delay: index * 0.1,
+            });
+          }
+        });
+      }
+
+      // Animate section headings
+      const sectionHeadings = document.querySelectorAll('section h2');
+      if (sectionHeadings.length > 0) {
+        sectionHeadings.forEach((heading: Element) => {
+          if (heading) {
+            gsap.from(heading as HTMLElement, {
+              scrollTrigger: {
+                trigger: heading as HTMLElement,
+                start: 'top 90%',
+                toggleActions: 'play none none reverse',
+              },
+              y: 40,
+              opacity: 0,
+              duration: 1,
+              ease: 'power3.out',
+            });
+          }
+        });
+      }
+
+      // Animate section descriptions
+      const sectionDescriptions = document.querySelectorAll('section p');
+      if (sectionDescriptions.length > 0) {
+        sectionDescriptions.forEach((desc: Element, index: number) => {
+          // Only animate direct children of sections, not nested ones
+          const parent = desc.parentElement;
+          if (parent && parent.tagName === 'SECTION' && index < 10) {
+            gsap.from(desc as HTMLElement, {
+              scrollTrigger: {
+                trigger: desc as HTMLElement,
+                start: 'top 90%',
+                toggleActions: 'play none none reverse',
+              },
+              y: 30,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power2.out',
+              delay: 0.2,
             });
           }
         });
@@ -345,7 +462,7 @@ export default function LandingPage() {
         <div className="relative z-10 max-w-6xl mx-auto w-full text-center">
           <div className="space-y-12">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
+            <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
               <span className="text-sm text-slate-300 font-medium">Trusted by 1,000+ drummers</span>
             </div>

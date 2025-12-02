@@ -1,19 +1,20 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { Users, Music2, Drum, Star } from 'lucide-react';
 
 interface Statistic {
   value: string;
   label: string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   suffix?: string;
 }
 
 const statistics: Statistic[] = [
-  { value: '1000', label: 'Active Users', icon: '👥', suffix: '+' },
-  { value: '10000', label: 'Patterns Created', icon: '🎵', suffix: '+' },
-  { value: '50000', label: 'Practice Sessions', icon: '🥁', suffix: '+' },
-  { value: '4.9', label: 'Average Rating', icon: '⭐', suffix: '/5' },
+  { value: '1000', label: 'Active Users', Icon: Users, suffix: '+' },
+  { value: '10000', label: 'Patterns Created', Icon: Music2, suffix: '+' },
+  { value: '50000', label: 'Practice Sessions', Icon: Drum, suffix: '+' },
+  { value: '4.9', label: 'Average Rating', Icon: Star, suffix: '/5' },
 ];
 
 export function StatisticsSection() {
@@ -88,19 +89,26 @@ export function StatisticsSection() {
     <section ref={sectionRef} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black via-purple-900/10 to-black">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-          {statistics.map((stat, index) => (
-            <div
-              key={index}
-              className="stat-item group relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-all duration-500 hover:scale-105 hover:border-white/20"
-            >
-              <div className="text-4xl md:text-5xl mb-3">{stat.icon}</div>
-              <div className="stat-number text-3xl md:text-4xl lg:text-5xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                {stat.value}{stat.suffix}
+          {statistics.map((stat, index) => {
+            const IconComponent = stat.Icon;
+            return (
+              <div
+                key={index}
+                className="stat-item group relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-2xl p-6 text-center hover:bg-slate-900/60 hover:border-slate-700/50 transition-all duration-700"
+              >
+                <div className="flex justify-center mb-3">
+                  <div className="bg-slate-900/50 rounded-xl p-3 border border-slate-800/50 group-hover:border-slate-700/50 transition-all duration-500">
+                    <IconComponent className="w-6 h-6 text-slate-400 group-hover:text-slate-200 transition-colors duration-500" strokeWidth={1.5} />
+                  </div>
+                </div>
+                <div className="stat-number text-3xl md:text-4xl lg:text-5xl font-semibold text-white mb-2 tracking-tight">
+                  {stat.value}{stat.suffix}
+                </div>
+                <div className="text-slate-400 text-sm md:text-base font-medium group-hover:text-slate-300 transition-colors duration-500">{stat.label}</div>
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-800/0 to-slate-900/0 group-hover:from-slate-800/20 group-hover:to-slate-900/20 rounded-2xl transition-all duration-700"></div>
               </div>
-              <div className="text-white/60 text-sm md:text-base font-medium">{stat.label}</div>
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity"></div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
