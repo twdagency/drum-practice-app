@@ -261,21 +261,23 @@ export function useMicrophonePractice() {
     //   distance: minDistance.toFixed(2),
     // });
 
-    const timingError = Math.abs(closest.expectedTime - adjustedElapsedTime);
-    const rawTimingError = adjustedElapsedTime - closest.expectedTime;
+    // TypeScript guard: closest is guaranteed to be non-null here after the early return above
+    const closestNote: { note: string | number; expectedTime: number; index: number } = closest;
+    const timingError = Math.abs(closestNote.expectedTime - adjustedElapsedTime);
+    const rawTimingError = adjustedElapsedTime - closestNote.expectedTime;
     const isEarly = rawTimingError < 0;
     const perfectThreshold = Math.min(CONSTANTS.TIMING.PERFECT_HIT_THRESHOLD, currentAccuracyWindow / 4);
     const isPerfect = timingError <= perfectThreshold;
     const isWithinWindow = timingError <= currentAccuracyWindow;
 
     if (isWithinWindow) {
-      markMicrophoneNoteMatched(closest.index);
+      markMicrophoneNoteMatched(closestNote.index);
     }
 
     const hit: PracticeHit = {
       time: adjustedElapsedTime,
-      note: closest.note,
-      expectedTime: closest.expectedTime,
+      note: closestNote.note,
+      expectedTime: closestNote.expectedTime,
       timingError: timingError,
       rawTimingError: rawTimingError,
       early: isEarly,

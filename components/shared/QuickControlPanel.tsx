@@ -286,7 +286,10 @@ export function QuickControlPanel({
             <input
               type="checkbox"
               checked={playDrumSounds}
-              onChange={(e) => setPlayDrumSounds(e.target.checked)}
+              onChange={(e) => {
+                console.log('[QuickControlPanel] Toggle clicked, new value:', e.target.checked);
+                setPlayDrumSounds(e.target.checked);
+              }}
             />
             <span className="dpgen-toggle-slider" />
           </label>

@@ -37,6 +37,8 @@ export const useStore = create<AppStore>((set, get, api) => ({
     midTom: null,
     floor: null,
     hiHat: null,
+    crash: null,
+    ride: null,
   },
   audioBuffersLoaded: false,
 

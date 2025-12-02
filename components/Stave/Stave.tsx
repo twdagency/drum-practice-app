@@ -6,6 +6,7 @@
 
 import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { ScrollMode } from '@/store/slices/uiSlice';
 import { Pattern } from '@/types';
 import { PolyrhythmPattern } from '@/types/polyrhythm';
 import { parseNumberList, parseTokens, parseTimeSignature, formatList, calculateNotesPerBar, getNotesPerBarForPattern, calculateNotesPerBarFromPerBeatSubdivisions, calculateNotePositionsFromPerBeatSubdivisions } from '@/lib/utils/patternUtils';
@@ -16,9 +17,6 @@ import { calculatePolyrhythmDurations } from '@/lib/utils/polyrhythmDurationCalc
 import {
   calculateHorizontalScrollPosition,
   calculateVerticalScrollPosition,
-  calculateFixedPlayheadPosition,
-  shouldTriggerPageTurn,
-  calculatePageTurnPosition,
   getScrollSpeedMultiplier,
   getScrollBehavior,
 } from '@/lib/utils/scrollModes';
@@ -79,7 +77,6 @@ export function Stave() {
   const currentLineIndexRef = useRef<number>(0);
   const currentPageRef = useRef<number>(0);
   const scrollAnimationFrameRef = useRef<number | null>(null);
-  const fixedPlayheadXRef = useRef<number | null>(null);
   // Store target scroll position for smooth continuous scrolling
   const targetScrollLeftRef = useRef<number | null>(null);
   const smoothScrollAnimationRef = useRef<number | null>(null);
@@ -95,7 +92,7 @@ export function Stave() {
   const highlightColors = useStore((state) => state.highlightColors);
   const showVisualMetronome = useStore((state) => state.showVisualMetronome);
   const scrollAnimationEnabled = useStore((state) => state.scrollAnimationEnabled);
-  const scrollMode = useStore((state) => state.scrollMode);
+  const scrollMode: ScrollMode = useStore((state) => state.scrollMode);
   const scrollSpeed = useStore((state) => state.scrollSpeed);
   const lookAheadDistance = useStore((state) => state.lookAheadDistance);
   const midiPractice = useStore((state) => state.midiPractice);
@@ -464,8 +461,8 @@ export function Stave() {
         cumulativeNoteIndex += notesPerBar;
       });
 
-      // Check if we should render horizontally (for horizontal scroll or fixed playhead modes)
-      const renderHorizontally = scrollMode === 'horizontal' || scrollMode === 'fixed-playhead';
+      // Check if we should render horizontally (for horizontal scroll mode)
+      const renderHorizontally = scrollMode === 'horizontal';
       
       // Group bars into lines based on subdivision
       // For horizontal modes, put ALL bars in a single line
@@ -1574,7 +1571,7 @@ export function Stave() {
           console.log('[Horizontal Scroll] Final SVG width after rendering:', {
             rendererWidth,
             svgWidth: svgElement.getAttribute('width'),
-            computedWidth: svgElement.offsetWidth,
+            computedWidth: svgElement.getBoundingClientRect().width,
             containerWidth: rawContainerWidth,
             scrollWidth: staveRef.current.scrollWidth,
             clientWidth: staveRef.current.clientWidth
@@ -3239,137 +3236,6 @@ export function Stave() {
     }
   }
 
-  /**
-   * Fixed playhead mode - notation scrolls horizontally behind fixed playhead
-   * The playhead is a fixed vertical line at the center, and notes scroll to align with it
-   * Works with horizontal layout (all measures in one line)
-   */
-  function scrollFixedPlayhead(noteElement: SVGElement) {
-    const scrollContainer = findScrollContainer();
-    if (!scrollContainer) return;
-    
-    // Initialize playhead position if not set (center of viewport)
-    if (fixedPlayheadXRef.current === null) {
-      const containerRect = scrollContainer.getBoundingClientRect();
-      fixedPlayheadXRef.current = containerRect.width / 2;
-    }
-    
-    const svgElement = scrollContainer.querySelector('svg');
-    if (!svgElement) return;
-    
-    const noteRect = noteElement.getBoundingClientRect();
-    const containerRect = scrollContainer.getBoundingClientRect();
-    const svgRect = svgElement.getBoundingClientRect();
-    
-    // Calculate note's absolute position in the SVG (including scroll)
-    const noteLeftAbsolute = noteRect.left - svgRect.left + scrollContainer.scrollLeft;
-    const noteCenterXAbsolute = noteLeftAbsolute + noteRect.width / 2;
-    
-    // Fixed playhead: align note center with the fixed playhead line (center of viewport)
-    const playheadX = fixedPlayheadXRef.current;
-    const targetScrollLeft = noteCenterXAbsolute - playheadX;
-    
-    // Clamp to valid scroll range
-    const maxScroll = Math.max(0, svgElement.scrollWidth - containerRect.width);
-    const clampedTarget = Math.min(maxScroll, Math.max(0, targetScrollLeft));
-    
-    // Update target scroll position continuously
-    targetScrollLeftRef.current = clampedTarget;
-    
-    // Start continuous smooth scroll animation if not already running
-    if (smoothScrollAnimationRef.current === null) {
-      const smoothScroll = () => {
-        const currentScroll = scrollContainer.scrollLeft;
-        const targetScroll = targetScrollLeftRef.current;
-        
-        // If no target, stop animating
-        if (targetScroll === null) {
-          smoothScrollAnimationRef.current = null;
-          return;
-        }
-        
-        const diff = targetScroll - currentScroll;
-        
-        // If we're very close to target, snap to it and continue
-        if (Math.abs(diff) < 0.5) {
-          scrollContainer.scrollLeft = targetScroll;
-        } else {
-          // Very slow, smooth interpolation: move only 2% of the distance each frame
-          // This creates a slow, continuous scroll
-          const scrollSpeed = 0.02; // Very slow for smooth continuous scrolling
-          const newScroll = currentScroll + (diff * scrollSpeed);
-          scrollContainer.scrollLeft = newScroll;
-        }
-        
-        // Continue animating (target will be updated as notes advance)
-        smoothScrollAnimationRef.current = requestAnimationFrame(smoothScroll);
-      };
-      
-      smoothScrollAnimationRef.current = requestAnimationFrame(smoothScroll);
-    }
-  }
-
-  /**
-   * Page turn mode - simulate page turns for long patterns
-   */
-  function scrollPageTurn(noteElement: SVGElement, lineIndex?: number) {
-    const scrollContainer = findScrollContainer();
-    if (!scrollContainer) return;
-    
-    // Calculate page size based on viewport
-    const containerRect = scrollContainer.getBoundingClientRect();
-    const lineSpacing = 220;
-    const pageSize = Math.floor(containerRect.height / lineSpacing);
-    
-    if (pageSize <= 0) return;
-    
-    // Determine current line index
-    let currentLine = lineIndex ?? currentLineIndexRef.current;
-    if (lineIndex === undefined) {
-      const noteRect = noteElement.getBoundingClientRect();
-      const relativeY = noteRect.top - containerRect.top + scrollContainer.scrollTop;
-      currentLine = Math.floor(relativeY / lineSpacing);
-    }
-    
-    // Get total lines (approximate - could be improved)
-    const svgElement = scrollContainer.querySelector('svg');
-    if (!svgElement) return;
-    const totalHeight = svgElement.getBoundingClientRect().height;
-    const totalLines = Math.ceil(totalHeight / lineSpacing);
-    
-    // Calculate current page and position within page
-    const currentPage = Math.floor(currentLine / pageSize);
-    const positionInPage = pageSize > 0 ? (currentLine % pageSize) / pageSize : 0;
-    const maxPage = Math.floor((totalLines - 1) / pageSize);
-    
-    // Trigger page turn when 75% through current page
-    const shouldTurn = positionInPage >= 0.75 && currentPage < maxPage;
-    const nextPage = currentPage + 1;
-    
-    if (shouldTurn && nextPage !== currentPageRef.current) {
-      currentPageRef.current = nextPage;
-      
-      // Calculate scroll position for start of next page
-      const scrollTop = nextPage * pageSize * lineSpacing;
-      
-      // Add fade transition effect
-      if (!scrollContainer.style.transition) {
-        scrollContainer.style.transition = 'opacity 0.3s ease';
-      }
-      scrollContainer.style.opacity = '0.6';
-      
-      setTimeout(() => {
-        scrollContainer.scrollTo({
-          top: Math.max(0, scrollTop),
-          behavior: getScrollBehavior(),
-        });
-        
-        setTimeout(() => {
-          scrollContainer.style.opacity = '1';
-        }, 250);
-      }, 200);
-    }
-  }
 
   /**
    * Main scroll animation dispatcher
@@ -3396,22 +3262,12 @@ export function Stave() {
           }
         }
         
-        switch (scrollMode) {
-          case 'horizontal':
-            scrollHorizontal(noteElement);
-            break;
-          case 'vertical':
-            scrollVertical(noteElement, lineIndex);
-            break;
-          case 'fixed-playhead':
-            scrollFixedPlayhead(noteElement);
-            break;
-          case 'page-turn':
-            scrollPageTurn(noteElement, lineIndex);
-            break;
-          case 'none':
-            // No scrolling
-            break;
+        if (scrollMode === 'horizontal') {
+          scrollHorizontal(noteElement);
+        } else if (scrollMode === 'vertical') {
+          scrollVertical(noteElement, lineIndex);
+        } else if (scrollMode === 'none') {
+          // No scrolling
         }
       } catch (error) {
         console.error('[Scroll Animation] Error in scroll mode:', scrollMode, error);
@@ -3483,7 +3339,7 @@ export function Stave() {
 
   // Ensure SVG can be wider than container in horizontal modes
   useEffect(() => {
-    if (!staveRef.current || (scrollMode !== 'horizontal' && scrollMode !== 'fixed-playhead')) {
+    if (!staveRef.current || scrollMode !== 'horizontal') {
       return;
     }
 
@@ -3529,7 +3385,7 @@ export function Stave() {
         
         console.log('[Horizontal Scroll] SVG width set:', {
           svgWidth: actualWidth,
-          computedWidth: svgElement.offsetWidth,
+          computedWidth: svgElement.getBoundingClientRect().width,
           scrollWidth: staveRef.current?.scrollWidth,
           clientWidth: staveRef.current?.clientWidth
         });
@@ -3540,26 +3396,10 @@ export function Stave() {
   }, [scrollMode, renderKey]); // Re-run when scroll mode or content changes
 
   // Determine if we need horizontal scrolling
-  const needsHorizontalScroll = scrollMode === 'horizontal' || scrollMode === 'fixed-playhead';
+  const needsHorizontalScroll = scrollMode === 'horizontal';
   
   return (
     <div className="dpgen-stave" style={{ width: '100%', overflow: needsHorizontalScroll ? 'visible' : 'hidden', position: 'relative' }}>
-      {/* Fixed playhead indicator */}
-      {scrollMode === 'fixed-playhead' && (
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: 0,
-            bottom: 0,
-            width: '2px',
-            backgroundColor: 'var(--dpgen-primary, #3b82f6)',
-            zIndex: 1000,
-            pointerEvents: 'none',
-            transform: 'translateX(-50%)',
-          }}
-        />
-      )}
       <div 
         ref={staveRef} 
         className="dpgen-stave__surface" 

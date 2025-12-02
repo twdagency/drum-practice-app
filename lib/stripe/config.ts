@@ -4,14 +4,15 @@
 
 import Stripe from 'stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
-}
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-12-18.acacia',
-  typescript: true,
-});
+// Only initialize Stripe if the secret key is available
+// This allows the build to succeed even if env vars aren't set yet
+// The API routes will check for the key at runtime
+export const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2024-12-18.acacia',
+      typescript: true,
+    })
+  : null;
 
 export const STRIPE_CONFIG = {
   // Get publishable key from environment

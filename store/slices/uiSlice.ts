@@ -40,7 +40,14 @@ const loadPersistedUISettings = () => {
     }
     
     // Ensure scroll settings have defaults
-    if (parsed.scrollMode === undefined) {
+    // Migrate deprecated modes: fixed-playhead -> horizontal, page-turn -> vertical
+    if (parsed.scrollMode === 'fixed-playhead') {
+      parsed.scrollMode = 'horizontal';
+      window.localStorage.setItem('dpgen_ui_settings', JSON.stringify(parsed));
+    } else if (parsed.scrollMode === 'page-turn') {
+      parsed.scrollMode = 'vertical';
+      window.localStorage.setItem('dpgen_ui_settings', JSON.stringify(parsed));
+    } else if (parsed.scrollMode === undefined) {
       parsed.scrollMode = 'none';
     }
     if (parsed.scrollSpeed === undefined) {
@@ -70,7 +77,7 @@ const saveUISettings = (settings: Partial<UISlice>) => {
   }
 };
 
-export type ScrollMode = 'horizontal' | 'vertical' | 'fixed-playhead' | 'page-turn' | 'none';
+export type ScrollMode = 'horizontal' | 'vertical' | 'none';
 export type ScrollSpeed = 'slow' | 'medium' | 'fast';
 
 export interface UISlice {

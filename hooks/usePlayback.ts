@@ -143,7 +143,7 @@ export function usePlayback() {
       return;
     }
     if (!playDrumSounds) {
-      console.warn(`[playDrumSound] playDrumSounds is false, cannot play: ${sound}`);
+      console.warn(`[playDrumSound] playDrumSounds is false, cannot play: ${sound}. Check if Drum Sounds toggle is enabled in Quick Control Panel or Audio Settings.`);
       return;
     }
     

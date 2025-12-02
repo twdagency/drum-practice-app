@@ -1276,7 +1276,7 @@ export function Toolbar() {
             <div style={{ marginBottom: '0.75rem', fontWeight: 600, fontSize: '0.875rem' }}>
               Scroll Mode
             </div>
-            {(['none', 'horizontal', 'vertical', 'fixed-playhead', 'page-turn'] as const).map((mode) => (
+            {(['none', 'horizontal', 'vertical'] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
@@ -1311,8 +1311,6 @@ export function Toolbar() {
                 {mode === 'none' && 'None'}
                 {mode === 'horizontal' && 'Horizontal Scroll'}
                 {mode === 'vertical' && 'Vertical Scroll'}
-                {mode === 'fixed-playhead' && 'Fixed Playhead'}
-                {mode === 'page-turn' && 'Page Turn'}
               </button>
             ))}
             {scrollMode !== 'none' && (

@@ -19,6 +19,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  // Check if Stripe is configured
+  if (!stripe) {
+    return NextResponse.json(
+      { error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables.' },
+      { status: 500 }
+    );
+  }
+
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
 

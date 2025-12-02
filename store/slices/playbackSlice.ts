@@ -90,7 +90,7 @@ export interface PlaybackSlice {
   setInfiniteLoop: (enabled: boolean) => void;
 }
 
-export const createPlaybackSlice: StateCreator<PlaybackSlice> = (set) => ({
+export const createPlaybackSlice: StateCreator<PlaybackSlice> = (set, get) => ({
   // Initial state
   bpm: 120,
   isPlaying: false,
@@ -142,8 +142,10 @@ export const createPlaybackSlice: StateCreator<PlaybackSlice> = (set) => ({
     savePlaybackSettings({ countInEnabled: enabled });
   },
   setPlayDrumSounds: (enabled) => {
+    console.log('[setPlayDrumSounds] Setting playDrumSounds to:', enabled);
     set({ playDrumSounds: enabled });
     savePlaybackSettings({ playDrumSounds: enabled });
+    console.log('[setPlayDrumSounds] State updated and saved to localStorage');
   },
   setMuteClickTrack: (muted) => {
     set({ muteClickTrack: muted });

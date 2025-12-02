@@ -14,6 +14,7 @@ interface PresetsBrowserProps {
 export const PresetsBrowser: React.FC<PresetsBrowserProps> = ({ onClose }) => {
   const { presets, loading, error, categories, subcategories, tags, searchPresets, filterByCategory, filterBySubcategory, filterByTag, filterByDifficulty } = usePresets();
   const addPattern = useStore((state) => state.addPattern);
+  const setBPM = useStore((state) => state.setBPM);
   const practicePadMode = useStore((state) => state.practicePadMode);
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -142,6 +143,11 @@ export const PresetsBrowser: React.FC<PresetsBrowserProps> = ({ onClose }) => {
         addPattern(pattern);
       }
       
+      // Update BPM if preset has a BPM value (set once after all patterns are added)
+      if (preset.bpm && typeof preset.bpm === 'number' && preset.bpm > 0) {
+        setBPM(preset.bpm);
+      }
+      
       onClose(); // Close modal after loading preset
       return;
     }
@@ -200,6 +206,12 @@ export const PresetsBrowser: React.FC<PresetsBrowserProps> = ({ onClose }) => {
     };
 
     addPattern(pattern);
+    
+    // Update BPM if preset has a BPM value
+    if (preset.bpm && typeof preset.bpm === 'number' && preset.bpm > 0) {
+      setBPM(preset.bpm);
+    }
+    
     onClose(); // Close modal after loading preset
   };
 

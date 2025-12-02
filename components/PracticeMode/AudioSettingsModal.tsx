@@ -189,7 +189,10 @@ export function AudioSettingsModal({ onClose }: AudioSettingsModalProps) {
               <input
                 type="checkbox"
                 checked={playDrumSounds}
-                onChange={(e) => setPlayDrumSounds(e.target.checked)}
+                onChange={(e) => {
+                  console.log('[AudioSettingsModal] Toggle clicked, new value:', e.target.checked);
+                  setPlayDrumSounds(e.target.checked);
+                }}
               />
               <span className="dpgen-toggle-slider" />
             </label>

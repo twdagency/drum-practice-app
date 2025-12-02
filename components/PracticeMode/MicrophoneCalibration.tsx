@@ -161,7 +161,7 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
           console.error('[Calibration] Failed to resume AudioContext:', e);
           return;
         }
-        if (ctx.state !== 'running') {
+        if (ctx.state === 'closed' || ctx.state === 'suspended' || ctx.state === 'interrupted') {
           return;
         }
       }
