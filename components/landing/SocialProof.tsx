@@ -69,53 +69,63 @@ export function SocialProof() {
 
       // Animate testimonials on scroll
       const testimonialCards = document.querySelectorAll('.testimonial-card');
-      testimonialCards.forEach((card: Element, index: number) => {
-        gsap.from(card as HTMLElement, {
-          scrollTrigger: {
-            trigger: card as HTMLElement,
-            start: 'top 85%',
-            toggleActions: 'play none none reverse',
-          },
-          y: 50,
-          opacity: 0,
-          duration: 0.8,
-          ease: 'power3.out',
-          delay: index * 0.1,
+      if (testimonialCards.length > 0) {
+        testimonialCards.forEach((card: Element, index: number) => {
+          if (card) {
+            gsap.from(card as HTMLElement, {
+              scrollTrigger: {
+                trigger: card as HTMLElement,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse',
+              },
+              y: 50,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+              delay: index * 0.1,
+            });
+          }
         });
-      });
+      }
 
       // Count-up animation for statistics
       const statCards = document.querySelectorAll('.stat-card');
-      statCards.forEach((card: Element) => {
-        const statValue = card.querySelector('.stat-value');
-        if (!statValue) return;
+      if (statCards.length > 0) {
+        statCards.forEach((card: Element) => {
+          if (!card) return;
+          
+          const statValue = card.querySelector('.stat-value');
+          if (!statValue) return;
 
-        const originalValue = statValue.textContent || '0';
-        const numValue = parseInt(originalValue.replace(/\D/g, '')) || 0;
-        const hasPlus = originalValue.includes('+');
-        const hasSlash = originalValue.includes('/');
+          const originalValue = statValue.textContent || '0';
+          const numValue = parseInt(originalValue.replace(/\D/g, '')) || 0;
+          const hasPlus = originalValue.includes('+');
+          const hasSlash = originalValue.includes('/');
 
-        ScrollTrigger.create({
-          trigger: card as HTMLElement,
-          start: 'top 85%',
-          onEnter: () => {
-            gsap.to({ value: 0 }, {
-              value: numValue,
-              duration: 2,
-              ease: 'power2.out',
-              onUpdate: function() {
-                const current = Math.floor(this.targets()[0].value);
-                let display = current.toString();
-                if (hasPlus) display += '+';
-                if (hasSlash && originalValue.includes('/')) {
-                  display = originalValue; // Keep original for ratings like "4.9/5"
-                }
-                statValue.textContent = display;
-              },
-            });
-          },
+          ScrollTrigger.create({
+            trigger: card as HTMLElement,
+            start: 'top 85%',
+            onEnter: () => {
+              gsap.to({ value: 0 }, {
+                value: numValue,
+                duration: 2,
+                ease: 'power2.out',
+                onUpdate: function() {
+                  const current = Math.floor(this.targets()[0].value);
+                  let display = current.toString();
+                  if (hasPlus) display += '+';
+                  if (hasSlash && originalValue.includes('/')) {
+                    display = originalValue; // Keep original for ratings like "4.9/5"
+                  }
+                  if (statValue) {
+                    statValue.textContent = display;
+                  }
+                },
+              });
+            },
+          });
         });
-      });
+      }
     });
   }, []);
 

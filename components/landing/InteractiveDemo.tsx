@@ -111,12 +111,14 @@ export function InteractiveDemo() {
     ]).then(([gsapModule]) => {
       const gsap = gsapModule.gsap;
 
-      gsap.from(contentRef.current, {
-        opacity: 0,
-        y: 20,
-        duration: 0.5,
-        ease: 'power2.out',
-      });
+      if (contentRef.current) {
+        gsap.from(contentRef.current, {
+          opacity: 0,
+          y: 20,
+          duration: 0.5,
+          ease: 'power2.out',
+        });
+      }
     });
   }, [activeTab]);
 

@@ -26,6 +26,8 @@ export default function LandingPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    let ctx: any = null;
+
     // Dynamically import GSAP (will be available after npm install)
     Promise.all([
       // @ts-ignore - GSAP will be installed
@@ -38,30 +40,40 @@ export default function LandingPage() {
       
       gsap.registerPlugin(ScrollTrigger);
 
-      // Hero animations
-      const ctx = gsap.context(() => {
+      // Wait for DOM to be fully ready
+      requestAnimationFrame(() => {
+        // Hero animations
+        ctx = gsap.context(() => {
       // Animate hero elements on load
       const tl = gsap.timeline();
       
-      tl.from(titleRef.current, {
-        y: 100,
-        opacity: 0,
-        duration: 1.2,
-        ease: 'power4.out',
-      })
-      .from(subtitleRef.current, {
-        y: 60,
-        opacity: 0,
-        duration: 1,
-        ease: 'power3.out',
-      }, '-=0.5')
-      .from(ctaRef.current?.children || [], {
-        y: 40,
-        opacity: 0,
-        duration: 0.8,
-        ease: 'power2.out',
-        stagger: 0.15,
-      }, '-=0.3');
+      if (titleRef.current) {
+        tl.from(titleRef.current, {
+          y: 100,
+          opacity: 0,
+          duration: 1.2,
+          ease: 'power4.out',
+        });
+      }
+      
+      if (subtitleRef.current) {
+        tl.from(subtitleRef.current, {
+          y: 60,
+          opacity: 0,
+          duration: 1,
+          ease: 'power3.out',
+        }, '-=0.5');
+      }
+      
+      if (ctaRef.current && ctaRef.current.children.length > 0) {
+        tl.from(Array.from(ctaRef.current.children), {
+          y: 40,
+          opacity: 0,
+          duration: 0.8,
+          ease: 'power2.out',
+          stagger: 0.15,
+        }, '-=0.3');
+      }
 
       // Parallax layers for background
       const parallaxLayers = [
@@ -72,18 +84,22 @@ export default function LandingPage() {
 
       parallaxLayers.forEach((layer) => {
         const elements = document.querySelectorAll(layer.selector);
-        elements.forEach((element: Element) => {
-          gsap.to(element as HTMLElement, {
-            scrollTrigger: {
-              trigger: 'body',
-              start: 'top top',
-              end: 'bottom top',
-              scrub: 1,
-            },
-            y: 100 * layer.speed,
-            opacity: 0.3,
+        if (elements.length > 0) {
+          elements.forEach((element: Element) => {
+            if (element) {
+              gsap.to(element as HTMLElement, {
+                scrollTrigger: {
+                  trigger: 'body',
+                  start: 'top top',
+                  end: 'bottom top',
+                  scrub: 1,
+                },
+                y: 100 * layer.speed,
+                opacity: 0.3,
+              });
+            }
           });
-        });
+        }
       });
 
       // Parallax effect for hero section
@@ -112,94 +128,118 @@ export default function LandingPage() {
 
       // Features scroll animations
       const featureCards = document.querySelectorAll('.feature-card');
-      featureCards.forEach((card: Element, index: number) => {
-        gsap.from(card as HTMLElement, {
-          scrollTrigger: {
-            trigger: card as HTMLElement,
-            start: 'top 80%',
-            toggleActions: 'play none none reverse',
-          },
-          y: 60,
-          opacity: 0,
-          duration: 0.8,
-          ease: 'power3.out',
-          delay: index * 0.1,
-        });
-      });
-
-      // Pricing cards animation
-      const pricingCards = document.querySelectorAll('.pricing-card');
-      pricingCards.forEach((card: Element, index: number) => {
-        gsap.from(card as HTMLElement, {
-          scrollTrigger: {
-            trigger: card as HTMLElement,
-            start: 'top 85%',
-            toggleActions: 'play none none reverse',
-          },
-          scale: 0.8,
-          opacity: 0,
-          duration: 0.6,
-          ease: 'back.out(1.7)',
-          delay: index * 0.1,
-        });
-      });
-
-      // Floating animation for particles
-      gsap.to('.floating-element', {
-        y: -30,
-        duration: 3 + Math.random() * 2,
-        ease: 'power1.inOut',
-        yoyo: true,
-        repeat: -1,
-        stagger: {
-          each: 0.1,
-          from: 'random',
-        },
-      });
-
-      // Animated gradient background
-      gsap.to('.gradient-bg', {
-        backgroundPosition: '200% 200%',
-        duration: 10,
-        ease: 'none',
-        repeat: -1,
-      });
-
-      // Magnetic button effect (desktop only)
-      if (window.innerWidth >= 768) {
-        const magneticButtons = document.querySelectorAll('.magnetic-button');
-        magneticButtons.forEach((button: Element) => {
-          const btn = button as HTMLElement;
-          btn.addEventListener('mousemove', (e: MouseEvent) => {
-            const rect = btn.getBoundingClientRect();
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
-            
-            gsap.to(btn, {
-              x: x * 0.3,
-              y: y * 0.3,
-              duration: 0.3,
-              ease: 'power2.out',
+      if (featureCards.length > 0) {
+        featureCards.forEach((card: Element, index: number) => {
+          if (card) {
+            gsap.from(card as HTMLElement, {
+              scrollTrigger: {
+                trigger: card as HTMLElement,
+                start: 'top 80%',
+                toggleActions: 'play none none reverse',
+              },
+              y: 60,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+              delay: index * 0.1,
             });
-          });
-          
-          btn.addEventListener('mouseleave', () => {
-            gsap.to(btn, {
-              x: 0,
-              y: 0,
-              duration: 0.5,
-              ease: 'elastic.out(1, 0.5)',
-            });
-          });
+          }
         });
       }
 
-      });
+      // Pricing cards animation
+      const pricingCards = document.querySelectorAll('.pricing-card');
+      if (pricingCards.length > 0) {
+        pricingCards.forEach((card: Element, index: number) => {
+          if (card) {
+            gsap.from(card as HTMLElement, {
+              scrollTrigger: {
+                trigger: card as HTMLElement,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse',
+              },
+              scale: 0.8,
+              opacity: 0,
+              duration: 0.6,
+              ease: 'back.out(1.7)',
+              delay: index * 0.1,
+            });
+          }
+        });
+      }
 
-      return () => {
-        if (ctx) ctx.revert();
-      };
+      // Floating animation for particles
+      const floatingElements = document.querySelectorAll('.floating-element');
+      if (floatingElements.length > 0) {
+        gsap.to('.floating-element', {
+          y: -30,
+          duration: 3 + Math.random() * 2,
+          ease: 'power1.inOut',
+          yoyo: true,
+          repeat: -1,
+          stagger: {
+            each: 0.1,
+            from: 'random',
+          },
+        });
+      }
+
+      // Animated gradient background
+      const gradientBg = document.querySelector('.gradient-bg');
+      if (gradientBg) {
+        gsap.to(gradientBg, {
+          backgroundPosition: '200% 200%',
+          duration: 10,
+          ease: 'none',
+          repeat: -1,
+        });
+      }
+
+      // Magnetic button effect (desktop only)
+      if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+        const magneticButtons = document.querySelectorAll('.magnetic-button');
+        if (magneticButtons.length > 0) {
+          magneticButtons.forEach((button: Element) => {
+            const btn = button as HTMLElement;
+            if (!btn) return;
+            
+            const handleMouseMove = (e: MouseEvent) => {
+              const rect = btn.getBoundingClientRect();
+              const x = e.clientX - rect.left - rect.width / 2;
+              const y = e.clientY - rect.top - rect.height / 2;
+              
+              gsap.to(btn, {
+                x: x * 0.3,
+                y: y * 0.3,
+                duration: 0.3,
+                ease: 'power2.out',
+              });
+            };
+            
+            const handleMouseLeave = () => {
+              gsap.to(btn, {
+                x: 0,
+                y: 0,
+                duration: 0.5,
+                ease: 'elastic.out(1, 0.5)',
+              });
+            };
+            
+            btn.addEventListener('mousemove', handleMouseMove);
+            btn.addEventListener('mouseleave', handleMouseLeave);
+            
+            // Cleanup will be handled by gsap.context
+          });
+        }
+      }
+
+        });
+      });
     });
+
+    return () => {
+      if (ctx) ctx.revert();
+    };
   }, []);
 
   return (

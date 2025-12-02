@@ -8,6 +8,8 @@ export function ProductPreview() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    let ctx: gsap.Context | null = null;
+
     // Dynamically import GSAP for animations
     Promise.all([
       // @ts-ignore
@@ -19,40 +21,43 @@ export function ProductPreview() {
       const ScrollTrigger = scrollTriggerModule.ScrollTrigger;
       gsap.registerPlugin(ScrollTrigger);
 
-      if (mockupRef.current) {
+      if (!mockupRef.current) return;
+
+      ctx = gsap.context(() => {
+        const mockup = mockupRef.current;
+        if (!mockup) return;
+
         // Entrance animation
-        gsap.from(mockupRef.current, {
+        gsap.from(mockup, {
           x: 100,
           opacity: 0,
           duration: 1.2,
           ease: 'power3.out',
           delay: 0.5,
         });
+      });
 
-        // Parallax effect on scroll
-        if (mockupRef.current) {
-          gsap.to(mockupRef.current, {
-            scrollTrigger: {
-              trigger: mockupRef.current,
-              start: 'top bottom',
-              end: 'bottom top',
-              scrub: 1,
-            },
-            y: -50,
-            scale: 0.98,
-          });
-        }
-
-        // Subtle floating animation
+      // Parallax effect on scroll
+      if (mockupRef.current) {
         gsap.to(mockupRef.current, {
-          y: -10,
-          duration: 3,
-          ease: 'power1.inOut',
-          yoyo: true,
-          repeat: -1,
+          scrollTrigger: {
+            trigger: mockupRef.current,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 1,
+            invalidateOnRefresh: true,
+          },
+          y: -50,
+          scale: 0.98,
         });
       }
     });
+
+    return () => {
+      if (ctx) {
+        ctx.revert();
+      }
+    };
   }, []);
 
   return (
