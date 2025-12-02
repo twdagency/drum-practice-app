@@ -42,7 +42,10 @@ function PricingContent() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create checkout session');
+        // Show more detailed error message
+        const errorMsg = data.error || data.message || 'Failed to create checkout session';
+        console.error('Checkout API error:', data);
+        throw new Error(errorMsg);
       }
 
       // Redirect to Stripe Checkout

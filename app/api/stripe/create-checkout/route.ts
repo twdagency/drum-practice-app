@@ -31,6 +31,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if price ID is a placeholder
+    if (priceId.includes('placeholder') || !priceId.startsWith('price_')) {
+      return NextResponse.json(
+        { 
+          error: 'Stripe Price IDs not configured',
+          message: 'Please set STRIPE_PRICE_ID_MONTHLY and STRIPE_PRICE_ID_YEARLY in your environment variables. Get the Price IDs from your Stripe Dashboard.',
+        },
+        { status: 400 }
+      );
+    }
+
     // Build checkout session parameters
     const sessionParams: any = {
       mode: 'subscription',
@@ -85,10 +96,23 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error creating checkout session:', error);
+    
+    // Provide more detailed error information
+    let errorMessage = 'Failed to create checkout session';
+    if (error.type === 'StripeInvalidRequestError') {
+      errorMessage = `Stripe error: ${error.message}`;
+      if (error.message?.includes('No such price')) {
+        errorMessage = 'Invalid price ID. Please check your Stripe Price IDs in environment variables.';
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return NextResponse.json(
       { 
-        error: 'Failed to create checkout session',
-        message: error.message,
+        error: errorMessage,
+        message: error.message || 'Unknown error occurred',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
       { status: 500 }
     );
