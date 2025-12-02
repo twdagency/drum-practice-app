@@ -8,6 +8,15 @@ import { SignUpModal } from '@/components/auth/SignUpModal';
 import { ProductPreview } from '@/components/landing/ProductPreview';
 import { SocialProof } from '@/components/landing/SocialProof';
 import { InteractiveDemo } from '@/components/landing/InteractiveDemo';
+import { 
+  Music, 
+  Piano, 
+  Target, 
+  BarChart3, 
+  Repeat, 
+  BookOpen,
+  CheckCircle2
+} from 'lucide-react';
 // GSAP will be loaded dynamically in useEffect
 
 export default function LandingPage() {
@@ -243,47 +252,59 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden">
-      {/* Animated Background Gradient with Parallax Layers */}
-      <div className="fixed inset-0 bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(120,119,198,0.1),transparent_50%)] parallax-layer-1"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(59,130,246,0.1),transparent_50%)] parallax-layer-2"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(236,72,153,0.08),transparent_50%)] parallax-layer-3"></div>
-        {/* Animated mesh gradient */}
-        <div className="absolute inset-0 gradient-bg opacity-30" style={{
-          background: 'linear-gradient(45deg, rgba(59,130,246,0.1), rgba(147,51,234,0.1), rgba(236,72,153,0.1))',
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white overflow-hidden">
+      {/* Sophisticated Background with Grid Pattern */}
+      <div className="fixed inset-0 pointer-events-none">
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900/95 to-slate-950"></div>
+        
+        {/* Subtle grid pattern */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: '50px 50px',
+          }}
+        ></div>
+        
+        {/* Subtle radial gradients for depth */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.08),transparent_60%)] parallax-layer-1"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(139,92,246,0.06),transparent_60%)] parallax-layer-2"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(30,41,59,0.1),transparent_70%)] parallax-layer-3"></div>
+        
+        {/* Animated mesh gradient - very subtle */}
+        <div className="absolute inset-0 gradient-bg opacity-10" style={{
+          background: 'linear-gradient(135deg, rgba(59,130,246,0.03), rgba(139,92,246,0.03), rgba(30,41,59,0.03))',
           backgroundSize: '200% 200%',
         }}></div>
       </div>
 
-      {/* Navigation */}
+      {/* Premium Navigation */}
       <nav 
         ref={navRef}
-        className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10"
+        className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-2xl border-b border-slate-800/50"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link href="/" className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
-                <span className="hidden sm:inline">🥁 </span>
-                <span className="hidden sm:inline">Drum Practice Generator</span>
-                <span className="sm:hidden">🥁 DPG</span>
+              <Link href="/" className="text-lg sm:text-xl font-semibold text-white hover:text-slate-200 transition-colors tracking-tight">
+                Drum Practice Generator
               </Link>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {status === 'loading' ? (
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-blue-500"></div>
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-600 border-t-slate-400"></div>
               ) : session?.user ? (
                 <>
                   <Link
                     href="/app"
-                    className="px-4 py-2 text-white/80 hover:text-white font-medium transition-colors"
+                    className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium transition-colors"
                   >
                     Go to App
                   </Link>
                   <Link
                     href="/pricing"
-                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-lg font-medium transition-all transform hover:scale-105 shadow-lg shadow-blue-500/50"
+                    className="px-5 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-lg text-sm font-medium transition-all shadow-lg shadow-slate-900/20"
                   >
                     View Pricing
                   </Link>
@@ -292,13 +313,13 @@ export default function LandingPage() {
                 <>
                   <button
                     onClick={() => setShowSignIn(true)}
-                    className="px-4 py-2 text-white/80 hover:text-white font-medium transition-colors"
+                    className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium transition-colors"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => setShowSignUp(true)}
-                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-lg font-medium transition-all transform hover:scale-105 shadow-lg shadow-blue-500/50"
+                    className="px-5 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-lg text-sm font-medium transition-all shadow-lg shadow-slate-900/20"
                   >
                     Get Started
                   </button>
@@ -309,137 +330,112 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section - Split Screen */}
+      {/* Hero Section - Modern Centered Layout */}
       <section 
         ref={heroRef}
-        className="relative min-h-screen flex items-center px-4 sm:px-6 lg:px-8 pt-20 overflow-hidden"
+        className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16 overflow-hidden"
       >
-        {/* Animated particles/dots background */}
+        {/* Subtle animated orbs */}
         <div className="absolute inset-0 overflow-hidden">
-          {[...Array(50)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white/20 rounded-full floating-element hidden md:block"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-              }}
-            />
-          ))}
-          {/* Fewer particles on mobile */}
-          {[...Array(25)].map((_, i) => (
-            <div
-              key={`mobile-${i}`}
-              className="absolute w-1 h-1 bg-white/20 rounded-full floating-element md:hidden"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-              }}
-            />
-          ))}
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
 
-        {/* Split Layout Container */}
-        <div className="relative z-10 max-w-7xl mx-auto w-full">
-          <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-5rem)]">
-            {/* Left Side - Content */}
-            <div className="text-left space-y-8">
-              <div>
-                <h1 
-                  ref={titleRef}
-                  className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black mb-6 leading-tight"
-                >
-                  <span className="bg-gradient-to-r from-white via-blue-200 to-purple-200 bg-clip-text text-transparent">
-                    Master Drum
-                  </span>
-                  <br />
-                  <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                    Patterns
-                  </span>
-                </h1>
-                <p 
-                  ref={subtitleRef}
-                  className="text-lg md:text-xl lg:text-2xl text-white/70 max-w-xl leading-relaxed"
-                >
-                  Create custom drum patterns, practice with <span className="text-blue-400 font-semibold">MIDI</span> or <span className="text-purple-400 font-semibold">microphone</span>, and improve your skills with real-time feedback
-                </p>
-              </div>
+        {/* Main Content Container */}
+        <div className="relative z-10 max-w-6xl mx-auto w-full text-center">
+          <div className="space-y-12">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+              <span className="text-sm text-slate-300 font-medium">Trusted by 1,000+ drummers</span>
+            </div>
 
-              <div 
-                ref={ctaRef}
-                className="flex flex-col sm:flex-row gap-4"
+            {/* Main Heading */}
+            <div className="space-y-6">
+              <h1 
+                ref={titleRef}
+                className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold leading-[1.1] tracking-tight"
               >
-                {session?.user ? (
-                  <>
+                <span className="block text-white">
+                  Master Drum
+                </span>
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-slate-300 via-slate-100 to-slate-300">
+                  Patterns
+                </span>
+              </h1>
+              
+              <p 
+                ref={subtitleRef}
+                className="text-xl sm:text-2xl md:text-3xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light"
+              >
+                Professional drum pattern creation and practice tool with <span className="text-slate-200 font-normal">real-time feedback</span> and <span className="text-slate-200 font-normal">advanced notation</span>
+              </p>
+            </div>
+
+            {/* CTA Buttons */}
+            <div 
+              ref={ctaRef}
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            >
+              {session?.user ? (
+                <>
                   <Link
                     href="/app"
-                    className="magnetic-button group relative px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white rounded-xl font-bold text-sm sm:text-base transition-all shadow-2xl shadow-purple-500/50 overflow-hidden active:scale-95"
+                    className="magnetic-button group relative px-8 py-4 bg-white text-slate-900 rounded-xl font-semibold text-base transition-all shadow-2xl shadow-slate-900/30 hover:shadow-slate-900/50 hover:scale-105 active:scale-95"
                   >
                     <span className="relative z-10">Open App</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </Link>
-                    <Link
-                      href="/pricing"
-                      className="px-6 sm:px-8 py-3 sm:py-4 bg-white/10 backdrop-blur-xl border-2 border-white/20 text-white rounded-xl font-bold text-sm sm:text-base transition-all hover:bg-white/20 hover:border-white/40 active:scale-95"
-                    >
-                      View Pricing
-                    </Link>
-                  </>
-                ) : (
-                  <>
+                  <Link
+                    href="/pricing"
+                    className="px-8 py-4 bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 text-white rounded-xl font-semibold text-base transition-all hover:bg-slate-800/70 hover:border-slate-600/50"
+                  >
+                    View Pricing
+                  </Link>
+                </>
+              ) : (
+                <>
                   <button
                     onClick={() => setShowSignUp(true)}
-                    className="magnetic-button group relative px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white rounded-xl font-bold text-sm sm:text-base transition-all shadow-2xl shadow-purple-500/50 overflow-hidden active:scale-95"
+                    className="magnetic-button group relative px-8 py-4 bg-white text-slate-900 rounded-xl font-semibold text-base transition-all shadow-2xl shadow-slate-900/30 hover:shadow-slate-900/50 hover:scale-105 active:scale-95"
                   >
                     <span className="relative z-10">Start Free Trial</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </button>
-                    <Link
-                      href="/pricing"
-                      className="px-6 sm:px-8 py-3 sm:py-4 bg-white/10 backdrop-blur-xl border-2 border-white/20 text-white rounded-xl font-bold text-sm sm:text-base transition-all hover:bg-white/20 hover:border-white/40 active:scale-95"
-                    >
-                      View Pricing
-                    </Link>
-                  </>
-                )}
-              </div>
-
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap gap-6 items-center pt-4">
-                <div className="flex items-center gap-2 text-white/60 text-sm">
-                  <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>No credit card required</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/60 text-sm">
-                  <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>Cancel anytime</span>
-                </div>
-              </div>
+                  <Link
+                    href="/pricing"
+                    className="px-8 py-4 bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 text-white rounded-xl font-semibold text-base transition-all hover:bg-slate-800/70 hover:border-slate-600/50"
+                  >
+                    View Pricing
+                  </Link>
+                </>
+              )}
             </div>
 
-            {/* Right Side - Product Preview */}
-            <div className="hidden lg:block relative">
-              <ProductPreview />
-            </div>
-
-            {/* Mobile Product Preview - Shown below content */}
-            <div className="lg:hidden relative mt-12">
-              <ProductPreview />
+            {/* Trust Indicators */}
+            <div className="flex flex-wrap gap-8 items-center justify-center pt-8">
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Cancel anytime</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>14-day free trial</span>
+              </div>
             </div>
           </div>
 
-          {/* Scroll indicator - Mobile only */}
-          <div className="lg:hidden mt-12 flex flex-col items-center">
-            <p className="text-white/50 text-sm mb-4">Scroll to explore</p>
-            <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center">
-              <div className="w-1.5 h-3 bg-white/50 rounded-full mt-2 animate-bounce"></div>
-            </div>
+          {/* Product Preview - Below hero content */}
+          <div className="mt-20 lg:mt-32">
+            <ProductPreview />
           </div>
         </div>
       </section>
@@ -453,14 +449,14 @@ export default function LandingPage() {
       {/* Features Section */}
       <section 
         ref={featuresRef}
-        className="relative py-24 md:py-32 px-4 sm:px-6 lg:px-8"
+        className="relative py-32 md:py-40 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16 md:mb-20">
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black mb-4 md:mb-6 bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent leading-tight">
+          <div className="text-center mb-20 md:mb-24">
+            <h2 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 text-white leading-tight tracking-tight">
               Powerful Features
             </h2>
-            <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
               Everything you need to create, practice, and master drum patterns
             </p>
           </div>
@@ -468,74 +464,81 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {[
               {
-                icon: '🎵',
+                Icon: Music,
                 title: 'Professional Notation',
                 description: 'Create and view drum patterns with professional VexFlow notation. Export to MIDI, SVG, PNG, or PDF.',
-                gradient: 'from-blue-500 to-cyan-500',
                 details: 'Industry-standard rendering with precise note placement and timing.',
               },
               {
-                icon: '🎹',
+                Icon: Piano,
                 title: 'MIDI & Microphone Practice',
                 description: 'Practice with MIDI drum pads or use your microphone for real-time feedback and accuracy analysis.',
-                gradient: 'from-purple-500 to-pink-500',
                 details: 'Real-time accuracy tracking with detailed performance metrics.',
               },
               {
-                icon: '🎯',
+                Icon: Target,
                 title: 'Custom Pattern Creation',
                 description: 'Build custom patterns with voicing, sticking, accents, ghost notes, and ornaments.',
-                gradient: 'from-pink-500 to-red-500',
                 details: 'Advanced editing tools for complete creative control.',
               },
               {
-                icon: '📊',
+                Icon: BarChart3,
                 title: 'Progress Tracking',
                 description: 'Track your practice sessions with detailed statistics, accuracy metrics, and progress goals.',
-                gradient: 'from-cyan-500 to-blue-500',
                 details: 'Visual progress charts and session history tracking.',
               },
               {
-                icon: '🔄',
+                Icon: Repeat,
                 title: 'Advanced Polyrhythms',
                 description: 'Create and practice complex polyrhythmic patterns with multiple time signatures.',
-                gradient: 'from-indigo-500 to-purple-500',
                 details: 'Master complex rhythm patterns with visual guides.',
               },
               {
-                icon: '📚',
+                Icon: BookOpen,
                 title: '175+ Preset Patterns',
                 description: 'Browse a library of preset patterns covering various styles and difficulty levels.',
-                gradient: 'from-violet-500 to-purple-500',
                 details: 'Carefully curated patterns from beginner to advanced.',
               },
-            ].map((feature, index) => (
-              <div
-                key={index}
-                className="feature-card group relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 hover:bg-white/10 transition-all duration-500 hover:scale-105 hover:border-white/20 overflow-hidden"
-              >
-                <div className={`text-4xl md:text-5xl mb-4 md:mb-6 inline-block p-3 md:p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} opacity-80 group-hover:opacity-100 transition-all duration-300 group-hover:scale-110`}>
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl md:text-2xl font-bold text-white mb-3 md:mb-4">
-                  {feature.title}
-                </h3>
-                <p className="text-white/60 leading-relaxed text-sm md:text-base mb-3">
-                  {feature.description}
-                </p>
-                {/* Hover reveal details */}
-                <div className="max-h-0 overflow-hidden group-hover:max-h-20 transition-all duration-500">
-                  <p className="text-white/50 text-xs md:text-sm mt-2">
-                    {feature.details}
+            ].map((feature, index) => {
+              const IconComponent = feature.Icon;
+              return (
+                <div
+                  key={index}
+                  className="feature-card group relative bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 rounded-2xl p-8 hover:bg-slate-900/60 hover:border-slate-700/50 transition-all duration-700 overflow-hidden"
+                >
+                  {/* Subtle gradient overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-800/0 via-slate-800/0 to-slate-900/0 group-hover:from-slate-800/20 group-hover:via-slate-800/10 group-hover:to-slate-900/20 transition-all duration-700 rounded-2xl"></div>
+                  
+                  {/* Icon container */}
+                  <div className="relative mb-6 bg-slate-900/50 rounded-xl p-4 w-fit border border-slate-800/50 group-hover:border-slate-700/50 transition-all duration-500 group-hover:scale-105">
+                    <IconComponent className="w-6 h-6 text-slate-400 group-hover:text-slate-200 transition-colors duration-500" strokeWidth={1.5} />
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/0 to-white/0 group-hover:from-white/5 group-hover:to-transparent rounded-xl transition-all duration-500"></div>
+                  </div>
+                  
+                  <h3 className="text-xl font-semibold text-white mb-3 relative z-10 group-hover:text-slate-100 transition-colors duration-500">
+                    {feature.title}
+                  </h3>
+                  <p className="text-slate-400 leading-relaxed text-sm mb-4 relative z-10 group-hover:text-slate-300 transition-colors duration-500">
+                    {feature.description}
                   </p>
+                  
+                  {/* Hover reveal details */}
+                  <div className="relative z-10 max-h-0 overflow-hidden group-hover:max-h-24 transition-all duration-700 ease-out">
+                    <p className="text-slate-500 text-xs mt-2 group-hover:text-slate-400 transition-colors duration-500">
+                      {feature.details}
+                    </p>
+                  </div>
+                  
+                  {/* Sophisticated shine effect */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-[2000ms] ease-in-out"></div>
+                  </div>
+                  
+                  {/* Subtle border glow */}
+                  <div className="absolute inset-0 rounded-2xl border border-slate-800/0 group-hover:border-slate-700/30 transition-all duration-700 pointer-events-none"></div>
                 </div>
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-10 rounded-3xl transition-opacity duration-500`}></div>
-                {/* Shine effect on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent transform -skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -543,14 +546,14 @@ export default function LandingPage() {
       {/* Pricing Preview Section */}
       <section 
         ref={pricingRef}
-        className="relative py-24 md:py-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black via-purple-900/10 to-black"
+        className="relative py-32 md:py-40 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16 md:mb-20">
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black mb-4 md:mb-6 bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent leading-tight">
+          <div className="text-center mb-20 md:mb-24">
+            <h2 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 text-white leading-tight tracking-tight">
               Simple Pricing
             </h2>
-            <p className="text-lg md:text-xl text-white/60">
+            <p className="text-xl md:text-2xl text-slate-400">
               Start free, upgrade when you're ready
             </p>
           </div>
@@ -564,7 +567,6 @@ export default function LandingPage() {
                 features: ['5 patterns', 'Basic practice modes', 'Progress tracking'],
                 cta: 'Get Started Free',
                 href: '/app',
-                gradient: 'from-gray-700 to-gray-800',
                 popular: false,
               },
               {
@@ -574,7 +576,6 @@ export default function LandingPage() {
                 features: ['Unlimited patterns', 'All practice modes', 'Export options', 'Advanced features'],
                 cta: 'Subscribe',
                 href: '/pricing',
-                gradient: 'from-blue-700 to-blue-800',
                 popular: false,
               },
               {
@@ -586,57 +587,65 @@ export default function LandingPage() {
                 features: ['Everything in Monthly', 'Priority support', 'Best value'],
                 cta: 'Subscribe',
                 href: '/pricing',
-                gradient: 'from-purple-600 via-pink-600 to-purple-600',
                 popular: true,
               },
             ].map((plan, index) => (
               <div
                 key={index}
-                className={`pricing-card relative ${plan.popular ? 'lg:-mt-8 lg:mb-8 sm:col-span-2 lg:col-span-1' : ''}`}
+                className={`pricing-card relative group ${plan.popular ? 'lg:-mt-8 lg:mb-8 sm:col-span-2 lg:col-span-1' : ''}`}
               >
-                <div className={`relative bg-gradient-to-br ${plan.gradient} rounded-3xl p-8 border-2 ${plan.popular ? 'border-purple-400 shadow-2xl shadow-purple-500/50' : 'border-white/20'} hover:scale-105 transition-transform duration-300`}>
+                <div className={`relative bg-slate-900/60 backdrop-blur-xl rounded-2xl p-8 border ${plan.popular ? 'border-slate-700/50 shadow-2xl shadow-slate-900/50' : 'border-slate-800/50'} hover:border-slate-700/70 transition-all duration-500`}>
                   {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                      <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
+                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+                      <span className="bg-slate-800 text-slate-200 px-5 py-1.5 rounded-full text-xs font-medium border border-slate-700/50 shadow-lg backdrop-blur-sm">
                         {plan.badge}
                       </span>
                     </div>
                   )}
-                  <h3 className="text-3xl font-bold text-white mb-2">{plan.name}</h3>
-                  <div className="text-5xl font-black text-white mb-2">{plan.price}</div>
-                  {plan.savings && (
-                    <p className="text-green-400 font-semibold mb-4">{plan.savings}</p>
-                  )}
-                  <p className="text-white/60 mb-8">{plan.period}</p>
-                  <ul className="space-y-4 mb-8">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start text-white/80">
-                        <svg className="w-5 h-5 text-green-400 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={plan.href}
-                    className={`block w-full text-center py-4 px-6 rounded-xl font-bold text-lg transition-all ${
-                      plan.popular
-                        ? 'bg-white text-purple-600 hover:bg-gray-100 shadow-lg'
-                        : 'bg-white/10 backdrop-blur-xl border-2 border-white/20 text-white hover:bg-white/20'
-                    }`}
-                  >
-                    {plan.cta}
-                  </Link>
+                  
+                  {/* Subtle gradient overlay */}
+                  <div className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${plan.popular ? 'bg-gradient-to-br from-slate-800/30 via-slate-900/20 to-slate-900/30' : 'bg-gradient-to-br from-slate-800/20 to-slate-900/20'}`}></div>
+                  
+                  <div className="relative z-10">
+                    <h3 className="text-2xl font-semibold text-white mb-2">{plan.name}</h3>
+                    <div className="text-5xl font-semibold text-white mb-2 tracking-tight">{plan.price}</div>
+                    {plan.savings && (
+                      <p className="text-slate-400 text-sm font-medium mb-4">{plan.savings}</p>
+                    )}
+                    <p className="text-slate-500 mb-8 text-sm">{plan.period}</p>
+                    <ul className="space-y-3 mb-8">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start text-slate-300">
+                          <CheckCircle2 className="w-5 h-5 text-slate-500 mr-3 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+                          <span className="text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      href={plan.href}
+                      className={`block w-full text-center py-3.5 px-6 rounded-xl font-medium text-sm transition-all duration-300 ${
+                        plan.popular
+                          ? 'bg-white text-slate-900 hover:bg-slate-100 shadow-lg shadow-slate-900/20'
+                          : 'bg-slate-800/50 border border-slate-700/50 text-slate-200 hover:bg-slate-800/70 hover:border-slate-600/50'
+                      }`}
+                    >
+                      {plan.cta}
+                    </Link>
+                  </div>
+                  
+                  {/* Sophisticated shine effect */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none rounded-2xl overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent transform -skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-[2000ms] ease-in-out"></div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="text-center mt-12">
+          <div className="text-center mt-16">
             <Link
               href="/pricing"
-              className="text-white/60 hover:text-white transition-colors font-medium inline-flex items-center gap-2"
+              className="text-slate-400 hover:text-slate-200 transition-colors font-medium inline-flex items-center gap-2"
             >
               View detailed pricing and features
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -648,28 +657,28 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA Section */}
-      <section className="relative py-24 md:py-32 px-4 sm:px-6 lg:px-8">
+      <section className="relative py-32 md:py-40 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto">
-          <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-3xl p-8 md:p-16 text-center overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent)]"></div>
+          <div className="relative bg-slate-900/60 backdrop-blur-xl border border-slate-800/50 rounded-2xl p-12 md:p-20 text-center overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-800/20 to-slate-900/20"></div>
             <div className="relative z-10">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-4 md:mb-6 text-white leading-tight">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 text-white leading-tight tracking-tight">
                 Ready to Improve Your Drumming?
               </h2>
-              <p className="text-lg md:text-xl lg:text-2xl mb-8 md:mb-10 text-white/90 leading-relaxed">
+              <p className="text-xl md:text-2xl mb-10 text-slate-300 leading-relaxed">
                 Join drummers who are already using Drum Practice Generator to master their craft
               </p>
               {session?.user ? (
                 <Link
                   href="/app"
-                  className="inline-block px-12 py-5 bg-white text-purple-600 rounded-2xl font-bold text-lg hover:bg-gray-100 transition-all transform hover:scale-105 shadow-2xl"
+                  className="inline-block px-12 py-5 bg-white text-slate-900 rounded-xl font-semibold text-lg hover:bg-slate-100 transition-all shadow-xl shadow-slate-900/20"
                 >
                   Open App
                 </Link>
               ) : (
                 <button
                   onClick={() => setShowSignUp(true)}
-                  className="px-12 py-5 bg-white text-purple-600 rounded-2xl font-bold text-lg hover:bg-gray-100 transition-all transform hover:scale-105 shadow-2xl"
+                  className="px-12 py-5 bg-white text-slate-900 rounded-xl font-semibold text-lg hover:bg-slate-100 transition-all shadow-xl shadow-slate-900/20"
                 >
                   Start Free Trial
                 </button>
@@ -680,50 +689,50 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative border-t border-white/10 py-12 md:py-16 px-4 sm:px-6 lg:px-8">
+      <footer className="relative border-t border-slate-800/50 py-16 md:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-8 md:mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
             <div>
-              <h3 className="text-white font-bold text-xl mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <h3 className="text-white font-semibold text-lg mb-4">
                 Drum Practice Generator
               </h3>
-              <p className="text-white/60 text-sm leading-relaxed">
+              <p className="text-slate-400 text-sm leading-relaxed">
                 Professional drum pattern creation and practice tool with MIDI support and real-time feedback.
               </p>
             </div>
             <div>
-              <h4 className="text-white font-semibold mb-4">Product</h4>
+              <h4 className="text-white font-medium mb-4">Product</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link href="/" className="text-white/60 hover:text-white transition-colors">Features</Link></li>
-                <li><Link href="/pricing" className="text-white/60 hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link href="/app" className="text-white/60 hover:text-white transition-colors">App</Link></li>
+                <li><Link href="/" className="text-slate-400 hover:text-slate-200 transition-colors">Features</Link></li>
+                <li><Link href="/pricing" className="text-slate-400 hover:text-slate-200 transition-colors">Pricing</Link></li>
+                <li><Link href="/app" className="text-slate-400 hover:text-slate-200 transition-colors">App</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-semibold mb-4">Support</h4>
+              <h4 className="text-white font-medium mb-4">Support</h4>
               <ul className="space-y-3 text-sm">
-                <li><a href="mailto:support@example.com" className="text-white/60 hover:text-white transition-colors">Contact</a></li>
-                <li><Link href="/" className="text-white/60 hover:text-white transition-colors">Documentation</Link></li>
+                <li><a href="mailto:support@example.com" className="text-slate-400 hover:text-slate-200 transition-colors">Contact</a></li>
+                <li><Link href="/" className="text-slate-400 hover:text-slate-200 transition-colors">Documentation</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-semibold mb-4">Account</h4>
+              <h4 className="text-white font-medium mb-4">Account</h4>
               <ul className="space-y-3 text-sm">
                 {session?.user ? (
                   <>
-                    <li><Link href="/app" className="text-white/60 hover:text-white transition-colors">Dashboard</Link></li>
-                    <li><Link href="/pricing" className="text-white/60 hover:text-white transition-colors">Manage Subscription</Link></li>
+                    <li><Link href="/app" className="text-slate-400 hover:text-slate-200 transition-colors">Dashboard</Link></li>
+                    <li><Link href="/pricing" className="text-slate-400 hover:text-slate-200 transition-colors">Manage Subscription</Link></li>
                   </>
                 ) : (
                   <>
-                    <li><button onClick={() => setShowSignIn(true)} className="text-white/60 hover:text-white transition-colors">Sign In</button></li>
-                    <li><button onClick={() => setShowSignUp(true)} className="text-white/60 hover:text-white transition-colors">Sign Up</button></li>
+                    <li><button onClick={() => setShowSignIn(true)} className="text-slate-400 hover:text-slate-200 transition-colors">Sign In</button></li>
+                    <li><button onClick={() => setShowSignUp(true)} className="text-slate-400 hover:text-slate-200 transition-colors">Sign Up</button></li>
                   </>
                 )}
               </ul>
             </div>
           </div>
-          <div className="border-t border-white/10 pt-8 text-center text-sm text-white/60">
+          <div className="border-t border-slate-800/50 pt-8 text-center text-sm text-slate-400">
             <p>&copy; {new Date().getFullYear()} Drum Practice Generator. All rights reserved.</p>
           </div>
         </div>
