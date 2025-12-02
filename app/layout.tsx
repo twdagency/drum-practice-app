@@ -5,6 +5,7 @@ import { SessionProvider } from '@/components/providers/SessionProvider'
 import { ToastProvider } from '@/components/shared/Toast'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata: Metadata = {
   title: 'Drum Practice Generator',
@@ -48,6 +49,7 @@ export default function RootLayout({
           </SessionProvider>
         </ErrorBoundary>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   )
