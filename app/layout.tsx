@@ -5,6 +5,7 @@ import { SessionProvider } from '@/components/providers/SessionProvider'
 import { ToastProvider } from '@/components/shared/Toast'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/next'
 import { ClarityLoader } from '@/components/ClarityLoader'
 
 export const metadata: Metadata = {
@@ -49,6 +50,7 @@ export default function RootLayout({
           </SessionProvider>
         </ErrorBoundary>
         <SpeedInsights />
+        <Analytics />
         <ClarityLoader />
       </body>
     </html>
