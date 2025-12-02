@@ -1,12 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { 
-  Users, 
-  Music2, 
-  Drum, 
-  Star 
-} from 'lucide-react';
+import { Star, Music2, Download, Piano, Mic } from 'lucide-react';
 
 interface Testimonial {
   quote: string;
@@ -21,6 +16,13 @@ interface Statistic {
   label: string;
   Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }
+
+const statistics: Statistic[] = [
+  { value: '175+', label: 'Preset Patterns', Icon: Music2 },
+  { value: '5', label: 'Export Formats', Icon: Download },
+  { value: '2', label: 'Practice Modes', Icon: Piano }, // MIDI + Microphone
+  { value: '100%', label: 'Free & Open Source', Icon: Star },
+];
 
 const testimonials: Testimonial[] = [
   {
@@ -49,12 +51,7 @@ const testimonials: Testimonial[] = [
   },
 ];
 
-const statistics: Statistic[] = [
-  { value: '1,000+', label: 'Active Users', Icon: Users },
-  { value: '10,000+', label: 'Patterns Created', Icon: Music2 },
-  { value: '50,000+', label: 'Practice Sessions', Icon: Drum },
-  { value: '4.9/5', label: 'Average Rating', Icon: Star },
-];
+// Statistics highlighting actual features we have
 
 export function SocialProof() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -94,51 +91,40 @@ export function SocialProof() {
         });
       }
 
-      // Count-up animation for statistics
+      // Animate statistics on scroll
       const statCards = document.querySelectorAll('.stat-card');
       if (statCards.length > 0) {
-        statCards.forEach((card: Element) => {
-          if (!card) return;
-          
-          const statValue = card.querySelector('.stat-value');
-          if (!statValue) return;
-
-          const originalValue = statValue.textContent || '0';
-          const numValue = parseInt(originalValue.replace(/\D/g, '')) || 0;
-          const hasPlus = originalValue.includes('+');
-          const hasSlash = originalValue.includes('/');
-
-          ScrollTrigger.create({
-            trigger: card as HTMLElement,
-            start: 'top 85%',
-            onEnter: () => {
-              gsap.to({ value: 0 }, {
-                value: numValue,
-                duration: 2,
-                ease: 'power2.out',
-                onUpdate: function() {
-                  const current = Math.floor(this.targets()[0].value);
-                  let display = current.toString();
-                  if (hasPlus) display += '+';
-                  if (hasSlash && originalValue.includes('/')) {
-                    display = originalValue; // Keep original for ratings like "4.9/5"
-                  }
-                  if (statValue) {
-                    statValue.textContent = display;
-                  }
-                },
-              });
-            },
-          });
+        statCards.forEach((card: Element, index: number) => {
+          if (card) {
+            const cardEl = card as HTMLElement;
+            gsap.set(cardEl, { opacity: 0, y: 40, scale: 0.95 });
+            
+            gsap.to(cardEl, {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.7,
+              ease: 'power3.out',
+              delay: index * 0.1,
+              scrollTrigger: {
+                trigger: cardEl,
+                start: 'top 90%',
+                end: 'top 50%',
+                toggleActions: 'play none none none',
+                once: true,
+                markers: false,
+              },
+            });
+          }
         });
       }
     });
   }, []);
 
   return (
-    <section ref={sectionRef} className="relative py-24 md:py-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black via-purple-900/10 to-black">
+    <section ref={sectionRef} className="relative py-24 md:py-32 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Statistics Section */}
+        {/* Statistics Section - Highlighting Real Features */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-16 md:mb-24">
           {statistics.map((stat, index) => {
             const IconComponent = stat.Icon;
@@ -153,7 +139,7 @@ export function SocialProof() {
                     <IconComponent className="w-6 h-6 text-slate-400 group-hover:text-slate-200 transition-colors duration-500" strokeWidth={1.5} />
                   </div>
                 </div>
-                <div className="stat-value text-4xl md:text-5xl font-semibold text-white mb-2 tracking-tight">
+                <div className="text-4xl md:text-5xl font-semibold text-white mb-2 tracking-tight">
                   {stat.value}
                 </div>
                 <div className="text-slate-400 text-sm font-medium group-hover:text-slate-300 transition-colors duration-500">{stat.label}</div>
@@ -165,11 +151,11 @@ export function SocialProof() {
 
         {/* Testimonials Section */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-4 bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent leading-tight">
-            Loved by Drummers Worldwide
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 text-white leading-tight tracking-tight">
+            What Musicians Are Saying
           </h2>
-          <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed">
-            Join thousands of musicians improving their skills every day
+          <p className="text-xl md:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            Discover how drummers are using our tools to improve their practice
           </p>
         </div>
 

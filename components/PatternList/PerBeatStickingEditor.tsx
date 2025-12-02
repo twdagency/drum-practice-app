@@ -53,7 +53,7 @@ export function PerBeatStickingEditor({
   };
 
   return (
-    <div className="per-beat-sticking-editor bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+    <div className="per-beat-sticking-editor bg-gray-50 dark:bg-slate-800/80 rounded-lg p-4 border border-gray-200 dark:border-slate-700/50">
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -95,7 +95,7 @@ export function PerBeatStickingEditor({
           return (
             <div 
               key={index} 
-              className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+              className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700/50 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
             >
               <div className="flex items-center justify-center w-10 h-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold text-sm">
                 {index + 1}
@@ -107,7 +107,7 @@ export function PerBeatStickingEditor({
                   value={sticking}
                   onChange={(e) => handleStickingChange(index, e.target.value)}
                   placeholder={`Beat ${index + 1} (${notesInBeat} notes)`}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 />
               </div>
               

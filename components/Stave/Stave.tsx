@@ -3632,7 +3632,7 @@ function buildNotes({
         clef: 'percussion',
         keys: footPulseKeys.length > 0 ? footPulseKeys : ['b/4'], // Fallback to rest if somehow no keys
         duration: noteDuration, // Regular note duration (not rest)
-        stem_direction: -1,
+        stem_direction: 1, // Upward stems
       });
       rawNotes.push(staveNote);
       noteDurations.push(noteDuration);
@@ -3644,7 +3644,7 @@ function buildNotes({
       clef: 'percussion',
       keys,
       duration: noteDuration,
-      stem_direction: -1,
+      stem_direction: 1, // Upward stems - beams at top
     });
 
     // Apply ghost note styling if detected
@@ -3763,7 +3763,7 @@ function buildNotes({
             keys: [graceNotePosition],
             duration: '16', // Use 16th note duration for grace notes (shorter for drags/ruffs)
             slash: true, // Slash through notehead for all ornaments
-            stem_direction: -1,
+            stem_direction: 1, // Upward stems
           });
           
           // Mark the grace note so we can identify it later (for filtering in collectNoteRefs)
@@ -3798,7 +3798,7 @@ function buildNotes({
       try {
         // Display the sticking notation (R, L, K, etc.)
         const annotation = new VF.Annotation(sticking);
-        annotation.setFont('Inter', 16, 'bold');
+        annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', 16, '600');
         if (darkMode) {
           annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
         }
@@ -3816,7 +3816,7 @@ function buildNotes({
       try {
         // Show the full ornament pattern (e.g., "lR", "llR", "lllR") so users can see all letters
         const ornamentAnnotation = new VF.Annotation(sticking); // Use original sticking pattern
-        ornamentAnnotation.setFont('Inter', 16, 'bold');
+        ornamentAnnotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', 16, '600');
         if (darkMode) {
           ornamentAnnotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
         }
@@ -3864,7 +3864,16 @@ function buildNotes({
         // Different beat or duration - finish current group and start new one
         if (currentBeamGroup.length > 1) {
           try {
-            beams.push(new VF.Beam(currentBeamGroup));
+            const beam = new VF.Beam(currentBeamGroup);
+            // Configure beam to be horizontal at top with upward stems
+            if (typeof beam.setStemDirection === 'function') {
+              beam.setStemDirection(1); // Upward stems
+            }
+            // Make beams thinner
+            if (typeof beam.setRenderOptions === 'function') {
+              beam.setRenderOptions({ beam_width: 2 }); // Thinner beams
+            }
+            beams.push(beam);
           } catch (e) {
             console.warn('Failed to create beam:', e);
           }
@@ -3877,7 +3886,16 @@ function buildNotes({
         // Can't beam this note (quarter note) - finish current group
         if (currentBeamGroup.length > 1) {
           try {
-            beams.push(new VF.Beam(currentBeamGroup));
+            const beam = new VF.Beam(currentBeamGroup);
+            // Configure beam to be horizontal at top with upward stems
+            if (typeof beam.setStemDirection === 'function') {
+              beam.setStemDirection(1); // Upward stems
+            }
+            // Make beams thinner
+            if (typeof beam.setRenderOptions === 'function') {
+              beam.setRenderOptions({ beam_width: 2 }); // Thinner beams
+            }
+            beams.push(beam);
           } catch (e) {
             console.warn('Failed to create beam:', e);
           }
@@ -3909,7 +3927,16 @@ function buildNotes({
         });
         if (group.length > 1) {
           try {
-            beams.push(new VF.Beam(group));
+            const beam = new VF.Beam(group);
+            // Configure beam to be horizontal at top with upward stems
+            if (typeof beam.setStemDirection === 'function') {
+              beam.setStemDirection(1); // Upward stems
+            }
+            // Make beams thinner
+            if (typeof beam.setRenderOptions === 'function') {
+              beam.setRenderOptions({ beam_width: 2 }); // Thinner beams
+            }
+            beams.push(beam);
           } catch (e) {
             console.warn('Failed to create beam:', e);
           }
@@ -4035,7 +4062,7 @@ function buildPolyrhythmNotes({
         clef: 'percussion',
         keys: [rightVoiceKey, leftVoiceKey],
         duration: durations.rightDuration,
-        stem_direction: -1,
+        stem_direction: 1, // Upward stems
       });
       
       // Add accent if either hand has one
@@ -4055,7 +4082,7 @@ function buildPolyrhythmNotes({
       const combinedSticking = `${rightSticking.charAt(0)}/${leftSticking.charAt(0)}`;
       try {
         const annotation = new VF.Annotation(combinedSticking);
-        annotation.setFont('Inter', 14, 'bold');
+        annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', 14, '600');
         if (darkMode) {
           annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
         }
@@ -4074,7 +4101,7 @@ function buildPolyrhythmNotes({
         clef: 'percussion',
         keys: [rightVoiceKey],
         duration: durations.rightDuration,
-        stem_direction: -1,
+        stem_direction: 1, // Upward stems
       });
       
       // Add accent if right hand has one
@@ -4093,7 +4120,7 @@ function buildPolyrhythmNotes({
       // Add right sticking annotation
         try {
         const annotation = new VF.Annotation(rightSticking.charAt(0));
-          annotation.setFont('Inter', 14, 'bold');
+          annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', 14, '600');
           if (darkMode) {
             annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
           }
@@ -4133,7 +4160,7 @@ function buildPolyrhythmNotes({
       clef: 'percussion',
       keys: [leftVoiceKey],
         duration: durations.leftDuration,
-      stem_direction: -1,
+      stem_direction: 1, // Upward stems
     });
       
       // Add accent if left hand has one
@@ -4152,7 +4179,7 @@ function buildPolyrhythmNotes({
     // Add left sticking annotation
       try {
         const annotation = new VF.Annotation(leftSticking.charAt(0));
-        annotation.setFont('Inter', 14, 'bold');
+        annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', 14, '600');
         if (darkMode) {
           annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
         }

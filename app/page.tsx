@@ -156,24 +156,24 @@ export default function LandingPage() {
         featureCards.forEach((card: Element, index: number) => {
           if (card) {
             const cardEl = card as HTMLElement;
-            const tl = gsap.timeline({
+            // Set initial state
+            gsap.set(cardEl, { opacity: 0, y: 60, scale: 0.95 });
+            
+            gsap.to(cardEl, {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.8,
+              ease: 'power3.out',
+              delay: index * 0.1,
               scrollTrigger: {
                 trigger: cardEl,
-                start: 'top 85%',
-                toggleActions: 'play none none reverse',
+                start: 'top 90%',
+                end: 'top 50%',
+                toggleActions: 'play none none none',
+                once: true,
+                markers: false,
               },
-            });
-            
-            // Staggered entrance with rotation and scale
-            tl.from(cardEl, {
-              y: 80,
-              opacity: 0,
-              scale: 0.9,
-              rotationX: -15,
-              transformOrigin: 'center center',
-              duration: 1,
-              ease: 'power3.out',
-              delay: index * 0.08,
             });
           }
         });
@@ -185,24 +185,24 @@ export default function LandingPage() {
         pricingCards.forEach((card: Element, index: number) => {
           if (card) {
             const cardEl = card as HTMLElement;
-            const tl = gsap.timeline({
+            // Set initial state
+            gsap.set(cardEl, { opacity: 0, y: 80, scale: 0.9 });
+            
+            gsap.to(cardEl, {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 1,
+              ease: 'power3.out',
+              delay: index * 0.12,
               scrollTrigger: {
                 trigger: cardEl,
-                start: 'top 85%',
-                toggleActions: 'play none none reverse',
+                start: 'top 90%',
+                end: 'top 50%',
+                toggleActions: 'play none none none',
+                once: true,
+                markers: false,
               },
-            });
-            
-            // Sophisticated entrance with perspective
-            tl.from(cardEl, {
-              y: 100,
-              opacity: 0,
-              scale: 0.85,
-              rotationY: -10,
-              transformPerspective: 1000,
-              duration: 1.2,
-              ease: 'power4.out',
-              delay: index * 0.12,
             });
           }
         });
@@ -213,18 +213,24 @@ export default function LandingPage() {
       if (statCards.length > 0) {
         statCards.forEach((card: Element, index: number) => {
           if (card) {
-            gsap.from(card as HTMLElement, {
-              scrollTrigger: {
-                trigger: card as HTMLElement,
-                start: 'top 85%',
-                toggleActions: 'play none none reverse',
-              },
-              y: 50,
-              opacity: 0,
-              scale: 0.95,
-              duration: 0.8,
+            const cardEl = card as HTMLElement;
+            gsap.set(cardEl, { opacity: 0, y: 40, scale: 0.95 });
+            
+            gsap.to(cardEl, {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.7,
               ease: 'power3.out',
               delay: index * 0.1,
+              scrollTrigger: {
+                trigger: cardEl,
+                start: 'top 90%',
+                end: 'top 50%',
+                toggleActions: 'play none none none',
+                once: true,
+                markers: false,
+              },
             });
           }
         });
@@ -235,17 +241,23 @@ export default function LandingPage() {
       if (testimonialCards.length > 0) {
         testimonialCards.forEach((card: Element, index: number) => {
           if (card) {
-            gsap.from(card as HTMLElement, {
-              scrollTrigger: {
-                trigger: card as HTMLElement,
-                start: 'top 85%',
-                toggleActions: 'play none none reverse',
-              },
-              y: 60,
-              opacity: 0,
-              duration: 0.9,
+            const cardEl = card as HTMLElement;
+            gsap.set(cardEl, { opacity: 0, y: 50 });
+            
+            gsap.to(cardEl, {
+              opacity: 1,
+              y: 0,
+              duration: 0.8,
               ease: 'power3.out',
               delay: index * 0.1,
+              scrollTrigger: {
+                trigger: cardEl,
+                start: 'top 90%',
+                end: 'top 50%',
+                toggleActions: 'play none none none',
+                once: true,
+                markers: false,
+              },
             });
           }
         });
@@ -256,41 +268,49 @@ export default function LandingPage() {
       if (sectionHeadings.length > 0) {
         sectionHeadings.forEach((heading: Element) => {
           if (heading) {
-            gsap.from(heading as HTMLElement, {
-              scrollTrigger: {
-                trigger: heading as HTMLElement,
-                start: 'top 90%',
-                toggleActions: 'play none none reverse',
-              },
-              y: 40,
-              opacity: 0,
-              duration: 1,
+            const headingEl = heading as HTMLElement;
+            gsap.set(headingEl, { opacity: 0, y: 30 });
+            
+            gsap.to(headingEl, {
+              opacity: 1,
+              y: 0,
+              duration: 0.9,
               ease: 'power3.out',
+              scrollTrigger: {
+                trigger: headingEl,
+                start: 'top 90%',
+                end: 'top 60%',
+                toggleActions: 'play none none none',
+                once: true,
+                markers: false,
+              },
             });
           }
         });
       }
 
       // Animate section descriptions
-      const sectionDescriptions = document.querySelectorAll('section p');
+      const sectionDescriptions = document.querySelectorAll('section > div > p:first-of-type');
       if (sectionDescriptions.length > 0) {
-        sectionDescriptions.forEach((desc: Element, index: number) => {
-          // Only animate direct children of sections, not nested ones
-          const parent = desc.parentElement;
-          if (parent && parent.tagName === 'SECTION' && index < 10) {
-            gsap.from(desc as HTMLElement, {
-              scrollTrigger: {
-                trigger: desc as HTMLElement,
-                start: 'top 90%',
-                toggleActions: 'play none none reverse',
-              },
-              y: 30,
-              opacity: 0,
-              duration: 0.8,
-              ease: 'power2.out',
-              delay: 0.2,
-            });
-          }
+        sectionDescriptions.forEach((desc: Element) => {
+          const descEl = desc as HTMLElement;
+          gsap.set(descEl, { opacity: 0, y: 20 });
+          
+          gsap.to(descEl, {
+            opacity: 1,
+            y: 0,
+            duration: 0.7,
+            ease: 'power2.out',
+            delay: 0.2,
+            scrollTrigger: {
+              trigger: descEl,
+              start: 'top 90%',
+              end: 'top 60%',
+              toggleActions: 'play none none none',
+              once: true,
+              markers: false,
+            },
+          });
         });
       }
 
@@ -399,29 +419,29 @@ export default function LandingPage() {
       {/* Premium Navigation */}
       <nav 
         ref={navRef}
-        className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-2xl border-b border-slate-800/50"
+        className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/50 shadow-lg shadow-slate-900/20"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16 md:h-18">
             <div className="flex items-center">
-              <Link href="/" className="text-lg sm:text-xl font-semibold text-white hover:text-slate-200 transition-colors tracking-tight">
+              <Link href="/" className="text-lg sm:text-xl md:text-2xl font-bold text-white hover:text-slate-200 transition-colors tracking-tight">
                 Drum Practice Generator
               </Link>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {status === 'loading' ? (
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-600 border-t-slate-400"></div>
               ) : session?.user ? (
                 <>
                   <Link
                     href="/app"
-                    className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium transition-colors"
+                    className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium transition-colors rounded-lg hover:bg-slate-800/50"
                   >
                     Go to App
                   </Link>
                   <Link
                     href="/pricing"
-                    className="px-5 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-lg text-sm font-medium transition-all shadow-lg shadow-slate-900/20"
+                    className="px-5 py-2.5 bg-white text-slate-900 hover:bg-slate-100 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-slate-900/20 hover:shadow-xl"
                   >
                     View Pricing
                   </Link>
@@ -430,13 +450,13 @@ export default function LandingPage() {
                 <>
                   <button
                     onClick={() => setShowSignIn(true)}
-                    className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium transition-colors"
+                    className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium transition-colors rounded-lg hover:bg-slate-800/50"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => setShowSignUp(true)}
-                    className="px-5 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-lg text-sm font-medium transition-all shadow-lg shadow-slate-900/20"
+                    className="px-5 py-2.5 bg-white text-slate-900 hover:bg-slate-100 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-slate-900/20 hover:shadow-xl"
                   >
                     Get Started
                   </button>
@@ -460,8 +480,8 @@ export default function LandingPage() {
 
         {/* Main Content Container */}
         <div className="relative z-10 max-w-6xl mx-auto w-full text-center">
-          <div className="space-y-12">
-            {/* Badge */}
+          <div className="space-y-16 md:space-y-20">
+            {/* Badge - with padding from top */}
             <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
               <span className="text-sm text-slate-300 font-medium">Trusted by 1,000+ drummers</span>

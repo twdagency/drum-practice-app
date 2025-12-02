@@ -1209,9 +1209,23 @@ textarea:focus-visible {
   transform: translate(-10px, 68px) !important;
 }
 
-.dpgen-stave .vf-annotation text {
+.dpgen-stave .vf-annotation text,
+.dpgen-stave .vf-annotation tspan {
   transform: none !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  font-weight: 600 !important;
   /* DO NOT set fill here - it will override highlighting */
+}
+
+/* Make beams thinner and ensure they're horizontal */
+.dpgen-stave svg path[stroke-width],
+.dpgen-stave svg line[stroke-width] {
+  stroke-width: 1.5 !important;
+}
+
+/* Specifically target beam paths */
+.dpgen-stave svg path[d*="M"][d*="L"] {
+  stroke-width: 1.5 !important;
 }
 
 /* Note highlighting for visual metronome - matches WordPress plugin */
@@ -1404,18 +1418,55 @@ tspan.dpgen-annotation--active.dpgen-annotation--right {
 /* Dark mode - Inputs, Selects, Textareas */
 .dpgen-dark-mode .dpgen-input,
 .dpgen-dark-mode .dpgen-select,
-.dpgen-dark-mode .dpgen-textarea {
-  background: #1f2230;
-  border-color: var(--dpgen-border);
-  color: var(--dpgen-text);
+.dpgen-dark-mode .dpgen-textarea,
+.dpgen-dark-mode input[type="text"],
+.dpgen-dark-mode input[type="number"],
+.dpgen-dark-mode select,
+.dpgen-dark-mode textarea {
+  background: #1f2230 !important;
+  border-color: var(--dpgen-border) !important;
+  color: var(--dpgen-text) !important;
 }
 
 .dpgen-dark-mode .dpgen-input:focus,
 .dpgen-dark-mode .dpgen-select:focus,
-.dpgen-dark-mode .dpgen-textarea:focus {
-  border-color: var(--dpgen-primary);
-  background: #252836;
-  box-shadow: 0 0 0 3px rgba(91, 143, 247, 0.1);
+.dpgen-dark-mode .dpgen-textarea:focus,
+.dpgen-dark-mode input[type="text"]:focus,
+.dpgen-dark-mode input[type="number"]:focus,
+.dpgen-dark-mode select:focus,
+.dpgen-dark-mode textarea:focus {
+  border-color: var(--dpgen-primary) !important;
+  background: #252836 !important;
+  box-shadow: 0 0 0 3px rgba(91, 143, 247, 0.1) !important;
+  color: var(--dpgen-text) !important;
+}
+
+/* Dark mode - Pattern-specific input classes */
+.dpgen-dark-mode .dpgen-pattern-repeat,
+.dpgen-dark-mode .dpgen-pattern-timeSignature,
+.dpgen-dark-mode .dpgen-pattern-subdivision,
+.dpgen-dark-mode .dpgen-pattern-drumPattern,
+.dpgen-dark-mode .dpgen-pattern-stickingPattern {
+  background: #1f2230 !important;
+  border-color: var(--dpgen-border) !important;
+  color: var(--dpgen-text) !important;
+}
+
+.dpgen-dark-mode .dpgen-pattern-repeat:focus,
+.dpgen-dark-mode .dpgen-pattern-timeSignature:focus,
+.dpgen-dark-mode .dpgen-pattern-subdivision:focus,
+.dpgen-dark-mode .dpgen-pattern-drumPattern:focus,
+.dpgen-dark-mode .dpgen-pattern-stickingPattern:focus {
+  border-color: var(--dpgen-primary) !important;
+  background: #252836 !important;
+  box-shadow: 0 0 0 3px rgba(91, 143, 247, 0.1) !important;
+  color: var(--dpgen-text) !important;
+}
+
+/* Dark mode - Select options */
+.dpgen-dark-mode select option {
+  background: #1f2230 !important;
+  color: var(--dpgen-text) !important;
 }
 
 /* Dark mode - Buttons */

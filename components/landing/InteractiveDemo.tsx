@@ -69,6 +69,7 @@ const demoData: DemoTab[] = [
 
 export function InteractiveDemo() {
   const [activeTab, setActiveTab] = useState('notation');
+  const [activeNoteIndex, setActiveNoteIndex] = useState(0);
   const sectionRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -121,6 +122,17 @@ export function InteractiveDemo() {
         });
       }
     });
+  }, [activeTab]);
+
+  // Animate note highlighting for notation tab
+  useEffect(() => {
+    if (activeTab !== 'notation') return;
+    
+    const interval = setInterval(() => {
+      setActiveNoteIndex((prev) => (prev + 1) % 4);
+    }, 600); // Change note every 600ms
+
+    return () => clearInterval(interval);
   }, [activeTab]);
 
   const activeDemo = demoData.find((tab) => tab.id === activeTab) || demoData[0];
@@ -200,58 +212,121 @@ export function InteractiveDemo() {
                 <div className="space-y-4">
                   {/* Feature-specific mockup */}
                   {activeTab === 'notation' && (
-                    <div className="relative min-h-[250px] flex items-center justify-center">
+                    <div className="relative min-h-[250px] flex items-center justify-center py-8">
                       {/* Time Signature - Top Left */}
-                      <div className="absolute top-4 left-4 text-slate-300 font-semibold text-sm">
+                      <div className="absolute top-4 left-4 text-slate-300 font-semibold text-sm z-10">
                         4/4
                       </div>
 
-                      {/* Staff Lines - Horizontal */}
-                      <div className="absolute inset-0 flex flex-col justify-center">
-                        {/* Main horizontal line connecting all notes */}
-                        <div className="h-px bg-slate-400/40 mx-8"></div>
-                        {/* Two fainter lines above */}
-                        <div className="h-px bg-slate-500/20 mx-8 mb-6"></div>
-                        <div className="h-px bg-slate-500/20 mx-8 mb-12"></div>
-                      </div>
-
-                      {/* Drum Notes - Matching actual app layout */}
-                      <div className="flex items-center justify-center gap-8 sm:gap-12">
-                        {['K', 'S', 'T', 'H'].map((drum, index) => (
+                      {/* 5-Line Stave - Proper musical staff */}
+                      <div className="relative w-full">
+                        {/* Staff Lines - 5 horizontal lines */}
+                        {[0, 1, 2, 3, 4].map((lineIndex) => (
                           <div
-                            key={drum}
-                            className="flex flex-col items-center relative"
-                          >
-                            {/* Circular Note Head - Glowing purple/blue gradient */}
-                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-purple-500/90 via-blue-500/90 to-purple-600/90 border-2 border-white/20 shadow-lg shadow-purple-500/30"></div>
-                            
-                            {/* Vertical Stem - Light blue line */}
-                            <div className="w-0.5 h-16 sm:h-20 bg-gradient-to-b from-blue-400/70 via-blue-300/50 to-transparent mt-[-2px]"></div>
-                            
-                            {/* Horizontal connection line */}
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 w-20 sm:w-24 h-px bg-blue-400/40"></div>
-                            
-                            {/* Drum Label */}
-                            <div className="text-xs sm:text-sm text-slate-300 font-medium mt-2">
-                              {drum}
-                            </div>
-                          </div>
+                            key={lineIndex}
+                            className="absolute left-0 right-0 h-px bg-slate-400/30"
+                            style={{
+                              top: `${20 + lineIndex * 20}px`,
+                            }}
+                          />
                         ))}
+                        
+                        {/* Drum Notes on Stave - Positioned like VexFlow */}
+                        <div className="relative flex items-center justify-center gap-12 sm:gap-16 mt-10">
+                          {[
+                            { drum: 'K', position: 'bottom' },
+                            { drum: 'S', position: 'middle' },
+                            { drum: 'T', position: 'top' },
+                            { drum: 'H', position: 'top' },
+                          ].map((note, index) => {
+                            const positions = {
+                              bottom: 80,
+                              middle: 60,
+                              top: 20,
+                            };
+                            const yPosition = positions[note.position as keyof typeof positions] || 60;
+                            const isActive = index === activeNoteIndex;
+                            
+                            return (
+                              <div
+                                key={note.drum}
+                                className="relative flex flex-col items-center"
+                                style={{
+                                  top: `${yPosition}px`,
+                                }}
+                              >
+                                {/* Note Head - Animated highlight */}
+                                <div
+                                  className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full border-2 transition-all duration-200 ${
+                                    isActive
+                                      ? 'bg-purple-500 border-purple-400 shadow-lg shadow-purple-500/50 scale-110'
+                                      : 'bg-slate-700/50 border-slate-600/50 scale-100'
+                                  }`}
+                                  style={{
+                                    animation: isActive 
+                                      ? 'notePulse 0.5s ease-in-out infinite' 
+                                      : 'none',
+                                    filter: isActive 
+                                      ? 'drop-shadow(0 0 6px rgba(139, 92, 246, 0.8))' 
+                                      : 'none',
+                                  }}
+                                />
+                                
+                                {/* Note Stem */}
+                                <div 
+                                  className={`w-0.5 h-10 sm:h-14 transition-all duration-200 ${
+                                    isActive
+                                      ? 'bg-purple-400'
+                                      : 'bg-slate-500/30'
+                                  }`}
+                                  style={{
+                                    marginTop: '-2px',
+                                  }}
+                                />
+                                
+                                {/* Drum Label */}
+                                <div 
+                                  className={`text-xs font-medium mt-1 transition-colors duration-200 ${
+                                    isActive
+                                      ? 'text-purple-300'
+                                      : 'text-slate-400'
+                                  }`}
+                                >
+                                  {note.drum}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
 
-                      {/* Step Indicators - Bottom Center */}
+                      {/* Playback Indicator */}
                       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                        {[1, 2, 3, 4].map((step, index) => (
+                        {[0, 1, 2, 3].map((step) => (
                           <div
                             key={step}
-                            className={`w-2 h-2 rounded-full ${
-                              index >= 2 
-                                ? 'bg-purple-400 shadow-md shadow-purple-500/50' 
-                                : 'bg-slate-600/50'
+                            className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                              step === activeNoteIndex
+                                ? 'bg-purple-400 shadow-md shadow-purple-500/50 scale-125'
+                                : 'bg-slate-600/50 scale-100'
                             }`}
                           />
                         ))}
                       </div>
+
+                      {/* CSS Animation */}
+                      <style jsx>{`
+                        @keyframes notePulse {
+                          0%, 100% {
+                            transform: scale(1.1);
+                            box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+                          }
+                          50% {
+                            transform: scale(1.2);
+                            box-shadow: 0 0 0 6px rgba(139, 92, 246, 0);
+                          }
+                        }
+                      `}</style>
                     </div>
                   )}
 
