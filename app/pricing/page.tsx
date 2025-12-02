@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { getAllPlans } from '@/lib/stripe/plans';
 import { SubscriptionPlan } from '@/lib/stripe/types';
 import Link from 'next/link';
 
 function PricingContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string>('');
   const plans = getAllPlans();
@@ -31,6 +34,8 @@ function PricingContent() {
         },
         body: JSON.stringify({
           priceId: plan.stripePriceId,
+          // Include email if user is logged in (optional - Stripe will collect if not provided)
+          customerEmail: session?.user?.email,
         }),
       });
 
@@ -41,6 +46,7 @@ function PricingContent() {
       }
 
       // Redirect to Stripe Checkout
+      // Stripe will collect email and payment info, user can create account after
       if (data.url) {
         window.location.href = data.url;
       }

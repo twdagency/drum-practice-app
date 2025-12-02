@@ -11,18 +11,18 @@ import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user session
-    const session = await auth();
-    
-    if (!session?.user?.email) {
+    // Check if Stripe is configured
+    if (!stripe) {
       return NextResponse.json(
-        { error: 'Unauthorized - Please sign in' },
-        { status: 401 }
+        { error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY in environment variables.' },
+        { status: 500 }
       );
     }
 
+    // Get authenticated user session (optional - allows checkout without sign-in)
+    const session = await auth();
     const body = await request.json();
-    const { priceId, trialDays, promoCode } = body;
+    const { priceId, trialDays, promoCode, customerEmail } = body;
 
     if (!priceId) {
       return NextResponse.json(
@@ -40,13 +40,24 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      customer_email: session.user.email,
       success_url: `${STRIPE_CONFIG.getBaseUrl()}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${STRIPE_CONFIG.getBaseUrl()}/pricing?canceled=true`,
-      metadata: {
-        userId: (session.user as any).id || session.user.email || '',
-      },
+      // Allow users to sign up during checkout
+      allow_promotion_codes: true,
     };
+
+    // If user is already logged in, use their email and add user ID to metadata
+    if (session?.user?.email) {
+      sessionParams.customer_email = session.user.email;
+      sessionParams.metadata = {
+        userId: (session.user as any).id || session.user.email || '',
+        userEmail: session.user.email,
+      };
+    } else if (customerEmail) {
+      // If email provided but not logged in, use it (they'll create account after)
+      sessionParams.customer_email = customerEmail;
+    }
+    // If neither, Stripe will collect email during checkout
 
     // Add trial period if specified
     if (trialDays && trialDays > 0) {
