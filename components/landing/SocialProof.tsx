@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Users, Music2, Drum, Star, Sparkles } from 'lucide-react';
+import { 
+  Users, 
+  Music2, 
+  Drum, 
+  Star 
+} from 'lucide-react';
 
 interface Testimonial {
   quote: string;
@@ -137,6 +142,7 @@ export function SocialProof() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-16 md:mb-24">
           {statistics.map((stat, index) => {
             const IconComponent = stat.Icon;
+            if (!IconComponent) return null;
             return (
               <div
                 key={index}
