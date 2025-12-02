@@ -42,6 +42,7 @@
     "react-dom": "^18.3.1",
     "react-use": "^17.6.0",
     "react-window": "^2.2.3",
+    "stripe": "^17.3.1",
     "typescript": "^5.9.3",
     "uuid": "^13.0.0",
     "vexflow": "^4.2.2",
