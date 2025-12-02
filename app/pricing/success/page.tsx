@@ -2,17 +2,29 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [customerEmail, setCustomerEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const sessionIdParam = searchParams.get('session_id');
     if (sessionIdParam) {
       setSessionId(sessionIdParam);
+      // Fetch checkout session to get customer email
+      fetch(`/api/stripe/checkout-session?sessionId=${sessionIdParam}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.email) {
+            setCustomerEmail(data.email);
+          }
+        })
+        .catch(err => console.error('Failed to fetch session:', err));
     }
   }, [searchParams]);
 
@@ -21,22 +33,21 @@ function CheckoutSuccessContent() {
 
     setLoading(true);
     try {
-      // TODO: Get customer ID from your database based on session
-      // For now, this is a placeholder - you'll need to implement customer lookup
+      // Pass the session ID to get the customer ID from the checkout session
       const response = await fetch('/api/stripe/portal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // customerId: 'cus_...', // You'll need to get this from your database
+          sessionId: sessionId, // Portal route will retrieve customer ID from this
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create portal session');
+        throw new Error(data.error || data.hint || 'Failed to create portal session');
       }
 
       // Redirect to Stripe Customer Portal
@@ -79,9 +90,27 @@ function CheckoutSuccessContent() {
             Thank you for subscribing! You now have access to all premium features.
           </p>
 
+          {/* Account Creation Prompt */}
+          {status !== 'loading' && !session && (
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-900 dark:text-blue-200 mb-3">
+                <strong>Create an account</strong> to save your patterns, track progress, and access your subscription from any device.
+              </p>
+              <Link
+                href="/"
+                className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Create Account
+              </Link>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
+                Click "Create Account" to sign up and link your subscription to your account
+              </p>
+            </div>
+          )}
+
           <div className="space-y-4">
             <Link
-              href="/"
+              href="/app"
               className="block w-full py-3 px-6 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
             >
               Start Using the App

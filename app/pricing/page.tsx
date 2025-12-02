@@ -140,7 +140,7 @@ function PricingContent() {
               </li>
             </ul>
             <Link
-              href="/"
+              href="/app"
               className="block w-full text-center py-3 px-6 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Get Started Free
@@ -245,7 +245,7 @@ function PricingContent() {
         {/* Back to App Link */}
         <div className="text-center mt-12">
           <Link
-            href="/"
+            href="/app"
             className="text-blue-600 dark:text-blue-400 hover:underline"
           >
             ← Back to App
