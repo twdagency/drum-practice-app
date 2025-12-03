@@ -88,10 +88,19 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
         // Clear previous rendering
         staveRef.current!.innerHTML = '';
 
+        // Get container width for responsive sizing
+        const containerWidth = staveRef.current!.parentElement?.clientWidth || 800;
+        const staveWidth = Math.max(400, containerWidth - 40); // Leave 20px margin on each side
+        const staveHeight = 200;
+
         // Create renderer with proper size
         const renderer = new VF.Renderer(staveRef.current!, VF.Renderer.Backends.SVG);
-        renderer.resize(800, 200);
+        renderer.resize(staveWidth, staveHeight);
         const context = renderer.getContext();
+        
+        // Set dark mode colors
+        context.setFillStyle('#ffffff');
+        context.setStrokeStyle('#ffffff');
 
         // Parse pattern data
         const drumPatternTokens = parseTokens(pattern.drumPattern || '').map((token) => token.toUpperCase());
@@ -100,8 +109,20 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
         const notesPerBar = getNotesPerBarForPattern(pattern);
         const accentIndices = pattern._presetAccents || [];
 
-        // Create stave
-        const stave = new VF.Stave(10, 40, 750);
+        // Debug logging
+        console.log('[LandingStave] Pattern data:', {
+          drumPattern: pattern.drumPattern,
+          drumPatternTokens,
+          stickingTokens,
+          timeSignature,
+          notesPerBar,
+          subdivision: pattern.subdivision,
+        });
+
+        // Create stave with responsive width
+        const leftMargin = 10;
+        const availableWidth = staveWidth - leftMargin - 20; // Leave right margin
+        const stave = new VF.Stave(leftMargin, 40, availableWidth);
         stave.addClef('percussion');
         stave.addTimeSignature(`${timeSignature[0]}/${timeSignature[1]}`);
         stave.setContext(context).draw();
@@ -170,7 +191,11 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
             let currentGroup: any[] = [];
 
             barNotes.forEach((note, index) => {
-              if (note.getDuration() !== 'qr') {
+              // Check if note is a rest by checking duration string
+              const duration = note.getDuration ? note.getDuration() : note.duration || '';
+              const isRest = duration.includes('r') || duration.includes('R');
+              
+              if (!isRest) {
                 currentGroup.push(note);
               } else {
                 if (currentGroup.length > 1) {
@@ -194,22 +219,60 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
           allBeams.push(...barBeams);
         }
 
+        console.log('[LandingStave] Created notes:', {
+          totalNotes: allNotes.length,
+          totalBeams: allBeams.length,
+          notesPerBar,
+        });
+
         // Create voice and format
+        if (allNotes.length === 0) {
+          console.error('No notes created for pattern:', pattern);
+          return;
+        }
+
         const voice = new VF.Voice({ num_beats: 2 * timeSignature[0], beat_value: timeSignature[1] });
         voice.addTickables(allNotes);
         voice.setStrict(false);
 
-        const formatter = new VF.Formatter().joinVoices([voice]).format([voice], 700);
-        voice.draw(context, stave);
+        // Format with available width (leave space for clef and time signature)
+        const formatWidth = Math.max(200, availableWidth - 120);
+        try {
+          const formatter = new VF.Formatter().joinVoices([voice]).format([voice], formatWidth);
+          voice.draw(context, stave);
+        } catch (error) {
+          console.error('Error formatting or drawing voice:', error);
+          // Try drawing without formatting
+          voice.draw(context, stave);
+        }
 
         // Draw beams
         allBeams.forEach((beam) => {
           beam.setContext(context).draw();
         });
 
-        // Get note groups for highlighting
+        // Get note groups for highlighting and apply dark mode styling
         const svgElement = staveRef.current!.querySelector('svg');
         if (svgElement) {
+          // Apply dark mode styling to SVG
+          svgElement.style.backgroundColor = 'transparent';
+          
+          // Set all paths, lines, and text to white for dark mode
+          const allElements = svgElement.querySelectorAll('path, line, text, tspan, circle, ellipse, rect');
+          allElements.forEach((el) => {
+            const svgEl = el as SVGElement;
+            const currentFill = svgEl.getAttribute('fill');
+            const currentStroke = svgEl.getAttribute('stroke');
+            
+            // Only change black/dark colors to white, preserve other colors
+            if (currentFill === '#000000' || currentFill === 'black' || currentFill === '#000') {
+              svgEl.setAttribute('fill', '#ffffff');
+            }
+            if (currentStroke === '#000000' || currentStroke === 'black' || currentStroke === '#000') {
+              svgEl.setAttribute('stroke', '#ffffff');
+            }
+          });
+          
           const groups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
           noteGroupsRef.current = groups;
           if (onNotesReady) {
@@ -328,7 +391,14 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
 
   return (
     <div className={`relative ${className}`}>
-      <div ref={staveRef} className="dpgen-stave" style={{ minHeight: '200px' }} />
+      <div 
+        ref={staveRef} 
+        className="dpgen-stave dpgen-dark-mode" 
+        style={{ 
+          minHeight: '200px',
+          backgroundColor: 'transparent',
+        }} 
+      />
     </div>
   );
 }
