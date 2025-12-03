@@ -488,9 +488,6 @@ textarea:focus-visible {
 .pricing-card:not([data-gsap-animated="true"]) {
   animation: fadeInFallback 0.5s ease-out 2s forwards;
 }
-  outline-offset: 2px;
-  border-radius: 4px;
-}
 
 .dpgen-pattern-fields {
   display: grid;
