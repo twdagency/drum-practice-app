@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { generateRandomPattern } from '@/lib/utils/patternUtils';
-import { parseTokens, parseTimeSignature, getNotesPerBarForPattern } from '@/lib/utils/patternUtils';
+import { generateRandomPattern, parseTokens, parseTimeSignature, getNotesPerBarForPattern, calculateNotesPerBar } from '@/lib/utils/patternUtils';
 import { Pattern } from '@/types';
 
 // VexFlow key map for drum notation
@@ -34,10 +33,49 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
     const maxAttempts = 10;
     
     // Try to generate a pattern with actual notes (not all rests)
+    // Prefer simpler subdivisions for landing page (8th, triplets, 16th notes)
+    // Sometimes use mixed subdivisions (but keep to 16th notes and under)
     const generateValidPattern = (): Pattern | null => {
+      // Prefer simpler subdivisions for landing page display
+      // Weight towards 8th notes and triplets (more common), sometimes 16th notes
+      const subdivisionWeights = [
+        { sub: 8, weight: 35 },   // 8th notes - most common
+        { sub: 12, weight: 35 },  // Triplets - common
+        { sub: 16, weight: 30 },  // 16th notes - common
+      ];
+      
+      // Select subdivision based on weights
+      const totalWeight = subdivisionWeights.reduce((sum, item) => sum + item.weight, 0);
+      let randomWeight = Math.random() * totalWeight;
+      let selectedSubdivision = 16; // Default
+      for (const item of subdivisionWeights) {
+        randomWeight -= item.weight;
+        if (randomWeight <= 0) {
+          selectedSubdivision = item.sub;
+          break;
+        }
+      }
+      
       while (attempts < maxAttempts) {
         attempts++;
-        const randomPattern = generateRandomPattern(false, false);
+        let randomPattern = generateRandomPattern(false, false);
+        
+        // If subdivision is 24 or 32, replace with our selected simpler subdivision
+        if (randomPattern.subdivision === 24 || randomPattern.subdivision === 32) {
+          randomPattern.subdivision = selectedSubdivision;
+          // Regenerate pattern to ensure it matches the new subdivision
+          randomPattern = generateRandomPattern(false, false);
+          randomPattern.subdivision = selectedSubdivision;
+        } else if (randomPattern.subdivision !== selectedSubdivision) {
+          // 50% chance to use the random subdivision if it's simple (8, 12, or 16)
+          if (Math.random() > 0.5 && [8, 12, 16].includes(randomPattern.subdivision)) {
+            // Keep the random subdivision
+          } else {
+            // Use our selected subdivision
+            randomPattern.subdivision = selectedSubdivision;
+          }
+        }
+        
         // Set repeat to 1 bar for the landing page
         randomPattern.repeat = 1;
         
@@ -182,7 +220,23 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
         for (let barIndex = 0; barIndex < 1; barIndex++) {
           const barNotes: any[] = [];
           const barBeams: any[] = [];
-          const noteDuration = pattern.subdivision === 4 ? 'q' : pattern.subdivision === 8 ? '8' : '16';
+          // Determine note duration based on subdivision
+          let noteDuration: string;
+          if (pattern.subdivision === 4) {
+            noteDuration = 'q';
+          } else if (pattern.subdivision === 8) {
+            noteDuration = '8';
+          } else if (pattern.subdivision === 12) {
+            noteDuration = '8'; // Triplets use eighth note duration
+          } else if (pattern.subdivision === 16) {
+            noteDuration = '16';
+          } else if (pattern.subdivision === 24) {
+            noteDuration = '16'; // Sextuplets use sixteenth note duration
+          } else if (pattern.subdivision === 32) {
+            noteDuration = '32';
+          } else {
+            noteDuration = '16'; // Default to 16th notes
+          }
 
           for (let i = 0; i < notesPerBar; i++) {
             const globalIndex = barIndex * notesPerBar + i;
@@ -321,9 +375,42 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
           allNotes.push(fallbackNote);
         }
 
-        const voice = new VF.Voice({ num_beats: timeSignature[0], beat_value: timeSignature[1] });
+        // Calculate correct voice configuration based on note durations
+        // For 32nd notes, we need to account for the smaller duration
+        let voiceBeats = timeSignature[0];
+        let voiceBeatValue = timeSignature[1];
+        
+        // If we have 32nd notes, the voice needs to account for the smaller note values
+        // VexFlow uses ticks internally, so we need to ensure the voice configuration matches
+        if (pattern.subdivision === 32) {
+          // For 32nd notes, each note is 1/32 of a whole note
+          // In 4/4 time: 32 notes * (1/32) = 1 whole note = 4 beats
+          // Voice should still be num_beats: 4, beat_value: 4, but we need to ensure notes are properly formatted
+          // The issue might be that VexFlow expects the total ticks to match
+          // Let's use a more lenient approach
+          voiceBeats = timeSignature[0];
+          voiceBeatValue = timeSignature[1];
+        } else if (pattern.subdivision === 24) {
+          // Sextuplets - similar handling
+          voiceBeats = timeSignature[0];
+          voiceBeatValue = timeSignature[1];
+        }
+        
+        // Create voice with proper configuration
+        // VexFlow uses ticks internally - resolution defaults to 16384 if not specified
+        const voiceConfig: any = { 
+          num_beats: voiceBeats, 
+          beat_value: voiceBeatValue,
+        };
+        
+        // Add resolution if VexFlow supports it (helps with 32nd notes)
+        if (VF.RESOLUTION !== undefined) {
+          voiceConfig.resolution = VF.RESOLUTION;
+        }
+        
+        const voice = new VF.Voice(voiceConfig);
         voice.addTickables(allNotes);
-        voice.setStrict(false);
+        voice.setStrict(false); // Allow flexible timing
 
         // Format with available width (leave space for clef and time signature)
         // Increase format width for higher subdivisions
