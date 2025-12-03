@@ -38,8 +38,8 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
       while (attempts < maxAttempts) {
         attempts++;
         const randomPattern = generateRandomPattern(false, false);
-        // Set repeat to 2 bars for the landing page
-        randomPattern.repeat = 2;
+        // Set repeat to 1 bar for the landing page
+        randomPattern.repeat = 1;
         
         // Check if pattern has actual notes (not all rests)
         const drumPattern = randomPattern.drumPattern || '';
@@ -67,7 +67,7 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
         stickingPattern: 'R K L K',
         leftFoot: false,
         rightFoot: false,
-        repeat: 2,
+        repeat: 1,
         _expanded: true,
         _presetAccents: [0],
       };
@@ -174,12 +174,12 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
         stave.addTimeSignature(`${timeSignature[0]}/${timeSignature[1]}`);
         stave.setContext(context).draw();
 
-        // Build notes for 2 bars
+        // Build notes for 1 bar
         const allNotes: any[] = [];
         const allBeams: any[] = [];
         noteGroupsRef.current = [];
 
-        for (let barIndex = 0; barIndex < 2; barIndex++) {
+        for (let barIndex = 0; barIndex < 1; barIndex++) {
           const barNotes: any[] = [];
           const barBeams: any[] = [];
           const noteDuration = pattern.subdivision === 4 ? 'q' : pattern.subdivision === 8 ? '8' : '16';
@@ -226,8 +226,8 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
               stem_direction: 1, // Upward stems
             });
 
-            // Add accent if needed
-            if (accentIndices.includes(i)) {
+            // Add accent if needed (only on non-rest notes)
+            if (accentIndices.includes(i) && !isRest) {
               try {
                 const accent = new VF.Articulation('a>');
                 if (typeof accent.setYShift === 'function') {
@@ -321,7 +321,7 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
           allNotes.push(fallbackNote);
         }
 
-        const voice = new VF.Voice({ num_beats: 2 * timeSignature[0], beat_value: timeSignature[1] });
+        const voice = new VF.Voice({ num_beats: timeSignature[0], beat_value: timeSignature[1] });
         voice.addTickables(allNotes);
         voice.setStrict(false);
 
