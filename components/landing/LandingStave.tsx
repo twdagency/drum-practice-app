@@ -269,66 +269,69 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
           beam.setContext(context).draw();
         });
 
-        // Get note groups for highlighting and apply dark mode styling
-        const svgElement = staveRef.current!.querySelector('svg');
-        if (svgElement) {
-          // Apply dark mode styling to SVG
-          svgElement.style.backgroundColor = 'transparent';
-          
-          // Set all paths, lines, and text to white for dark mode
-          const allElements = svgElement.querySelectorAll('path, line, text, tspan, circle, ellipse, rect');
-          allElements.forEach((el) => {
-            const svgEl = el as SVGElement;
-            const currentFill = svgEl.getAttribute('fill');
-            const currentStroke = svgEl.getAttribute('stroke');
+          // Get note groups for highlighting and apply dark mode styling
+        // Use setTimeout to ensure rendering is complete
+        setTimeout(() => {
+          const svgElement = staveRef.current!.querySelector('svg');
+          if (svgElement) {
+            // Apply dark mode styling to SVG
+            svgElement.style.backgroundColor = 'transparent';
             
-            // Only change black/dark colors to white, preserve other colors
-            if (currentFill === '#000000' || currentFill === 'black' || currentFill === '#000') {
-              svgEl.setAttribute('fill', '#ffffff');
+            // Set all paths, lines, and text to white for dark mode
+            const allElements = svgElement.querySelectorAll('path, line, text, tspan, circle, ellipse, rect');
+            allElements.forEach((el) => {
+              const svgEl = el as SVGElement;
+              const currentFill = svgEl.getAttribute('fill');
+              const currentStroke = svgEl.getAttribute('stroke');
+              
+              // Only change black/dark colors to white, preserve other colors
+              if (currentFill === '#000000' || currentFill === 'black' || currentFill === '#000') {
+                svgEl.setAttribute('fill', '#ffffff');
+              }
+              if (currentStroke === '#000000' || currentStroke === 'black' || currentStroke === '#000') {
+                svgEl.setAttribute('stroke', '#ffffff');
+              }
+            });
+            
+            const groups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+            noteGroupsRef.current = groups;
+            if (onNotesReady) {
+              onNotesReady(groups);
             }
-            if (currentStroke === '#000000' || currentStroke === 'black' || currentStroke === '#000') {
-              svgEl.setAttribute('stroke', '#ffffff');
-            }
-          });
-          
-          const groups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
-          noteGroupsRef.current = groups;
-          if (onNotesReady) {
-            onNotesReady(groups);
-          }
 
-          // Align sticking annotations
-          setTimeout(() => {
-            const staveBBox = svgElement.querySelector('.vf-stave')?.getBBox();
-            if (staveBBox) {
-              const baseY = staveBBox.y + staveBBox.height + 30;
-              groups.forEach((noteGroup) => {
-                const annotation = noteGroup.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
-                if (annotation) {
-                  const noteBBox = noteGroup.getBBox();
-                  const circles = noteGroup.querySelectorAll('circle, ellipse');
-                  let noteX = noteBBox.x + (noteBBox.width / 2);
-                  
-                  if (circles.length > 0) {
-                    const notehead = circles[0] as SVGCircleElement | SVGEllipseElement;
-                    try {
-                      const cx = parseFloat(notehead.getAttribute('cx') || '0');
-                      if (cx > 0) {
-                        noteX = cx;
-                      }
-                    } catch (e) {}
+            // Align sticking annotations
+            setTimeout(() => {
+              const staveBBox = svgElement.querySelector('.vf-stave')?.getBBox();
+              if (staveBBox) {
+                const baseY = staveBBox.y + staveBBox.height + 30;
+                groups.forEach((noteGroup) => {
+                  const annotation = noteGroup.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
+                  if (annotation) {
+                    const noteBBox = noteGroup.getBBox();
+                    const circles = noteGroup.querySelectorAll('circle, ellipse');
+                    let noteX = noteBBox.x + (noteBBox.width / 2);
+                    
+                    if (circles.length > 0) {
+                      const notehead = circles[0] as SVGCircleElement | SVGEllipseElement;
+                      try {
+                        const cx = parseFloat(notehead.getAttribute('cx') || '0');
+                        if (cx > 0) {
+                          noteX = cx;
+                        }
+                      } catch (e) {}
+                    }
+                    
+                    annotation.setAttribute('x', noteX.toString());
+                    annotation.setAttribute('y', baseY.toString());
+                    annotation.setAttribute('text-anchor', 'middle');
+                    annotation.setAttribute('dominant-baseline', 'hanging');
+                    annotation.removeAttribute('transform');
                   }
-                  
-                  annotation.setAttribute('x', noteX.toString());
-                  annotation.setAttribute('y', baseY.toString());
-                  annotation.setAttribute('text-anchor', 'middle');
-                  annotation.setAttribute('dominant-baseline', 'hanging');
-                  annotation.removeAttribute('transform');
-                }
-              });
-            }
-          }, 100);
-        }
+                });
+              }
+            }, 100);
+          }
+        }, 150); // Delay to ensure rendering is complete
       } catch (error) {
         console.error('Error rendering VexFlow stave:', error);
       }
@@ -343,69 +346,115 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
 
   // Animate note highlighting
   useEffect(() => {
-    if (noteGroupsRef.current.length === 0) return;
+    let interval: NodeJS.Timeout | null = null;
+    let retryTimeout: NodeJS.Timeout | null = null;
 
-    // Filter out rest notes (they have 'b/4' key which shows as a rest symbol)
-    const nonRestNotes = noteGroupsRef.current.filter((group) => {
-      // Check if this is a rest note by looking for rest symbols
-      const hasRestSymbol = group.querySelector('path[data-name="rest"]') !== null;
-      return !hasRestSymbol;
-    });
+    // Orange highlight color matching the main app
+    const highlightColor = '#f97316'; // Orange
+    const highlightGlow = 'rgba(249, 115, 22, 0.6)';
 
-    if (nonRestNotes.length === 0) return;
-
-    const totalNotes = nonRestNotes.length;
-    let currentIndex = 0;
-
-    const highlightNote = (index: number) => {
-      // Reset all notes
-      noteGroupsRef.current.forEach((group) => {
-        const elements = group.querySelectorAll('path, circle, ellipse, rect, line');
-        elements.forEach((el) => {
-          const svgEl = el as SVGElement;
-          svgEl.style.transition = 'all 0.2s ease';
-          svgEl.style.fill = '';
-          svgEl.style.stroke = '';
-          svgEl.style.filter = '';
-          svgEl.style.transform = '';
-        });
-      });
-
-      // Highlight current note
-      const targetGroup = nonRestNotes[index];
-      if (targetGroup) {
-        const elements = targetGroup.querySelectorAll('path, circle, ellipse, rect, line');
-        elements.forEach((el) => {
-          const svgEl = el as SVGElement;
-          const isStem = el.tagName === 'line' || (el.tagName === 'path' && svgEl.getAttribute('fill') === 'none');
-          
-          if (isStem) {
-            svgEl.style.stroke = '#8b5cf6';
-            svgEl.style.strokeWidth = '2.5';
-          } else {
-            svgEl.style.fill = '#8b5cf6';
-            svgEl.style.filter = 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.8))';
-          }
-        });
+    const startAnimation = () => {
+      // Refresh note groups in case they weren't ready
+      const svgElement = staveRef.current?.querySelector('svg');
+      if (svgElement) {
+        const groups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+        noteGroupsRef.current = groups;
       }
 
-      currentIndex = (currentIndex + 1) % totalNotes;
+      if (noteGroupsRef.current.length === 0) {
+        // Retry after a short delay if notes aren't ready
+        retryTimeout = setTimeout(startAnimation, 200);
+        return;
+      }
+
+      // Filter out rest notes (they have 'b/4' key which shows as a rest symbol)
+      const nonRestNotes = noteGroupsRef.current.filter((group) => {
+        // Check if this is a rest note by looking for rest symbols
+        const hasRestSymbol = group.querySelector('path[data-name="rest"]') !== null;
+        return !hasRestSymbol;
+      });
+
+      if (nonRestNotes.length === 0) {
+        retryTimeout = setTimeout(startAnimation, 200);
+        return;
+      }
+
+      const totalNotes = nonRestNotes.length;
+      let currentIndex = 0;
+
+      const highlightNote = (index: number) => {
+        // Reset all notes and annotations
+        noteGroupsRef.current.forEach((group) => {
+          // Reset note elements
+          const elements = group.querySelectorAll('path, circle, ellipse, rect, line');
+          elements.forEach((el) => {
+            const svgEl = el as SVGElement;
+            svgEl.style.transition = 'all 0.2s ease';
+            svgEl.style.fill = '';
+            svgEl.style.stroke = '';
+            svgEl.style.filter = '';
+            svgEl.style.transform = '';
+          });
+
+          // Reset annotation text
+          const annotationText = group.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
+          if (annotationText) {
+            annotationText.style.fill = '';
+            annotationText.style.filter = '';
+          }
+        });
+
+        // Highlight current note
+        const targetGroup = nonRestNotes[index];
+        if (targetGroup) {
+          // Highlight note elements
+          const elements = targetGroup.querySelectorAll('path, circle, ellipse, rect, line');
+          elements.forEach((el) => {
+            const svgEl = el as SVGElement;
+            const isStem = el.tagName === 'line' || (el.tagName === 'path' && svgEl.getAttribute('fill') === 'none');
+            
+            if (isStem) {
+              svgEl.style.stroke = highlightColor;
+              svgEl.style.strokeWidth = '2.5';
+            } else {
+              svgEl.style.fill = highlightColor;
+              svgEl.style.filter = `drop-shadow(0 0 6px ${highlightGlow})`;
+            }
+          });
+
+          // Highlight annotation (sticking letter)
+          const annotationText = targetGroup.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
+          if (annotationText) {
+            annotationText.style.fill = highlightColor;
+            annotationText.style.filter = `drop-shadow(0 0 4px ${highlightGlow})`;
+          }
+        }
+
+        currentIndex = (currentIndex + 1) % totalNotes;
+      };
+
+      // Start animation
+      highlightNote(0);
+      interval = setInterval(() => {
+        highlightNote(currentIndex);
+        setActiveNoteIndex(currentIndex);
+      }, 600); // 100 BPM (600ms per note at 16th note subdivision)
     };
 
-    // Start animation
-    highlightNote(0);
-    const interval = setInterval(() => {
-      highlightNote(currentIndex);
-      setActiveNoteIndex(currentIndex);
-    }, 600); // 100 BPM (600ms per note at 16th note subdivision)
+    startAnimation();
 
     return () => {
-      clearInterval(interval);
+      if (interval) {
+        clearInterval(interval);
+      }
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [noteGroupsRef.current.length]);
+  }, [pattern]); // Restart when pattern changes
 
   return (
     <div className={`relative ${className}`}>
