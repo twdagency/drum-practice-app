@@ -21,7 +21,7 @@ const statistics: Statistic[] = [
   { value: '175+', label: 'Preset Patterns', Icon: Music2 },
   { value: '5', label: 'Export Formats', Icon: Download },
   { value: '2', label: 'Practice Modes', Icon: Piano }, // MIDI + Microphone
-  { value: '100%', label: 'Free & Open Source', Icon: Star },
+  { value: 'Free', label: 'Tier Available', Icon: Star },
 ];
 
 const testimonials: Testimonial[] = [

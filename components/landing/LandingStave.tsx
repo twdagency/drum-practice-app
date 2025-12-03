@@ -90,7 +90,11 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
 
         // Get container width for responsive sizing
         const containerWidth = staveRef.current!.parentElement?.clientWidth || 800;
-        const staveWidth = Math.max(400, containerWidth - 40); // Leave 20px margin on each side
+        // Increase width for higher subdivisions (sextuplets, 32nd notes, etc.)
+        const subdivision = pattern.subdivision || 16;
+        const widthMultiplier = subdivision >= 24 ? 1.5 : subdivision >= 16 ? 1.3 : 1.0;
+        const baseWidth = Math.max(500, containerWidth - 40); // Increased base width
+        const staveWidth = Math.floor(baseWidth * widthMultiplier);
         const staveHeight = 200;
 
         // Create renderer with proper size
@@ -254,14 +258,20 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
         voice.setStrict(false);
 
         // Format with available width (leave space for clef and time signature)
-        const formatWidth = Math.max(200, availableWidth - 120);
+        // Increase format width for higher subdivisions
+        const formatWidthMultiplier = subdivision >= 24 ? 1.4 : subdivision >= 16 ? 1.2 : 1.0;
+        const formatWidth = Math.max(300, Math.floor((availableWidth - 120) * formatWidthMultiplier));
         try {
           const formatter = new VF.Formatter().joinVoices([voice]).format([voice], formatWidth);
           voice.draw(context, stave);
         } catch (error) {
           console.error('Error formatting or drawing voice:', error);
           // Try drawing without formatting
-          voice.draw(context, stave);
+          try {
+            voice.draw(context, stave);
+          } catch (drawError) {
+            console.error('Error drawing voice:', drawError);
+          }
         }
 
         // Draw beams
@@ -270,41 +280,59 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
         });
 
           // Get note groups for highlighting and apply dark mode styling
-        // Use setTimeout to ensure rendering is complete
-        setTimeout(() => {
+        // Use multiple retries to ensure rendering is complete
+        let retryCount = 0;
+        const maxRetries = 5;
+        const applyStyling = () => {
           const svgElement = staveRef.current!.querySelector('svg');
-          if (svgElement) {
-            // Apply dark mode styling to SVG
-            svgElement.style.backgroundColor = 'transparent';
-            
-            // Set all paths, lines, and text to white for dark mode
-            const allElements = svgElement.querySelectorAll('path, line, text, tspan, circle, ellipse, rect');
-            allElements.forEach((el) => {
-              const svgEl = el as SVGElement;
-              const currentFill = svgEl.getAttribute('fill');
-              const currentStroke = svgEl.getAttribute('stroke');
-              
-              // Only change black/dark colors to white, preserve other colors
-              if (currentFill === '#000000' || currentFill === 'black' || currentFill === '#000') {
-                svgEl.setAttribute('fill', '#ffffff');
-              }
-              if (currentStroke === '#000000' || currentStroke === 'black' || currentStroke === '#000') {
-                svgEl.setAttribute('stroke', '#ffffff');
-              }
-            });
-            
-            const groups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
-            noteGroupsRef.current = groups;
-            if (onNotesReady) {
-              onNotesReady(groups);
+          if (!svgElement) {
+            if (retryCount < maxRetries) {
+              retryCount++;
+              setTimeout(applyStyling, 100);
             }
+            return;
+          }
 
-            // Align sticking annotations
-            setTimeout(() => {
+          // Check if notes are actually rendered
+          const groups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+          if (groups.length === 0 && retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(applyStyling, 150);
+            return;
+          }
+
+          // Apply dark mode styling to SVG
+          svgElement.style.backgroundColor = 'transparent';
+          
+          // Set all paths, lines, and text to white for dark mode
+          const allElements = svgElement.querySelectorAll('path, line, text, tspan, circle, ellipse, rect');
+          allElements.forEach((el) => {
+            const svgEl = el as SVGElement;
+            const currentFill = svgEl.getAttribute('fill');
+            const currentStroke = svgEl.getAttribute('stroke');
+            
+            // Only change black/dark colors to white, preserve other colors
+            if (currentFill === '#000000' || currentFill === 'black' || currentFill === '#000') {
+              svgEl.setAttribute('fill', '#ffffff');
+            }
+            if (currentStroke === '#000000' || currentStroke === 'black' || currentStroke === '#000') {
+              svgEl.setAttribute('stroke', '#ffffff');
+            }
+          });
+          
+          noteGroupsRef.current = groups;
+          if (onNotesReady) {
+            onNotesReady(groups);
+          }
+
+          // Align sticking annotations
+          setTimeout(() => {
+            const svgElement = staveRef.current!.querySelector('svg');
+            if (svgElement) {
               const staveBBox = svgElement.querySelector('.vf-stave')?.getBBox();
               if (staveBBox) {
                 const baseY = staveBBox.y + staveBBox.height + 30;
-                groups.forEach((noteGroup) => {
+                noteGroupsRef.current.forEach((noteGroup) => {
                   const annotation = noteGroup.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
                   if (annotation) {
                     const noteBBox = noteGroup.getBBox();
@@ -329,9 +357,12 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
                   }
                 });
               }
-            }, 100);
-          }
-        }, 150); // Delay to ensure rendering is complete
+            }
+          }, 200);
+        };
+        
+        // Start styling with initial delay
+        setTimeout(applyStyling, 100);
       } catch (error) {
         console.error('Error rendering VexFlow stave:', error);
       }
