@@ -156,10 +156,12 @@ export default function LandingPage() {
         featureCards.forEach((card: Element, index: number) => {
           if (card) {
             const cardEl = card as HTMLElement;
+            // Mark as GSAP-initialized
+            cardEl.setAttribute('data-gsap-initialized', 'true');
             // Set initial state
             gsap.set(cardEl, { opacity: 0, y: 60, scale: 0.95 });
             
-            gsap.to(cardEl, {
+            const animation = gsap.to(cardEl, {
               opacity: 1,
               y: 0,
               scale: 1,
@@ -173,8 +175,25 @@ export default function LandingPage() {
                 toggleActions: 'play none none none',
                 once: true,
                 markers: false,
+                onEnter: () => {
+                  cardEl.setAttribute('data-gsap-animated', 'true');
+                },
               },
             });
+            
+            // Fallback: if ScrollTrigger doesn't fire within 3 seconds, make visible
+            setTimeout(() => {
+              if (!cardEl.getAttribute('data-gsap-animated')) {
+                gsap.to(cardEl, {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  duration: 0.5,
+                  ease: 'power2.out',
+                });
+                cardEl.setAttribute('data-gsap-animated', 'true');
+              }
+            }, 3000);
           }
         });
       }
@@ -185,10 +204,12 @@ export default function LandingPage() {
         pricingCards.forEach((card: Element, index: number) => {
           if (card) {
             const cardEl = card as HTMLElement;
+            // Mark as GSAP-initialized
+            cardEl.setAttribute('data-gsap-initialized', 'true');
             // Set initial state
             gsap.set(cardEl, { opacity: 0, y: 80, scale: 0.9 });
             
-            gsap.to(cardEl, {
+            const animation = gsap.to(cardEl, {
               opacity: 1,
               y: 0,
               scale: 1,
@@ -202,8 +223,25 @@ export default function LandingPage() {
                 toggleActions: 'play none none none',
                 once: true,
                 markers: false,
+                onEnter: () => {
+                  cardEl.setAttribute('data-gsap-animated', 'true');
+                },
               },
             });
+            
+            // Fallback: if ScrollTrigger doesn't fire within 3 seconds, make visible
+            setTimeout(() => {
+              if (!cardEl.getAttribute('data-gsap-animated')) {
+                gsap.to(cardEl, {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  duration: 0.5,
+                  ease: 'power2.out',
+                });
+                cardEl.setAttribute('data-gsap-animated', 'true');
+              }
+            }, 3000);
           }
         });
       }

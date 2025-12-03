@@ -457,6 +457,37 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--dpgen-primary);
+}
+
+/* Fallback visibility for scroll-triggered animations */
+/* Elements should be visible by default, GSAP will hide them if needed */
+.feature-card,
+.pricing-card {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Only hide if GSAP has explicitly set opacity to 0 */
+.feature-card[data-gsap-initialized="true"],
+.pricing-card[data-gsap-initialized="true"] {
+  opacity: 0;
+}
+
+/* Ensure elements become visible after a timeout if GSAP doesn't load */
+@keyframes fadeInFallback {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Apply fallback animation after 2 seconds if GSAP hasn't animated */
+.feature-card:not([data-gsap-animated="true"]),
+.pricing-card:not([data-gsap-animated="true"]) {
+  animation: fadeInFallback 0.5s ease-out 2s forwards;
+}
   outline-offset: 2px;
   border-radius: 4px;
 }

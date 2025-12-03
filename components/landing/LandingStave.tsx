@@ -30,10 +30,53 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
 
   // Generate random pattern on mount
   useEffect(() => {
-    const randomPattern = generateRandomPattern(false, false);
-    // Set repeat to 2 bars for the landing page
-    randomPattern.repeat = 2;
-    setPattern(randomPattern);
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    // Try to generate a pattern with actual notes (not all rests)
+    const generateValidPattern = (): Pattern | null => {
+      while (attempts < maxAttempts) {
+        attempts++;
+        const randomPattern = generateRandomPattern(false, false);
+        // Set repeat to 2 bars for the landing page
+        randomPattern.repeat = 2;
+        
+        // Check if pattern has actual notes (not all rests)
+        const drumPattern = randomPattern.drumPattern || '';
+        const tokens = parseTokens(drumPattern);
+        const hasNotes = tokens.some(token => {
+          const normalized = token.replace(/\+/g, ' ').toUpperCase();
+          const voicingTokens = normalized.split(/\s+/).filter(Boolean);
+          return voicingTokens.length > 0 && !voicingTokens.every(t => t === '-' || t === 'R');
+        });
+        
+        if (hasNotes) {
+          console.log('[LandingStave] Generated valid pattern:', randomPattern);
+          return randomPattern;
+        }
+      }
+      
+      // Fallback: create a simple pattern with notes
+      console.warn('[LandingStave] Failed to generate valid pattern after', maxAttempts, 'attempts, using fallback');
+      return {
+        id: Date.now(),
+        timeSignature: '4/4',
+        subdivision: 16,
+        phrase: '1 2 3 4',
+        drumPattern: 'S K S K',
+        stickingPattern: 'R K L K',
+        leftFoot: false,
+        rightFoot: false,
+        repeat: 2,
+        _expanded: true,
+        _presetAccents: [0],
+      };
+    };
+    
+    const validPattern = generateValidPattern();
+    if (validPattern) {
+      setPattern(validPattern);
+    }
   }, []);
 
   // Render VexFlow stave
@@ -144,7 +187,10 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
           for (let i = 0; i < notesPerBar; i++) {
             const globalIndex = barIndex * notesPerBar + i;
             const drumToken = drumPatternTokens[i % drumPatternTokens.length];
-            const normalizedToken = drumToken.replace(/\+/g, ' ').toUpperCase();
+            if (!drumToken) {
+              console.warn(`[LandingStave] Empty drum token at index ${i}, using default`);
+            }
+            const normalizedToken = (drumToken || 'S').replace(/\+/g, ' ').toUpperCase();
             const voicingTokens = normalizedToken.split(/\s+/).filter(Boolean);
             const isRest = voicingTokens.length === 0 || voicingTokens.every((token) => token === '-' || token === 'R');
 
@@ -158,10 +204,18 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
                   if (normalizedToken === 'HT') normalizedToken = 'I';
                   else if (normalizedToken === 'MT') normalizedToken = 'M';
                   const position = keyMap[normalizedToken];
-                  if (position) keys.push(position);
+                  if (position) {
+                    keys.push(position);
+                  } else {
+                    console.warn(`[LandingStave] Unknown token "${token}", using snare as fallback`);
+                    keys.push(keyMap.S);
+                  }
                 }
               }
-              if (keys.length === 0) keys.push(keyMap.S);
+              if (keys.length === 0) {
+                console.warn(`[LandingStave] No valid keys for token "${drumToken}", using snare as fallback`);
+                keys.push(keyMap.S);
+              }
             }
 
             // Create note
@@ -188,9 +242,9 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
               }
             }
 
-            // Add sticking annotation
+            // Add sticking annotation (including K for kick drum)
             const stickingToken = stickingTokens[i % stickingTokens.length];
-            if (stickingToken && stickingToken !== '-' && stickingToken !== 'K') {
+            if (stickingToken && stickingToken !== '-') {
               try {
                 const annotation = new VF.Annotation(stickingToken);
                 annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 16, '600');
@@ -245,12 +299,26 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
           totalNotes: allNotes.length,
           totalBeams: allBeams.length,
           notesPerBar,
+          drumPatternTokens,
+          pattern: pattern.drumPattern,
         });
 
         // Create voice and format
         if (allNotes.length === 0) {
-          console.error('No notes created for pattern:', pattern);
-          return;
+          console.error('No notes created for pattern:', {
+            pattern,
+            drumPatternTokens,
+            notesPerBar,
+            voicingTokens: drumPatternTokens.map(t => t.split(/\s+/)),
+          });
+          // Try to create at least one note as fallback
+          const fallbackNote = new VF.StaveNote({
+            clef: 'percussion',
+            keys: [keyMap.S],
+            duration: noteDuration,
+            stem_direction: 1,
+          });
+          allNotes.push(fallbackNote);
         }
 
         const voice = new VF.Voice({ num_beats: 2 * timeSignature[0], beat_value: timeSignature[1] });
