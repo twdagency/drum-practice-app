@@ -170,16 +170,34 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
 
             // Add accent if needed
             if (accentIndices.includes(i)) {
-              note.addArticulation(0, new VF.Articulation('a>').setPosition(4).setYShift(25));
+              try {
+                const accent = new VF.Articulation('a>');
+                if (typeof accent.setYShift === 'function') {
+                  accent.setYShift(25); // Position below note
+                }
+                if (typeof accent.setPosition === 'function') {
+                  accent.setPosition(4); // Position 4 = below note
+                }
+                note.addModifier(accent, 0);
+              } catch (e) {
+                console.error('Failed to add accent:', e);
+              }
             }
 
             // Add sticking annotation
             const stickingToken = stickingTokens[i % stickingTokens.length];
             if (stickingToken && stickingToken !== '-' && stickingToken !== 'K') {
-              const annotation = new VF.Annotation(stickingToken);
-              annotation.setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM);
-              annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 16, '600');
-              note.addAnnotation(0, annotation);
+              try {
+                const annotation = new VF.Annotation(stickingToken);
+                annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 16, '600');
+                annotation.setJustification(1); // CENTER
+                annotation.setVerticalJustification(2); // BOTTOM
+                annotation.setYShift(140); // Position below stave
+                annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
+                note.addModifier(annotation, 0);
+              } catch (e) {
+                console.error('Failed to add annotation:', e);
+              }
             }
 
             barNotes.push(note);
