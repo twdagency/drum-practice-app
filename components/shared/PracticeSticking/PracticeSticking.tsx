@@ -37,7 +37,7 @@ export function PracticeSticking() {
     
     const subdivisions: number[] = [];
     patterns.forEach((pattern) => {
-      if (pattern._advancedMode && pattern._perBeatSubdivisions) {
+      if (pattern._advancedMode && pattern._perBeatSubdivisions && pattern._perBeatSubdivisions.length > 0) {
         // For advanced mode, use the minimum subdivision to ensure we don't break mid-beat
         subdivisions.push(Math.min(...pattern._perBeatSubdivisions));
       } else {
@@ -335,17 +335,37 @@ export function PracticeSticking() {
             noteOpacity = Math.max(0.1, 1 - fadeProgress * 0.9);
           }
         }
-        
-        // Get color based on sticking (or timing color if practice mode)
-        let color = highlightColors.default;
-        const upper = note.sticking.toUpperCase();
-        if (upper === 'R') color = highlightColors.right;
-        else if (upper === 'L') color = highlightColors.left;
-        else if (upper === 'K') color = highlightColors.default;
+
+        if (note.isRest) {
+          return (
+            <div
+              key={note.index}
+              data-note-index={note.index}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '60px',
+                minHeight: '60px',
+                padding: '0.75rem',
+                borderRadius: 'var(--dpgen-radius, 14px)',
+                backgroundColor: 'transparent',
+                opacity: 0.3 * noteOpacity,
+                border: `2px solid ${darkMode ? '#475569' : '#e2e8f0'}`,
+              }}
+            >
+              <span style={{ fontSize: '0.875rem', opacity: 0.5 }}>—</span>
+            </div>
+          );
+        }
+
+        const stickingText = formatSticking(note.sticking);
+        const highlightColor = highlightColors.default;
+        let displayColor = highlightColor;
         
         // Override with timing color if practice mode is active
         if (timingColor && practiceViewVisualFeedback) {
-          color = timingColor;
+          displayColor = timingColor;
         }
 
         return (
@@ -353,9 +373,7 @@ export function PracticeSticking() {
             key={note.index}
             data-note-index={note.index}
             style={{
-              position: 'relative',
               display: 'inline-flex',
-              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
               minWidth: '60px',
@@ -363,33 +381,31 @@ export function PracticeSticking() {
               padding: '0.75rem',
               borderRadius: 'var(--dpgen-radius, 14px)',
               backgroundColor: isHighlighted
-                ? color
+                ? displayColor
                 : 'transparent',
-              color: isHighlighted
-                ? '#ffffff'
-                : darkMode
-                ? '#cbd5e1'
-                : '#1e293b',
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
               transition: 'all 0.2s ease',
               transform: isHighlighted ? 'scale(1.1)' : 'scale(1)',
               boxShadow: isHighlighted
-                ? `0 0 20px ${color}40`
+                ? `0 0 20px ${displayColor}40`
                 : 'none',
               border: note.isAccent
-                ? `3px solid ${highlightColors.default}`
+                ? `3px solid ${displayColor}`
                 : isHighlighted
-                ? `2px solid ${color}`
+                ? `2px solid ${displayColor}`
                 : `2px solid ${darkMode ? '#475569' : '#e2e8f0'}`,
-              opacity: note.isRest ? 0.3 * noteOpacity : noteOpacity,
+              opacity: noteOpacity,
             }}
           >
-            {note.isRest ? (
-              <span style={{ fontSize: '0.875rem', opacity: 0.5 }}>—</span>
-            ) : (
-              <span>{formatSticking(note.sticking)}</span>
-            )}
+            <span
+              style={{
+                fontSize: '1.5rem',
+                fontWeight: note.isAccent ? 'bold' : 'normal',
+                color: isHighlighted ? '#ffffff' : (darkMode ? '#cbd5e1' : '#1e293b'),
+                textAlign: 'center',
+              }}
+            >
+              {stickingText}
+            </span>
             {timingText && (
               <span style={{ 
                 fontSize: '0.625rem', 

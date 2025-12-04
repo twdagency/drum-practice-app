@@ -7,6 +7,7 @@ interface Testimonial {
   quote: string;
   author: string;
   role: string;
+  location?: string;
   avatar?: string;
   rating?: number;
 }
@@ -29,24 +30,28 @@ const testimonials: Testimonial[] = [
     quote: 'DrumPractice transformed how I teach my students. The notation feature alone saves me hours every week, and my students love the instant feedback.',
     author: 'Sarah Martinez',
     role: 'Drum Instructor, Berklee College of Music',
+    location: 'Boston, MA',
     rating: 5,
   },
   {
     quote: 'I\'ve tried every practice app out there. This is the only one that actually helped me fix my timing issues. The microphone feedback is incredibly accurate.',
     author: 'James Chen',
     role: 'Intermediate Drummer',
+    location: 'London, UK',
     rating: 5,
   },
   {
     quote: 'The polyrhythm features are next level. I can finally practice complex patterns without hunting for sheet music. Improved my accuracy by 40% in just a month.',
     author: 'Marcus Williams',
     role: 'Professional Session Drummer',
+    location: 'Los Angeles, CA',
     rating: 5,
   },
   {
     quote: 'As a beginner, having access to professional notation and custom patterns has accelerated my learning. The progress tracking keeps me motivated every day.',
     author: 'Emma Davis',
     role: 'Drum Student',
+    location: 'Toronto, Canada',
     rating: 5,
   },
 ];
@@ -192,12 +197,15 @@ export function SocialProof() {
 
               {/* Author */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700/50 flex items-center justify-center text-slate-300 font-semibold text-sm group-hover:border-slate-600/50 transition-colors duration-500">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50 flex items-center justify-center text-slate-200 font-semibold text-sm group-hover:border-slate-500/50 transition-colors duration-500">
                   {testimonial.author.charAt(0)}
                 </div>
-                <div>
+                <div className="flex-1">
                   <div className="text-white font-medium text-sm group-hover:text-slate-100 transition-colors duration-500">{testimonial.author}</div>
                   <div className="text-slate-500 text-xs group-hover:text-slate-400 transition-colors duration-500">{testimonial.role}</div>
+                  {testimonial.location && (
+                    <div className="text-slate-600 text-xs mt-0.5 group-hover:text-slate-500 transition-colors duration-500">{testimonial.location}</div>
+                  )}
                 </div>
               </div>
 

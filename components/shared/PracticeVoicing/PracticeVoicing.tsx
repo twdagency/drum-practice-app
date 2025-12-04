@@ -51,7 +51,7 @@ export function PracticeVoicing() {
     
     const subdivisions: number[] = [];
     patterns.forEach((pattern) => {
-      if (pattern._advancedMode && pattern._perBeatSubdivisions) {
+      if (pattern._advancedMode && pattern._perBeatSubdivisions && pattern._perBeatSubdivisions.length > 0) {
         // For advanced mode, use the minimum subdivision to ensure we don't break mid-beat
         subdivisions.push(Math.min(...pattern._perBeatSubdivisions));
       } else {

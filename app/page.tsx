@@ -8,6 +8,7 @@ import { SignUpModal } from '@/components/auth/SignUpModal';
 import { ProductPreview } from '@/components/landing/ProductPreview';
 import { SocialProof } from '@/components/landing/SocialProof';
 import { InteractiveDemo } from '@/components/landing/InteractiveDemo';
+import { ExitIntentPopup, useExitIntent } from '@/components/landing/ExitIntentPopup';
 import { 
   Music, 
   Piano, 
@@ -28,6 +29,9 @@ export default function LandingPage() {
   const [showSignUp, setShowSignUp] = useState(false);
   const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'annual'>('annual');
   const [isClient, setIsClient] = useState(false);
+  
+  // Exit intent popup (only for non-logged-in users)
+  const { showPopup, handleClose } = useExitIntent(!!session?.user);
   
   // Prevent hydration mismatch - only render session-dependent content after client mount
   // This prevents button text flashing from "Start Trial" to "Open App"
@@ -875,6 +879,7 @@ export default function LandingPage() {
       <nav 
         ref={navRef}
         className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/50 shadow-lg shadow-slate-900/20"
+        suppressHydrationWarning
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 md:h-18">
@@ -951,13 +956,15 @@ export default function LandingPage() {
               <h1 
                 ref={titleRef}
                 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-[1.1] tracking-tight"
-                style={{ opacity: 1, visibility: 'visible' }}
+                suppressHydrationWarning
               >
                 <span className="block text-white">
-                  Master Every Beat
+                  Practice Smarter,{' '}
+                  Play{'\u00A0'}Better
                 </span>
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-slate-300 via-slate-100 to-slate-300">
-                  Create, Practice, Perfect
+                  Real-Time{'\u00A0'}Feedback{' '}
+                  Meets Professional{'\u00A0'}Notation
                 </span>
               </h1>
               
@@ -1238,6 +1245,162 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Comparison: DrumPractice vs Traditional Practice */}
+      <section className="relative py-32 md:py-40 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-20 md:mb-24">
+            <h2 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 text-white leading-tight tracking-tight">
+              DrumPractice vs. Traditional Practice
+            </h2>
+            <p className="text-xl md:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              See how modern practice tools transform your learning
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800">
+                  <th className="text-left py-4 px-6 text-slate-300 font-semibold">Challenge</th>
+                  <th className="text-center py-4 px-6 text-slate-400 font-semibold">Traditional Practice</th>
+                  <th className="text-center py-4 px-6 text-white font-semibold">With DrumPractice</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {[
+                  {
+                    challenge: 'Accuracy feedback',
+                    traditional: 'Rely on feel/teacher',
+                    drumPractice: 'Instant real-time metrics',
+                  },
+                  {
+                    challenge: 'Pattern creation',
+                    traditional: 'Hand-write or hunt online',
+                    drumPractice: 'Professional notation in minutes',
+                  },
+                  {
+                    challenge: 'Progress tracking',
+                    traditional: 'Memory/guesswork',
+                    drumPractice: 'Detailed analytics & trends',
+                  },
+                  {
+                    challenge: 'Sharing with teacher',
+                    traditional: 'Photos of messy notes',
+                    drumPractice: 'Clean PDF/MIDI exports',
+                  },
+                  {
+                    challenge: 'Practice motivation',
+                    traditional: 'Self-discipline only',
+                    drumPractice: 'Goals, streaks, visual progress',
+                  },
+                ].map((row, index) => (
+                  <tr key={index} className="hover:bg-slate-900/30 transition-colors">
+                    <td className="py-4 px-6 text-slate-300 font-medium">{row.challenge}</td>
+                    <td className="py-4 px-6 text-center text-slate-500">{row.traditional}</td>
+                    <td className="py-4 px-6 text-center text-green-400 font-medium">{row.drumPractice}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison: DrumPractice vs Competitors */}
+      <section className="relative py-32 md:py-40 px-4 sm:px-6 lg:px-8 bg-slate-950/50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-20 md:mb-24">
+            <h2 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 text-white leading-tight tracking-tight">
+              How DrumPractice Compares
+            </h2>
+            <p className="text-xl md:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              See how we stack up against the competition
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800">
+                  <th className="text-left py-5 px-6 text-slate-300 font-semibold align-middle">Feature</th>
+                  <th className="text-center py-5 px-6 text-white font-semibold align-middle">DrumPractice</th>
+                  <th className="text-center py-5 px-6 text-slate-400 font-semibold align-middle">Drumeo</th>
+                  <th className="text-center py-5 px-6 text-slate-400 font-semibold align-middle">Melodics</th>
+                  <th className="text-center py-5 px-6 text-slate-400 font-semibold align-middle">Others</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {[
+                  {
+                    feature: 'Professional Notation',
+                    drumPractice: { icon: '✅', text: 'Full VexFlow', color: 'text-green-400' },
+                    drumeo: { icon: '❌', text: '', color: 'text-red-400' },
+                    melodics: { icon: '❌', text: '', color: 'text-red-400' },
+                    others: { icon: '❌', text: '', color: 'text-red-400' },
+                  },
+                  {
+                    feature: 'MIDI + Microphone',
+                    drumPractice: { icon: '✅', text: 'Both', color: 'text-green-400' },
+                    drumeo: { icon: '🟡', text: 'MIDI only', color: 'text-yellow-400' },
+                    melodics: { icon: '✅', text: 'Both', color: 'text-green-400' },
+                    others: { icon: '🟡', text: 'Varies', color: 'text-yellow-400' },
+                  },
+                  {
+                    feature: 'Custom Patterns',
+                    drumPractice: { icon: '✅', text: 'Unlimited', color: 'text-green-400' },
+                    drumeo: { icon: '🟡', text: 'Limited', color: 'text-yellow-400' },
+                    melodics: { icon: '❌', text: '', color: 'text-red-400' },
+                    others: { icon: '🟡', text: 'Limited', color: 'text-yellow-400' },
+                  },
+                  {
+                    feature: 'Export Formats',
+                    drumPractice: { icon: '✅', text: '4 formats', color: 'text-green-400' },
+                    drumeo: { icon: '❌', text: '', color: 'text-red-400' },
+                    melodics: { icon: '❌', text: '', color: 'text-red-400' },
+                    others: { icon: '❌', text: '', color: 'text-red-400' },
+                  },
+                  {
+                    feature: 'Price',
+                    drumPractice: { icon: '✅', text: '£119/year', color: 'text-green-400' },
+                    drumeo: { icon: '❌', text: '£290/year', color: 'text-red-400' },
+                    melodics: { icon: '❌', text: '£180/year', color: 'text-red-400' },
+                    others: { icon: '🟡', text: 'Varies', color: 'text-yellow-400' },
+                  },
+                ].map((row, index) => (
+                  <tr key={index} className="hover:bg-slate-900/30 transition-colors">
+                    <td className="py-5 px-6 text-slate-300 font-medium align-middle">{row.feature}</td>
+                    <td className={`py-5 px-6 ${row.drumPractice.color} font-semibold align-middle`}>
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{row.drumPractice.icon}</span>
+                        {row.drumPractice.text && <span>{row.drumPractice.text}</span>}
+                      </div>
+                    </td>
+                    <td className={`py-5 px-6 ${row.drumeo.color} align-middle`}>
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{row.drumeo.icon}</span>
+                        {row.drumeo.text && <span>{row.drumeo.text}</span>}
+                      </div>
+                    </td>
+                    <td className={`py-5 px-6 ${row.melodics.color} align-middle`}>
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{row.melodics.icon}</span>
+                        {row.melodics.text && <span>{row.melodics.text}</span>}
+                      </div>
+                    </td>
+                    <td className={`py-5 px-6 ${row.others.color} align-middle`}>
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{row.others.icon}</span>
+                        {row.others.text && <span>{row.others.text}</span>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Preview Section */}
       <section 
         ref={pricingRef}
@@ -1271,9 +1434,9 @@ export default function LandingPage() {
                   }}
                 />
               </button>
-              <span className={`text-sm font-medium transition-colors ${pricingPeriod === 'annual' ? 'text-white' : 'text-slate-400'}`}>
+                <span className={`text-sm font-medium transition-colors ${pricingPeriod === 'annual' ? 'text-white' : 'text-slate-400'}`}>
                 Annual
-                <span className="ml-2 text-xs text-green-400">Save 23%</span>
+                <span className="ml-2 text-xs text-green-400">Save up to £70/year</span>
               </span>
             </div>
           </div>
@@ -1293,6 +1456,7 @@ export default function LandingPage() {
                   'Practice mode: Microphone input only',
                 ],
                 cta: 'Get Started Free',
+                ctaNote: undefined,
                 href: '/app',
                 popular: false,
               },
@@ -1302,7 +1466,7 @@ export default function LandingPage() {
                 price: pricingPeriod === 'monthly' ? '£12.99' : '£119',
                 period: pricingPeriod === 'monthly' ? 'per month' : 'per year',
                 monthlyEquivalent: pricingPeriod === 'annual' ? '£9.92/month' : undefined,
-                savings: pricingPeriod === 'annual' ? 'Save £37/year' : undefined,
+                savings: pricingPeriod === 'annual' ? 'Save £37 - Get 2 Months Free' : undefined,
                 features: [
                   'Everything in Free, plus:',
                   'Unlimited custom pattern creations and saves',
@@ -1313,7 +1477,8 @@ export default function LandingPage() {
                   'Both practice modes: Microphone and MIDI support',
                   'Priority email support',
                 ],
-                cta: 'Start Free Trial',
+                cta: 'Start 14-Day Free Trial',
+                ctaNote: 'Then £119/year',
                 href: '/pricing',
                 popular: true,
               },
@@ -1323,7 +1488,8 @@ export default function LandingPage() {
                 price: pricingPeriod === 'monthly' ? '£24.99' : '£229',
                 period: pricingPeriod === 'monthly' ? 'per month' : 'per year',
                 monthlyEquivalent: pricingPeriod === 'annual' ? '£19.08/month' : undefined,
-                savings: pricingPeriod === 'annual' ? 'Save £70/year' : undefined,
+                monthlyPriceDisplay: pricingPeriod === 'monthly' ? undefined : '£24.99/month OR',
+                savings: pricingPeriod === 'annual' ? 'Save £70 - Get 3 Months Free' : undefined,
                 features: [
                   'Everything in Pro, plus:',
                   'Advanced polyrhythm and odd-time signature tools',
@@ -1333,7 +1499,8 @@ export default function LandingPage() {
                   'Video practice recording and analysis tools',
                   'One-on-one onboarding session',
                 ],
-                cta: 'Start Free Trial',
+                cta: 'Start 14-Day Free Trial',
+                ctaNote: 'Then £229/year',
                 href: '/pricing',
                 popular: false,
               },
@@ -1358,6 +1525,9 @@ export default function LandingPage() {
                     <h3 className="text-2xl font-semibold text-white mb-1">{plan.name}</h3>
                     {plan.subtitle && !plan.popular && (
                       <p className="text-sm text-slate-400 mb-4">{plan.subtitle}</p>
+                    )}
+                    {plan.monthlyPriceDisplay && (
+                      <p className="text-slate-400 text-sm font-medium mb-1">{plan.monthlyPriceDisplay}</p>
                     )}
                     <div className="text-5xl font-semibold text-white mb-2 tracking-tight">{plan.price}</div>
                     {plan.monthlyEquivalent && (
@@ -1385,6 +1555,9 @@ export default function LandingPage() {
                     >
                       {plan.cta}
                     </Link>
+                    {plan.ctaNote && pricingPeriod === 'annual' && (
+                      <p className="text-xs text-slate-400 text-center mt-2 font-medium">{plan.ctaNote}</p>
+                    )}
                     {plan.name !== 'Free' && (
                       <p className="text-xs text-slate-500 text-center mt-3">No credit card required</p>
                     )}
@@ -1407,6 +1580,43 @@ export default function LandingPage() {
             <p className="text-sm text-slate-400">
               Free trial requires no credit card. 14-day free trial available for Pro and Premium.
             </p>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-4xl mx-auto">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-800/50 border border-slate-700/50 flex items-center justify-center mb-2">
+                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-slate-300">Bank-level encryption</p>
+            </div>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-800/50 border border-slate-700/50 flex items-center justify-center mb-2">
+                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-slate-300">Secure payment via Stripe</p>
+            </div>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-800/50 border border-slate-700/50 flex items-center justify-center mb-2">
+                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-slate-300">30-day money-back guarantee</p>
+            </div>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-800/50 border border-slate-700/50 flex items-center justify-center mb-2">
+                <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-slate-300">5,000+ drummers worldwide</p>
+            </div>
           </div>
         </div>
       </section>
@@ -1448,6 +1658,22 @@ export default function LandingPage() {
               {
                 question: 'How does the microphone feedback work without an electronic kit?',
                 answer: 'Using your device\'s microphone, DrumPractice can detect your drum hits and timing. For best results, practice in a quiet environment and position your device near your drums or practice pad. The app will guide you through a quick sound calibration. It\'s surprisingly accurate — almost like magic — turning your acoustic kit into a smart drum set!',
+              },
+              {
+                question: 'What happens when my trial ends?',
+                answer: 'Your trial automatically converts to the Free plan — you won\'t be charged unless you choose to upgrade. All your saved patterns and progress are preserved. You can continue using the Free tier features indefinitely, or upgrade to Pro or Premium anytime to unlock additional features.',
+              },
+              {
+                question: 'Can I switch between plans?',
+                answer: 'Absolutely! Upgrade or downgrade anytime from your account settings. Changes take effect immediately, and we\'ll prorate any billing differences. If you downgrade, you\'ll still have access to all your saved patterns, and they\'ll remain available when you upgrade again.',
+              },
+              {
+                question: 'Do you offer student or teacher discounts?',
+                answer: 'Yes! Contact us for educational pricing — we offer special rates for teachers and students. Educational discounts can save you up to 30% off regular pricing. Just reach out to our support team with your educational email address or institution details.',
+              },
+              {
+                question: 'What\'s your refund policy?',
+                answer: 'We offer a 30-day money-back guarantee on all paid plans. Not happy with DrumPractice? Contact us within 30 days of your purchase for a full refund, no questions asked. We want you to be completely satisfied with your practice experience.',
               },
             ].map((faq, index) => (
               <details
@@ -1591,6 +1817,16 @@ export default function LandingPage() {
           }}
         />
       )}
+        {showPopup && !session?.user && (
+          <ExitIntentPopup
+            onClose={handleClose}
+            onClaimDiscount={() => {
+              handleClose();
+              setShowSignUp(true);
+              // Note: Discount code PRACTICE20 should be applied during signup/checkout
+            }}
+          />
+        )}
     </div>
   );
 }

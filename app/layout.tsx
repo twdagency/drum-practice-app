@@ -9,7 +9,7 @@ import { ClarityLoader } from '@/components/ClarityLoader'
 
 export const metadata: Metadata = {
   title: 'DrumPractice – Create Drum Patterns, Get Instant Feedback & Improve Fast',
-  description: 'DrumPractice.co.uk is a modern drum practice platform for beginners and intermediates. Create custom drum patterns with professional notation, use your e-drum or acoustic kit for instant feedback via microphone, and track your progress. Start a free trial and level up your drumming!',
+  description: 'Professional drum practice tool with real-time feedback, MIDI support, and industry-standard notation. Join 5,000+ drummers. 14-day free trial, no credit card required.',
   icons: {
     icon: '/favicon.svg',
   },

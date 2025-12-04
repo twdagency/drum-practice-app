@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Music } from 'lucide-react';
 import { LandingStave } from './LandingStave';
+import { LandingPatternGenerator } from './LandingPatternGenerator';
+import { Pattern } from '@/types/pattern';
 
 export function ProductPreview() {
+  const [pattern, setPattern] = useState<Pattern | null>(null);
   const mockupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,10 +79,15 @@ export function ProductPreview() {
               <div className="w-1.5 h-1.5 bg-slate-600 rounded-full"></div>
             </div>
 
+            {/* Interactive Pattern Generator */}
+            <div className="p-4 sm:p-6 border-b border-slate-700/30">
+              <LandingPatternGenerator onPatternChange={setPattern} />
+            </div>
+
             {/* Notation Preview Area - Real VexFlow stave with animated highlighting */}
-            <div className="p-6 sm:p-8 md:p-10 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 min-h-[300px] sm:min-h-[350px] md:min-h-[400px] flex items-center justify-center relative overflow-hidden">
-              <div className="relative z-10 w-full max-w-4xl">
-                <LandingStave className="w-full" />
+            <div className="p-4 sm:p-6 md:p-8 lg:p-10 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 min-h-[300px] sm:min-h-[350px] md:min-h-[400px] flex items-center justify-center relative overflow-x-auto overflow-y-hidden">
+              <div className="relative z-10 w-full max-w-4xl min-w-0">
+                <LandingStave className="w-full" pattern={pattern} />
               </div>
             </div>
           </div>
