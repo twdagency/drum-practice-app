@@ -79,6 +79,7 @@ const saveUISettings = (settings: Partial<UISlice>) => {
 
 export type ScrollMode = 'horizontal' | 'vertical' | 'none';
 export type ScrollSpeed = 'slow' | 'medium' | 'fast';
+export type NotationViewMode = 'notation' | 'sticking' | 'voicing';
 
 export interface UISlice {
   // State
@@ -98,6 +99,10 @@ export interface UISlice {
   polyrhythmClickMode: 'both' | 'right-only' | 'left-only' | 'metronome-only' | 'none'; // Which clicks to play for polyrhythms
   practicePadMode: boolean; // When enabled, voicing pattern always displays as "S"
   patternViewMode: 'list' | 'grid' | 'compact'; // Pattern list view mode
+  notationViewMode: NotationViewMode; // View mode for notation area: 'notation', 'sticking', or 'voicing'
+  practiceViewNotesAhead: number; // Number of notes to show ahead in practice views (0 = show all)
+  practiceViewVisualFeedback: boolean; // Show accuracy colors in practice views (sticking/voicing)
+  practiceViewShowTimingErrors: boolean; // Show timing measurements in practice views (sticking/voicing)
   highlightColors: {
     default: string; // Default/orange color for both hands
     right: string; // Blue color for right hand
@@ -122,6 +127,10 @@ export interface UISlice {
   setPolyrhythmClickMode: (mode: 'both' | 'right-only' | 'left-only' | 'metronome-only' | 'none') => void;
   setPracticePadMode: (enabled: boolean) => void;
   setPatternViewMode: (mode: 'list' | 'grid' | 'compact') => void;
+  setNotationViewMode: (mode: NotationViewMode) => void;
+  setPracticeViewNotesAhead: (count: number) => void;
+  setPracticeViewVisualFeedback: (enabled: boolean) => void;
+  setPracticeViewShowTimingErrors: (enabled: boolean) => void;
   setHighlightColor: (type: 'default' | 'right' | 'left', color: string) => void;
 }
 
@@ -147,6 +156,10 @@ export const createUISlice: StateCreator<UISlice> = (set) => {
     polyrhythmClickMode: 'both', // Default: play clicks for both hands
     practicePadMode: false,
     patternViewMode: 'list', // Default to list view
+    notationViewMode: (persisted?.notationViewMode as NotationViewMode) || 'notation', // Default to notation view
+    practiceViewNotesAhead: persisted?.practiceViewNotesAhead ?? 0, // 0 = show all, or number of notes ahead to show clearly
+    practiceViewVisualFeedback: persisted?.practiceViewVisualFeedback ?? true, // Default to showing visual feedback
+    practiceViewShowTimingErrors: persisted?.practiceViewShowTimingErrors ?? true, // Default to showing timing errors
     highlightColors: {
       default: '#f97316', // Orange
       right: '#3b82f6', // Blue
@@ -243,6 +256,23 @@ export const createUISlice: StateCreator<UISlice> = (set) => {
   setPatternViewMode: (mode) => {
     set({ patternViewMode: mode });
     saveUISettings({ patternViewMode: mode });
+  },
+  setNotationViewMode: (mode) => {
+    set({ notationViewMode: mode });
+    saveUISettings({ notationViewMode: mode });
+  },
+  setPracticeViewNotesAhead: (count) => {
+    const clampedCount = Math.max(0, Math.min(50, count)); // Clamp between 0-50
+    set({ practiceViewNotesAhead: clampedCount });
+    saveUISettings({ practiceViewNotesAhead: clampedCount });
+  },
+  setPracticeViewVisualFeedback: (enabled) => {
+    set({ practiceViewVisualFeedback: enabled });
+    saveUISettings({ practiceViewVisualFeedback: enabled });
+  },
+  setPracticeViewShowTimingErrors: (enabled) => {
+    set({ practiceViewShowTimingErrors: enabled });
+    saveUISettings({ practiceViewShowTimingErrors: enabled });
   },
   setHighlightColor: (type, color) => {
     set((state) => {

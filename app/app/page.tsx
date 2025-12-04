@@ -10,6 +10,8 @@ import { PolyrhythmList } from '@/components/PolyrhythmList/PolyrhythmList';
 import { Stave } from '@/components/Stave/Stave';
 import { VisualMetronome } from '@/components/VisualMetronome/VisualMetronome';
 import { PolyrhythmShapes } from '@/components/PolyrhythmShapes/PolyrhythmShapes';
+import { PracticeSticking } from '@/components/shared/PracticeSticking/PracticeSticking';
+import { PracticeVoicing } from '@/components/shared/PracticeVoicing/PracticeVoicing';
 import { useAudioLoader } from '@/hooks/useAudioLoader';
 import { usePlayback } from '@/hooks/usePlayback';
 import { useMIDIPractice } from '@/hooks/useMIDIPractice';
@@ -62,6 +64,14 @@ export default function App() {
   const addPattern = useStore((state) => state.addPattern);
   const setPatterns = useStore((state) => state.setPatterns);
   const setBPM = useStore((state) => state.setBPM);
+  const notationViewMode = useStore((state) => state.notationViewMode);
+  const setNotationViewMode = useStore((state) => state.setNotationViewMode);
+  const practiceViewNotesAhead = useStore((state) => state.practiceViewNotesAhead);
+  const setPracticeViewNotesAhead = useStore((state) => state.setPracticeViewNotesAhead);
+  const practiceViewVisualFeedback = useStore((state) => state.practiceViewVisualFeedback);
+  const setPracticeViewVisualFeedback = useStore((state) => state.setPracticeViewVisualFeedback);
+  const practiceViewShowTimingErrors = useStore((state) => state.practiceViewShowTimingErrors);
+  const setPracticeViewShowTimingErrors = useStore((state) => state.setPracticeViewShowTimingErrors);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Load persisted UI settings synchronously on mount (client-side only)
@@ -330,10 +340,81 @@ export default function App() {
           
           {/* Stave Component */}
           <div className="lg:col-span-2 dpgen-stave-column" style={{ minWidth: 0, overflow: 'hidden', width: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-            <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-              <h2 className="text-2xl font-semibold mb-4">Music Notation</h2>
+            <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, borderRadius: 'var(--dpgen-radius, 14px)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h2 className="text-2xl font-semibold">Music Notation</h2>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginRight: '0.5rem' }}>
+                    View:
+                  </label>
+                  <select
+                    value={notationViewMode}
+                    onChange={(e) => setNotationViewMode(e.target.value as 'notation' | 'sticking' | 'voicing')}
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '6px',
+                      border: `1px solid ${darkMode ? '#475569' : '#e2e8f0'}`,
+                      backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+                      color: darkMode ? '#f1f5f9' : '#1e293b',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="notation">Notation</option>
+                    <option value="sticking">Practice Sticking</option>
+                    <option value="voicing">Practice Voicing</option>
+                  </select>
+                  {(notationViewMode === 'sticking' || notationViewMode === 'voicing') && (
+                    <>
+                      <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginLeft: '0.5rem', marginRight: '0.5rem' }}>
+                        Notes Ahead:
+                      </label>
+                      <select
+                        value={practiceViewNotesAhead}
+                        onChange={(e) => setPracticeViewNotesAhead(Number(e.target.value))}
+                        style={{
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '6px',
+                          border: `1px solid ${darkMode ? '#475569' : '#e2e8f0'}`,
+                          backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          fontSize: '0.875rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <option value="0">All</option>
+                        <option value="8">8 notes</option>
+                        <option value="12">12 notes</option>
+                        <option value="16">16 notes</option>
+                        <option value="24">24 notes</option>
+                        <option value="32">32 notes</option>
+                      </select>
+                      <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginLeft: '1rem', marginRight: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={practiceViewVisualFeedback}
+                          onChange={(e) => setPracticeViewVisualFeedback(e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        Accuracy Colors
+                      </label>
+                      <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginLeft: '0.5rem', marginRight: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={practiceViewShowTimingErrors}
+                          onChange={(e) => setPracticeViewShowTimingErrors(e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        Timing (ms)
+                      </label>
+                    </>
+                  )}
+                </div>
+              </div>
               <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                <Stave />
+                {notationViewMode === 'notation' && <Stave />}
+                {notationViewMode === 'sticking' && <PracticeSticking />}
+                {notationViewMode === 'voicing' && <PracticeVoicing />}
                 {settingsLoaded && <VisualMetronome />}
                 {settingsLoaded && <PolyrhythmShapes />}
               </div>
