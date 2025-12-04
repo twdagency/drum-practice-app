@@ -68,15 +68,19 @@ export function StatisticsSection() {
           },
         });
 
-        // Card entrance animation
-        gsap.from(card as HTMLElement, {
+        // Keep visible - no opacity animation
+        const cardEl = card as HTMLElement;
+        cardEl.style.opacity = '1';
+        cardEl.style.visibility = 'visible';
+        
+        // Card entrance animation - only position, no opacity
+        gsap.from(cardEl, {
           scrollTrigger: {
-            trigger: card as HTMLElement,
+            trigger: cardEl,
             start: 'top 85%',
             toggleActions: 'play none none reverse',
           },
           y: 40,
-          opacity: 0,
           duration: 0.6,
           ease: 'power2.out',
           delay: index * 0.1,

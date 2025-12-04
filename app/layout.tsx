@@ -8,10 +8,20 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { ClarityLoader } from '@/components/ClarityLoader'
 
 export const metadata: Metadata = {
-  title: 'Drum Practice Generator',
-  description: 'Generate and practice drumming patterns with real-time feedback',
+  title: 'DrumPractice – Create Drum Patterns, Get Instant Feedback & Improve Fast',
+  description: 'DrumPractice.co.uk is a modern drum practice platform for beginners and intermediates. Create custom drum patterns with professional notation, use your e-drum or acoustic kit for instant feedback via microphone, and track your progress. Start a free trial and level up your drumming!',
   icons: {
     icon: '/favicon.svg',
+  },
+  openGraph: {
+    title: 'DrumPractice – Create Drum Patterns, Get Instant Feedback & Improve Fast',
+    description: 'DrumPractice.co.uk is a modern drum practice platform for beginners and intermediates. Create custom drum patterns with professional notation, use your e-drum or acoustic kit for instant feedback via microphone, and track your progress.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DrumPractice – Create Drum Patterns, Get Instant Feedback & Improve Fast',
+    description: 'DrumPractice.co.uk is a modern drum practice platform for beginners and intermediates. Create custom drum patterns with professional notation.',
   },
 }
 
@@ -37,6 +47,39 @@ export default function RootLayout({
           integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ=="
           crossOrigin="anonymous"
           referrerPolicy="no-referrer"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Force all elements visible immediately - runs before React
+              (function() {
+                function forceVisible() {
+                  const selectors = [
+                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                    'p', 'section', 'nav', 'header',
+                    '[class*="ProductPreview"]',
+                    '[class*="SocialProof"]',
+                    '[class*="InteractiveDemo"]',
+                    '.feature-card', '.pricing-card', '.stat-card', '.testimonial-card'
+                  ];
+                  selectors.forEach(sel => {
+                    try {
+                      document.querySelectorAll(sel).forEach(el => {
+                        if (el) {
+                          el.style.setProperty('opacity', '1', 'important');
+                          el.style.setProperty('visibility', 'visible', 'important');
+                        }
+                      });
+                    } catch(e) {}
+                  });
+                }
+                // Run immediately and repeatedly
+                forceVisible();
+                document.addEventListener('DOMContentLoaded', forceVisible);
+                setInterval(forceVisible, 100);
+              })();
+            `,
+          }}
         />
       </head>
       <body>

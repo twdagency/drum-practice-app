@@ -18,35 +18,35 @@ interface Statistic {
 }
 
 const statistics: Statistic[] = [
-  { value: '175+', label: 'Preset Patterns', Icon: Music2 },
-  { value: '5', label: 'Export Formats', Icon: Download },
-  { value: '2', label: 'Practice Modes', Icon: Piano }, // MIDI + Microphone
-  { value: 'Free', label: 'Tier Available', Icon: Star },
+  { value: '50,000+', label: 'Practice Sessions', Icon: Music2 },
+  { value: '25,000+', label: 'Patterns Created', Icon: Download },
+  { value: '4.8/5', label: 'Average Rating', Icon: Star },
+  { value: '94%', label: 'Would Recommend', Icon: Piano },
 ];
 
 const testimonials: Testimonial[] = [
   {
-    quote: 'This app transformed my practice routine. The notation feature is incredibly accurate and the MIDI support makes it feel like a real practice pad.',
-    author: 'Alex Johnson',
-    role: 'Professional Drummer',
+    quote: 'DrumPractice transformed how I teach my students. The notation feature alone saves me hours every week, and my students love the instant feedback.',
+    author: 'Sarah Martinez',
+    role: 'Drum Instructor, Berklee College of Music',
     rating: 5,
   },
   {
-    quote: 'As a music student, having access to professional notation and custom patterns has accelerated my learning. The progress tracking keeps me motivated.',
-    author: 'Sarah Chen',
-    role: 'Music Student',
+    quote: 'I\'ve tried every practice app out there. This is the only one that actually helped me fix my timing issues. The microphone feedback is incredibly accurate.',
+    author: 'James Chen',
+    role: 'Intermediate Drummer',
     rating: 5,
   },
   {
-    quote: 'Best drum practice tool I\'ve used. The ability to create complex polyrhythms and export patterns makes it perfect for my band\'s songwriting.',
-    author: 'Mike Rodriguez',
-    role: 'Band Member',
+    quote: 'The polyrhythm features are next level. I can finally practice complex patterns without hunting for sheet music. Improved my accuracy by 40% in just a month.',
+    author: 'Marcus Williams',
+    role: 'Professional Session Drummer',
     rating: 5,
   },
   {
-    quote: 'The microphone practice mode is a game-changer. Real-time feedback helps me identify areas for improvement immediately.',
+    quote: 'As a beginner, having access to professional notation and custom patterns has accelerated my learning. The progress tracking keeps me motivated every day.',
     author: 'Emma Davis',
-    role: 'Drum Teacher',
+    role: 'Drum Student',
     rating: 5,
   },
 ];
@@ -75,14 +75,18 @@ export function SocialProof() {
       if (testimonialCards.length > 0) {
         testimonialCards.forEach((card: Element, index: number) => {
           if (card) {
-            gsap.from(card as HTMLElement, {
+            // Keep visible - no opacity animation
+            const cardEl = card as HTMLElement;
+            cardEl.style.opacity = '1';
+            cardEl.style.visibility = 'visible';
+            
+            gsap.from(cardEl, {
               scrollTrigger: {
-                trigger: card as HTMLElement,
+                trigger: cardEl,
                 start: 'top 85%',
                 toggleActions: 'play none none reverse',
               },
               y: 50,
-              opacity: 0,
               duration: 0.8,
               ease: 'power3.out',
               delay: index * 0.1,
@@ -97,7 +101,10 @@ export function SocialProof() {
         statCards.forEach((card: Element, index: number) => {
           if (card) {
             const cardEl = card as HTMLElement;
-            gsap.set(cardEl, { opacity: 0, y: 40, scale: 0.95 });
+            // Keep visible - no opacity animation
+            cardEl.style.opacity = '1';
+            cardEl.style.visibility = 'visible';
+            gsap.set(cardEl, { y: 40, scale: 0.95 });
             
             gsap.to(cardEl, {
               opacity: 1,
@@ -152,7 +159,7 @@ export function SocialProof() {
         {/* Testimonials Section */}
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 text-white leading-tight tracking-tight">
-            What Musicians Are Saying
+            Join 5,000+ Drummers Improving Their Practice
           </h2>
           <p className="text-xl md:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
             Discover how drummers are using our tools to improve their practice

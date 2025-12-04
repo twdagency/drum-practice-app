@@ -10,56 +10,37 @@ export function ProductPreview() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    let ctx: gsap.Context | null = null;
-
-    // Dynamically import GSAP for animations
-    Promise.all([
-      // @ts-ignore
-      import('gsap'),
-      // @ts-ignore
-      import('gsap/ScrollTrigger'),
-    ]).then(([gsapModule, scrollTriggerModule]) => {
-      const gsap = gsapModule.gsap;
-      const ScrollTrigger = scrollTriggerModule.ScrollTrigger;
-      gsap.registerPlugin(ScrollTrigger);
-
-      if (!mockupRef.current) return;
-
-      ctx = gsap.context(() => {
-        const mockup = mockupRef.current;
-        if (!mockup) return;
-
-        // Entrance animation
-        gsap.from(mockup, {
-          x: 100,
-          opacity: 0,
-          duration: 1.2,
-          ease: 'power3.out',
-          delay: 0.5,
-        });
-      });
-
-      // Parallax effect on scroll
+    // Completely disable GSAP animations - ensure element stays centered
+    // Reset all transforms immediately to prevent any misalignment
+    if (mockupRef.current) {
+      const mockup = mockupRef.current;
+      mockup.style.opacity = '1';
+      mockup.style.visibility = 'visible';
+      mockup.style.transform = 'none';
+      mockup.style.translate = 'none';
+      mockup.style.scale = 'none';
+      mockup.style.x = '0';
+      mockup.style.y = '0';
+      mockup.style.left = 'auto';
+      mockup.style.right = 'auto';
+      mockup.style.top = 'auto';
+      mockup.style.bottom = 'auto';
+    }
+    
+    // Also reset any GSAP transforms that might be applied
+    const resetTransforms = () => {
       if (mockupRef.current) {
-        gsap.to(mockupRef.current, {
-          scrollTrigger: {
-            trigger: mockupRef.current,
-            start: 'top bottom',
-            end: 'bottom top',
-            scrub: 1,
-            invalidateOnRefresh: true,
-          },
-          y: -50,
-          scale: 0.98,
-        });
-      }
-    });
-
-    return () => {
-      if (ctx) {
-        ctx.revert();
+        const mockup = mockupRef.current;
+        mockup.style.transform = 'none';
+        mockup.style.translate = 'none';
+        mockup.style.scale = 'none';
       }
     };
+    
+    // Reset transforms immediately and periodically to catch any GSAP interference
+    resetTransforms();
+    setTimeout(resetTransforms, 100);
+    setTimeout(resetTransforms, 500);
   }, []);
 
 
@@ -79,7 +60,7 @@ export function ProductPreview() {
               <div className="w-3 h-3 rounded-full bg-green-500/40"></div>
             </div>
             <div className="flex-1 bg-slate-700/40 rounded-lg px-4 py-1.5 text-xs text-slate-300">
-              drum-practice-generator.com/app
+              drumpractice.co.uk/app
             </div>
             <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
           </div>

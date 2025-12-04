@@ -27,81 +27,16 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
   const noteGroupsRef = useRef<SVGElement[]>([]);
   const animationRef = useRef<number | null>(null);
 
-  // Generate random pattern on mount
-  useEffect(() => {
-    let attempts = 0;
-    const maxAttempts = 10;
-    
-    // Try to generate a pattern with actual notes (not all rests)
-    // Prefer simpler subdivisions for landing page (8th, triplets, 16th notes)
-    // Sometimes use mixed subdivisions (but keep to 16th notes and under)
-    const generateValidPattern = (): Pattern | null => {
-      // Prefer simpler subdivisions for landing page display
-      // Weight towards 8th notes and triplets (more common), sometimes 16th notes
-      const subdivisionWeights = [
-        { sub: 8, weight: 35 },   // 8th notes - most common
-        { sub: 12, weight: 35 },  // Triplets - common
-        { sub: 16, weight: 30 },  // 16th notes - common
-      ];
-      
-      // Select subdivision based on weights
-      const totalWeight = subdivisionWeights.reduce((sum, item) => sum + item.weight, 0);
-      let randomWeight = Math.random() * totalWeight;
-      let selectedSubdivision = 16; // Default
-      for (const item of subdivisionWeights) {
-        randomWeight -= item.weight;
-        if (randomWeight <= 0) {
-          selectedSubdivision = item.sub;
-          break;
-        }
-      }
-      
-      while (attempts < maxAttempts) {
-        attempts++;
-        let randomPattern = generateRandomPattern(false, false);
-        
-        // If subdivision is 24 or 32, replace with our selected simpler subdivision
-        if (randomPattern.subdivision === 24 || randomPattern.subdivision === 32) {
-          randomPattern.subdivision = selectedSubdivision;
-          // Regenerate pattern to ensure it matches the new subdivision
-          randomPattern = generateRandomPattern(false, false);
-          randomPattern.subdivision = selectedSubdivision;
-        } else if (randomPattern.subdivision !== selectedSubdivision) {
-          // 50% chance to use the random subdivision if it's simple (8, 12, or 16)
-          if (Math.random() > 0.5 && [8, 12, 16].includes(randomPattern.subdivision)) {
-            // Keep the random subdivision
-          } else {
-            // Use our selected subdivision
-            randomPattern.subdivision = selectedSubdivision;
-          }
-        }
-        
-        // Set repeat to 1 bar for the landing page
-        randomPattern.repeat = 1;
-        
-        // Check if pattern has actual notes (not all rests)
-        const drumPattern = randomPattern.drumPattern || '';
-        const tokens = parseTokens(drumPattern);
-        const hasNotes = tokens.some(token => {
-          const normalized = token.replace(/\+/g, ' ').toUpperCase();
-          const voicingTokens = normalized.split(/\s+/).filter(Boolean);
-          return voicingTokens.length > 0 && !voicingTokens.every(t => t === '-' || t === 'R');
-        });
-        
-        if (hasNotes) {
-          console.log('[LandingStave] Generated valid pattern:', randomPattern);
-          return randomPattern;
-        }
-      }
-      
-      // Fallback: create a simple pattern with notes
-      console.warn('[LandingStave] Failed to generate valid pattern after', maxAttempts, 'attempts, using fallback');
-      return {
+    // Generate a simple, reliable pattern for landing page display
+    // Use quarter notes only to avoid VexFlow tick issues
+    useEffect(() => {
+      // Create a simple 4-note pattern for landing page
+      const simplePattern: Pattern = {
         id: Date.now(),
         timeSignature: '4/4',
-        subdivision: 16,
+        subdivision: 4, // Quarter notes only - simplest and most reliable
         phrase: '1 2 3 4',
-        drumPattern: 'S K S K',
+        drumPattern: 'S K S K', // Simple 4-note pattern
         stickingPattern: 'R K L K',
         leftFoot: false,
         rightFoot: false,
@@ -109,13 +44,9 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
         _expanded: true,
         _presetAccents: [0],
       };
-    };
-    
-    const validPattern = generateValidPattern();
-    if (validPattern) {
-      setPattern(validPattern);
-    }
-  }, []);
+      
+      setPattern(simplePattern);
+    }, []);
 
   // Render VexFlow stave
   useEffect(() => {
@@ -187,252 +118,202 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
         context.setFillStyle('#ffffff');
         context.setStrokeStyle('#ffffff');
 
-        // Parse pattern data
-        const drumPatternTokens = parseTokens(pattern.drumPattern || '').map((token) => token.toUpperCase());
-        const stickingTokens = parseTokens(pattern.stickingPattern || '');
+        // Parse pattern data - landing page uses simple 4-note pattern
+        const drumPatternTokens = parseTokens(pattern.drumPattern || 'S K S K').slice(0, 4).map((token) => token.toUpperCase());
+        const stickingTokens = parseTokens(pattern.stickingPattern || 'R K L K').slice(0, 4);
         const timeSignature = parseTimeSignature(pattern.timeSignature || '4/4');
-        const notesPerBar = getNotesPerBarForPattern(pattern);
         const accentIndices = pattern._presetAccents || [];
-
-        // Debug logging
-        console.log('[LandingStave] Pattern data:', {
-          drumPattern: pattern.drumPattern,
-          drumPatternTokens,
-          stickingTokens,
-          timeSignature,
-          notesPerBar,
-          subdivision: pattern.subdivision,
-        });
 
         // Create stave with responsive width
         const leftMargin = 10;
-        const availableWidth = staveWidth - leftMargin - 20; // Leave right margin
+        const availableWidth = staveWidth - leftMargin - 20;
         const stave = new VF.Stave(leftMargin, 40, availableWidth);
         stave.addClef('percussion');
         stave.addTimeSignature(`${timeSignature[0]}/${timeSignature[1]}`);
         stave.setContext(context).draw();
 
-        // Build notes for 1 bar
+        // Build exactly 4 quarter notes for landing page
         const allNotes: any[] = [];
-        const allBeams: any[] = [];
         noteGroupsRef.current = [];
 
-        for (let barIndex = 0; barIndex < 1; barIndex++) {
-          const barNotes: any[] = [];
-          const barBeams: any[] = [];
-          // Determine note duration based on subdivision
-          let noteDuration: string;
-          if (pattern.subdivision === 4) {
-            noteDuration = 'q';
-          } else if (pattern.subdivision === 8) {
-            noteDuration = '8';
-          } else if (pattern.subdivision === 12) {
-            noteDuration = '8'; // Triplets use eighth note duration
-          } else if (pattern.subdivision === 16) {
-            noteDuration = '16';
-          } else if (pattern.subdivision === 24) {
-            noteDuration = '16'; // Sextuplets use sixteenth note duration
-          } else if (pattern.subdivision === 32) {
-            noteDuration = '32';
+        // Create exactly 4 quarter notes
+        for (let i = 0; i < 4; i++) {
+          const drumToken = drumPatternTokens[i] || 'S';
+          const normalizedToken = drumToken.replace(/\+/g, ' ').toUpperCase();
+          const voicingTokens = normalizedToken.split(/\s+/).filter(Boolean);
+          const isRest = voicingTokens.length === 0 || voicingTokens.every((token) => token === '-' || token === 'R');
+
+          const keys: string[] = [];
+          if (isRest) {
+            keys.push('b/4');
           } else {
-            noteDuration = '16'; // Default to 16th notes
+            for (const token of voicingTokens) {
+              if (token !== '-' && token !== 'R') {
+                let normalizedToken = token.toUpperCase();
+                if (normalizedToken === 'HT') normalizedToken = 'I';
+                else if (normalizedToken === 'MT') normalizedToken = 'M';
+                const position = keyMap[normalizedToken];
+                if (position) {
+                  keys.push(position);
+                } else {
+                  keys.push(keyMap.S);
+                }
+              }
+            }
+            if (keys.length === 0) {
+              keys.push(keyMap.S);
+            }
           }
 
-          for (let i = 0; i < notesPerBar; i++) {
-            const globalIndex = barIndex * notesPerBar + i;
-            const drumToken = drumPatternTokens[i % drumPatternTokens.length];
-            if (!drumToken) {
-              console.warn(`[LandingStave] Empty drum token at index ${i}, using default`);
-            }
-            const normalizedToken = (drumToken || 'S').replace(/\+/g, ' ').toUpperCase();
-            const voicingTokens = normalizedToken.split(/\s+/).filter(Boolean);
-            const isRest = voicingTokens.length === 0 || voicingTokens.every((token) => token === '-' || token === 'R');
-
-            const keys: string[] = [];
-            if (isRest) {
-              keys.push('b/4');
-            } else {
-              for (const token of voicingTokens) {
-                if (token !== '-' && token !== 'R') {
-                  let normalizedToken = token.toUpperCase();
-                  if (normalizedToken === 'HT') normalizedToken = 'I';
-                  else if (normalizedToken === 'MT') normalizedToken = 'M';
-                  const position = keyMap[normalizedToken];
-                  if (position) {
-                    keys.push(position);
-                  } else {
-                    console.warn(`[LandingStave] Unknown token "${token}", using snare as fallback`);
-                    keys.push(keyMap.S);
-                  }
-                }
-              }
-              if (keys.length === 0) {
-                console.warn(`[LandingStave] No valid keys for token "${drumToken}", using snare as fallback`);
-                keys.push(keyMap.S);
-              }
-            }
-
-            // Create note
-            const note = new VF.StaveNote({
-              clef: 'percussion',
-              keys,
-              duration: isRest ? `${noteDuration}r` : noteDuration,
-              stem_direction: 1, // Upward stems
-            });
-
-            // Add accent if needed (only on non-rest notes)
-            if (accentIndices.includes(i) && !isRest) {
-              try {
-                const accent = new VF.Articulation('a>');
-                if (typeof accent.setYShift === 'function') {
-                  accent.setYShift(25); // Position below note
-                }
-                if (typeof accent.setPosition === 'function') {
-                  accent.setPosition(4); // Position 4 = below note
-                }
-                note.addModifier(accent, 0);
-              } catch (e) {
-                console.error('Failed to add accent:', e);
-              }
-            }
-
-            // Add sticking annotation (including K for kick drum)
-            const stickingToken = stickingTokens[i % stickingTokens.length];
-            if (stickingToken && stickingToken !== '-') {
-              try {
-                const annotation = new VF.Annotation(stickingToken);
-                annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 16, '600');
-                annotation.setJustification(1); // CENTER
-                annotation.setVerticalJustification(2); // BOTTOM
-                annotation.setYShift(140); // Position below stave
-                annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
-                note.addModifier(annotation, 0);
-              } catch (e) {
-                console.error('Failed to add annotation:', e);
-              }
-            }
-
-            barNotes.push(note);
-          }
-
-          // Create beams for the bar
-          if (pattern.subdivision >= 8) {
-            const beamGroups: any[] = [];
-            let currentGroup: any[] = [];
-
-            barNotes.forEach((note, index) => {
-              // Check if note is a rest by checking duration string
-              const duration = note.getDuration ? note.getDuration() : note.duration || '';
-              const isRest = duration.includes('r') || duration.includes('R');
-              
-              if (!isRest) {
-                currentGroup.push(note);
-              } else {
-                if (currentGroup.length > 1) {
-                  beamGroups.push(currentGroup);
-                }
-                currentGroup = [];
-              }
-            });
-
-            if (currentGroup.length > 1) {
-              beamGroups.push(currentGroup);
-            }
-
-            beamGroups.forEach((group) => {
-              const beam = new VF.Beam(group);
-              barBeams.push(beam);
-            });
-          }
-
-          allNotes.push(...barNotes);
-          allBeams.push(...barBeams);
-        }
-
-        console.log('[LandingStave] Created notes:', {
-          totalNotes: allNotes.length,
-          totalBeams: allBeams.length,
-          notesPerBar,
-          drumPatternTokens,
-          pattern: pattern.drumPattern,
-        });
-
-        // Create voice and format
-        if (allNotes.length === 0) {
-          console.error('No notes created for pattern:', {
-            pattern,
-            drumPatternTokens,
-            notesPerBar,
-            voicingTokens: drumPatternTokens.map(t => t.split(/\s+/)),
-          });
-          // Try to create at least one note as fallback
-          const fallbackNote = new VF.StaveNote({
+          // Create quarter note
+          const note = new VF.StaveNote({
             clef: 'percussion',
-            keys: [keyMap.S],
-            duration: noteDuration,
+            keys,
+            duration: isRest ? 'qr' : 'q',
             stem_direction: 1,
           });
-          allNotes.push(fallbackNote);
+
+          // Add accent if needed
+          if (accentIndices.includes(i) && !isRest) {
+            try {
+              const accent = new VF.Articulation('a>');
+              if (typeof accent.setYShift === 'function') {
+                accent.setYShift(25);
+              }
+              if (typeof accent.setPosition === 'function') {
+                accent.setPosition(4);
+              }
+              note.addModifier(accent, 0);
+            } catch (e) {
+              // Ignore accent errors
+            }
+          }
+
+          // Add sticking annotation
+          const stickingToken = stickingTokens[i] || '';
+          if (stickingToken && stickingToken !== '-') {
+            try {
+              const annotation = new VF.Annotation(stickingToken);
+              annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 16, '600');
+              annotation.setJustification(1);
+              annotation.setVerticalJustification(2);
+              annotation.setYShift(140);
+              annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
+              note.addModifier(annotation, 0);
+            } catch (e) {
+              // Ignore annotation errors
+            }
+          }
+
+          allNotes.push(note);
         }
 
-        // Calculate correct voice configuration based on note durations
-        // For 32nd notes, we need to account for the smaller duration
-        let voiceBeats = timeSignature[0];
-        let voiceBeatValue = timeSignature[1];
+        // Calculate format width before creating voice
+        const formatWidth = Math.max(300, Math.floor((availableWidth - 120) * 1.0));
         
-        // If we have 32nd notes, the voice needs to account for the smaller note values
-        // VexFlow uses ticks internally, so we need to ensure the voice configuration matches
-        if (pattern.subdivision === 32) {
-          // For 32nd notes, each note is 1/32 of a whole note
-          // In 4/4 time: 32 notes * (1/32) = 1 whole note = 4 beats
-          // Voice should still be num_beats: 4, beat_value: 4, but we need to ensure notes are properly formatted
-          // The issue might be that VexFlow expects the total ticks to match
-          // Let's use a more lenient approach
-          voiceBeats = timeSignature[0];
-          voiceBeatValue = timeSignature[1];
-        } else if (pattern.subdivision === 24) {
-          // Sextuplets - similar handling
-          voiceBeats = timeSignature[0];
-          voiceBeatValue = timeSignature[1];
+        // Create voice with exactly 4 beats
+        const voice = new VF.Voice({ num_beats: 4, beat_value: 4 });
+        voice.setStrict(false);
+        
+        try {
+          voice.addTickables(allNotes);
+        } catch (error) {
+          console.error('[LandingStave] Error adding tickables, using single note fallback:', error);
+          // Fallback: single note
+          const singleNote = new VF.StaveNote({
+            clef: 'percussion',
+            keys: [keyMap.S],
+            duration: 'q',
+            stem_direction: 1,
+          });
+          const fallbackVoice = new VF.Voice({ num_beats: 4, beat_value: 4 });
+          fallbackVoice.setStrict(false);
+          fallbackVoice.addTickable(singleNote);
+          
+          try {
+            const formatter = new VF.Formatter().joinVoices([fallbackVoice]).format([fallbackVoice], formatWidth);
+            fallbackVoice.draw(context, stave);
+          } catch (e) {
+            console.error('[LandingStave] Complete rendering failure:', e);
+          }
+          return; // Exit early with fallback
         }
-        
-        // Create voice with proper configuration
-        // VexFlow uses ticks internally - resolution defaults to 16384 if not specified
-        const voiceConfig: any = { 
-          num_beats: voiceBeats, 
-          beat_value: voiceBeatValue,
-        };
-        
-        // Add resolution if VexFlow supports it (helps with 32nd notes)
-        if (VF.RESOLUTION !== undefined) {
-          voiceConfig.resolution = VF.RESOLUTION;
-        }
-        
-        const voice = new VF.Voice(voiceConfig);
-        voice.addTickables(allNotes);
-        voice.setStrict(false); // Allow flexible timing
 
-        // Format with available width (leave space for clef and time signature)
-        // Increase format width for higher subdivisions
-        const formatWidthMultiplier = subdivision >= 24 ? 1.4 : subdivision >= 16 ? 1.2 : 1.0;
-        const formatWidth = Math.max(300, Math.floor((availableWidth - 120) * formatWidthMultiplier));
+        // Format and draw - with comprehensive error handling
         try {
           const formatter = new VF.Formatter().joinVoices([voice]).format([voice], formatWidth);
           voice.draw(context, stave);
         } catch (error) {
-          console.error('Error formatting or drawing voice:', error);
-          // Try drawing without formatting
+          console.error('[LandingStave] Error formatting voice:', error);
+          // If formatting fails, try drawing without formatting
           try {
             voice.draw(context, stave);
           } catch (drawError) {
-            console.error('Error drawing voice:', drawError);
+            console.error('[LandingStave] Error drawing voice:', drawError);
+            // Last resort: render a simple static message
+            if (staveRef.current) {
+              staveRef.current.innerHTML = `
+                <div style="padding: 2rem; text-align: center; color: #ffffff;">
+                  <p style="font-size: 1.125rem; margin-bottom: 0.5rem;">Professional Drum Notation</p>
+                  <p style="font-size: 0.875rem; color: #94a3b8;">VexFlow rendering unavailable</p>
+                </div>
+              `;
+            }
+            return;
           }
         }
 
-        // Draw beams
-        allBeams.forEach((beam) => {
-          beam.setContext(context).draw();
-        });
+        // No beams needed for quarter notes - skip beam drawing
+
+        // Position sticking annotations immediately after drawing - synchronously to prevent visual jump
+        const svgElement = staveRef.current!.querySelector('svg');
+        if (svgElement) {
+          const staveEl = svgElement.querySelector('.vf-stave') as SVGElement;
+          if (staveEl) {
+            try {
+              const staveBBox = staveEl.getBBox();
+              const absoluteY = staveBBox.y + staveBBox.height + 30; // 30px below stave
+              
+              // Position all annotations immediately
+              const allNoteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+              allNoteGroups.forEach((noteGroup) => {
+                const annotationGroup = noteGroup.querySelector('.vf-annotation') as SVGGElement;
+                const annotation = noteGroup.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
+                
+                if (annotation) {
+                  const noteBBox = noteGroup.getBBox();
+                  let absoluteX = noteBBox.x + (noteBBox.width / 2);
+                  
+                  // Try to get notehead center for more accurate X positioning
+                  const circles = noteGroup.querySelectorAll('circle, ellipse');
+                  if (circles.length > 0) {
+                    const notehead = circles[0] as SVGCircleElement | SVGEllipseElement;
+                    try {
+                      const cx = parseFloat(notehead.getAttribute('cx') || '0');
+                      if (cx > 0) absoluteX = cx;
+                    } catch (e) {}
+                  }
+                  
+                  // Position immediately - set attributes synchronously
+                  annotation.setAttribute('x', absoluteX.toString());
+                  annotation.setAttribute('y', absoluteY.toString());
+                  annotation.setAttribute('text-anchor', 'middle');
+                  annotation.setAttribute('dominant-baseline', 'hanging');
+                  
+                  // Remove any transforms
+                  if (annotationGroup) {
+                    annotationGroup.removeAttribute('transform');
+                    annotationGroup.style.transform = 'none';
+                  }
+                  annotation.removeAttribute('transform');
+                  annotation.style.transform = 'none';
+                }
+              });
+            } catch (e) {
+              // If positioning fails, continue
+            }
+          }
+        }
 
           // Get note groups for highlighting and apply dark mode styling
         // Use multiple retries to ensure rendering is complete
@@ -479,41 +360,6 @@ export function LandingStave({ className = '', onNotesReady }: LandingStaveProps
           if (onNotesReady) {
             onNotesReady(groups);
           }
-
-          // Align sticking annotations
-          setTimeout(() => {
-            const svgElement = staveRef.current!.querySelector('svg');
-            if (svgElement) {
-              const staveBBox = svgElement.querySelector('.vf-stave')?.getBBox();
-              if (staveBBox) {
-                const baseY = staveBBox.y + staveBBox.height + 30;
-                noteGroupsRef.current.forEach((noteGroup) => {
-                  const annotation = noteGroup.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
-                  if (annotation) {
-                    const noteBBox = noteGroup.getBBox();
-                    const circles = noteGroup.querySelectorAll('circle, ellipse');
-                    let noteX = noteBBox.x + (noteBBox.width / 2);
-                    
-                    if (circles.length > 0) {
-                      const notehead = circles[0] as SVGCircleElement | SVGEllipseElement;
-                      try {
-                        const cx = parseFloat(notehead.getAttribute('cx') || '0');
-                        if (cx > 0) {
-                          noteX = cx;
-                        }
-                      } catch (e) {}
-                    }
-                    
-                    annotation.setAttribute('x', noteX.toString());
-                    annotation.setAttribute('y', baseY.toString());
-                    annotation.setAttribute('text-anchor', 'middle');
-                    annotation.setAttribute('dominant-baseline', 'hanging');
-                    annotation.removeAttribute('transform');
-                  }
-                });
-              }
-            }
-          }, 200);
         };
         
         // Start styling with initial delay

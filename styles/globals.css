@@ -2,6 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/* FORCE ALL ELEMENTS VISIBLE - NO GSAP HIDING ALLOWED */
+/* Specific selectors to avoid breaking layout */
+h1, h1 span, h2, h3, h4, h5, h6, p, span, section, nav, header, main, article {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  display: block !important;
+}
+
+/* Ensure gradient text spans are visible */
+h1 span.text-transparent {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+}
+
+/* Force all cards and sections visible */
+.feature-card,
+.pricing-card,
+.stat-card,
+.testimonial-card,
+section,
+nav,
+header,
+[class*="ProductPreview"],
+[class*="SocialProof"],
+[class*="InteractiveDemo"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Force buttons and interactive elements visible */
+button, a, input, select, textarea {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 /* Mobile viewport fixes */
 html {
   -webkit-text-size-adjust: 100%;

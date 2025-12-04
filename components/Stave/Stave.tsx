@@ -1403,10 +1403,71 @@ export function Stave() {
               }
             });
             
-            // Mark ghost notes in the DOM after rendering and add parentheses as SVG text
+            // Position sticking annotations correctly immediately after drawing - synchronously to prevent visual jump
             if (staveRef.current) {
               const svgElement = staveRef.current.querySelector('svg');
               if (svgElement) {
+                // Get stave position to calculate annotation Y position - use the stave we just drew
+                if (stave) {
+                  try {
+                    // Find the stave element we just drew by matching its position
+                    const allStaves = Array.from(svgElement.querySelectorAll('.vf-stave')) as SVGElement[];
+                    const currentStaveEl = allStaves[allStaves.length - 1] as SVGElement; // Get the last stave (most recently drawn)
+                    
+                    if (currentStaveEl) {
+                      const staveBBox = currentStaveEl.getBBox();
+                      const absoluteY = staveBBox.y + staveBBox.height + 30; // 30px below stave
+                      
+                      // Find all notes in THIS stave only - check if note center is within stave bounds
+                      const allNoteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+                      allNoteGroups.forEach((noteGroup) => {
+                        // Check if this note belongs to this stave
+                        const noteBBox = noteGroup.getBBox();
+                        const noteCenterY = noteBBox.y + (noteBBox.height / 2);
+                        const isInThisStave = noteCenterY >= staveBBox.y && noteCenterY <= staveBBox.y + staveBBox.height;
+                        
+                        if (!isInThisStave) return; // Skip notes not in this stave
+                        
+                        const annotationGroup = noteGroup.querySelector('.vf-annotation') as SVGGElement;
+                        const annotation = noteGroup.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
+                        
+                        if (annotation) {
+                          // Get note X position for centering (noteBBox already calculated above)
+                        let absoluteX = noteBBox.x + (noteBBox.width / 2);
+                        
+                        // Try to get notehead center for more accurate X positioning
+                        const circles = noteGroup.querySelectorAll('circle, ellipse');
+                        if (circles.length > 0) {
+                          const notehead = circles[0] as SVGCircleElement | SVGEllipseElement;
+                          try {
+                            const cx = parseFloat(notehead.getAttribute('cx') || '0');
+                            if (cx > 0) absoluteX = cx;
+                          } catch (e) {}
+                        }
+                        
+                        // Position immediately - set attributes synchronously
+                        annotation.setAttribute('x', absoluteX.toString());
+                        annotation.setAttribute('y', absoluteY.toString());
+                        annotation.setAttribute('text-anchor', 'middle');
+                        annotation.setAttribute('dominant-baseline', 'hanging');
+                        
+                        // Remove any transforms that might cause positioning issues
+                        if (annotationGroup) {
+                          annotationGroup.removeAttribute('transform');
+                          annotationGroup.style.transform = 'none';
+                        }
+                          annotation.removeAttribute('transform');
+                          annotation.style.transform = 'none';
+                        }
+                      });
+                    }
+                  } catch (e) {
+                    // If positioning fails, continue - annotations will use VexFlow default
+                  }
+                }
+                
+                // Mark ghost notes in the DOM after rendering and add parentheses as SVG text
+                if (svgElement) {
                 // Find all note groups and mark ghost notes, then add parentheses
                 const noteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
                 let noteIndexInLine = 0;
@@ -1477,80 +1538,9 @@ export function Stave() {
                     noteIndexInLine++;
                   }
                 });
-                
-                // Absolutely position all sticking annotations to the same Y coordinate
-                // Calculate absolute positions based on stave position in SVG coordinate system
-                const allStaves = svgElement.querySelectorAll('.vf-stave') as NodeListOf<SVGElement>;
-                allStaves.forEach((staveEl) => {
-                  // Get stave bounding box in SVG coordinates
-                  const staveBBox = staveEl.getBBox();
-                  if (staveBBox) {
-                    // Calculate absolute Y position below stave - same for ALL annotations
-                    // Use getBBox which gives us coordinates in the SVG's coordinate system
-                    const absoluteY = staveBBox.y + staveBBox.height + 30; // 30px below stave bottom
-                    
-                    // Find all note groups that are within this stave's Y range
-                    const allNoteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
-                    allNoteGroups.forEach((noteGroup) => {
-                      // Check if this note is within this stave's vertical range
-                      const noteBBox = noteGroup.getBBox();
-                      const noteCenterY = noteBBox.y + (noteBBox.height / 2);
-                      const isInStave = noteCenterY >= staveBBox.y && noteCenterY <= staveBBox.y + staveBBox.height;
-                      
-                      if (isInStave) {
-                        const annotationGroup = noteGroup.querySelector('.vf-annotation') as SVGGElement;
-                        const annotation = noteGroup.querySelector('.vf-annotation text, .vf-annotation tspan') as SVGTextElement;
-                        
-                        if (annotation) {
-                          // Find notehead for absolute X positioning
-                          let absoluteX = noteBBox.x + (noteBBox.width / 2); // Default fallback
-                          
-                          const circles = noteGroup.querySelectorAll('circle, ellipse');
-                          if (circles.length > 0) {
-                            const notehead = circles[0] as SVGCircleElement | SVGEllipseElement;
-                            try {
-                              const cx = parseFloat(notehead.getAttribute('cx') || '0');
-                              if (cx > 0) {
-                                absoluteX = cx;
-                              } else {
-                                const noteheadBBox = notehead.getBBox();
-                                absoluteX = noteheadBBox.x + (noteheadBBox.width / 2);
-                              }
-                            } catch (e) {
-                              // Use default
-                            }
-                          } else {
-                            const noteheadPath = noteGroup.querySelector('path[data-name="notehead"]') as SVGPathElement;
-                            if (noteheadPath) {
-                              try {
-                                const noteheadBBox = noteheadPath.getBBox();
-                                absoluteX = noteheadBBox.x + (noteheadBBox.width / 2);
-                              } catch (e) {
-                                // Use default
-                              }
-                            }
-                          }
-                          
-                          // Set absolute positions - override any transforms or relative positioning
-                          annotation.setAttribute('x', absoluteX.toString());
-                          annotation.setAttribute('y', absoluteY.toString());
-                          annotation.setAttribute('text-anchor', 'middle');
-                          annotation.setAttribute('dominant-baseline', 'hanging');
-                          
-                          // Remove transforms from both annotation group and text element
-                          if (annotationGroup) {
-                            annotationGroup.removeAttribute('transform');
-                            annotationGroup.style.transform = 'none';
-                          }
-                          annotation.removeAttribute('transform');
-                          annotation.style.transform = 'none';
-                        }
-                      }
-                    });
-                  }
-                });
               }
             }
+          }
           } catch (error) {
             console.error('Error formatting/drawing voice:', error);
           }

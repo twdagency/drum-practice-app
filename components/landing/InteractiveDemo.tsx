@@ -88,6 +88,10 @@ export function InteractiveDemo() {
 
       // Animate section on scroll
       if (sectionRef.current) {
+        // Keep visible - no opacity animation
+        sectionRef.current.style.opacity = '1';
+        sectionRef.current.style.visibility = 'visible';
+        
         gsap.from(sectionRef.current, {
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -95,7 +99,6 @@ export function InteractiveDemo() {
             toggleActions: 'play none none reverse',
           },
           y: 60,
-          opacity: 0,
           duration: 1,
           ease: 'power3.out',
         });
@@ -114,8 +117,11 @@ export function InteractiveDemo() {
       const gsap = gsapModule.gsap;
 
       if (contentRef.current) {
+        // Keep visible - no opacity animation
+        contentRef.current.style.opacity = '1';
+        contentRef.current.style.visibility = 'visible';
+        
         gsap.from(contentRef.current, {
-          opacity: 0,
           y: 20,
           duration: 0.5,
           ease: 'power2.out',
