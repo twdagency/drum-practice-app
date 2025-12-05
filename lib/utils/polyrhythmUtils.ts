@@ -71,31 +71,26 @@ export function calculatePolyrhythmNotes(
  * The ratio defines the subdivision - we just need to fit the notes evenly across the bar
  * 
  * @param timeSignature Time signature string (e.g., "4/4", "3/4", "7/8")
- * @returns Total subdivisions in one measure (calculated from time signature only)
- * 
- * For polyrhythms, we use a base subdivision based on the time signature:
- * - 4/4, 3/4, 2/4: use 16th notes (4 subdivisions per beat)
- * - 6/8, 9/8, 12/8: use 16th notes (2 subdivisions per eighth note beat)
- * - 7/8, 5/8: use 16th notes (2 subdivisions per eighth note beat)
- * We always use a fine enough subdivision to fit any ratio evenly
+ * @param baseSubdivision The base subdivision to use (4=quarter, 8=eighth, 16=sixteenth, 32=32nd)
+ * @returns Total subdivisions in one measure (calculated from time signature)
  */
-export function calculateMeasureLength(timeSignature: string): number {
+export function calculateMeasureLength(timeSignature: string, baseSubdivision: number = 16): number {
   // Parse time signature (e.g., "4/4" -> [4, 4])
   const parts = timeSignature.split('/').map(p => parseInt(p.trim(), 10));
   if (parts.length !== 2 || parts.some(isNaN)) {
     // Default to 4/4 if invalid
-    return 16; // 4 beats × 4 sixteenth notes per beat = 16
+    const defaultSubdivisionsPerBeat = baseSubdivision / 4;
+    return 4 * defaultSubdivisionsPerBeat; // 4 beats × subdivisions per beat
   }
   
   const [numerator, denominator] = parts;
   
-  // For polyrhythms, we always use a fine subdivision (16th notes) to fit any ratio
-  // This ensures we can evenly space any number of notes within the bar
-  const baseSubdivision = 16; // Always use 16th notes for polyrhythms
-  
-  // Calculate subdivisions per beat
+  // Calculate subdivisions per beat based on the provided base subdivision
   // denominator: 4 = quarter note beat, 8 = eighth note beat
-  // subdivisionsPerBeat = baseSubdivision / denominator (e.g., 16/4 = 4, 16/8 = 2)
+  // For baseSubdivision = 16 (sixteenth notes) and denominator = 4:
+  //   subdivisionsPerBeat = 16/4 = 4 subdivisions per quarter note beat
+  // For baseSubdivision = 8 (eighth notes) and denominator = 4:
+  //   subdivisionsPerBeat = 8/4 = 2 subdivisions per quarter note beat
   const subdivisionsPerBeat = baseSubdivision / denominator;
   
   // Total subdivisions = number of beats × subdivisions per beat
@@ -116,6 +111,7 @@ export function generatePolyrhythmPattern(
     rightVoice?: 'snare' | 'kick' | 'hi-hat' | 'tom' | 'floor';
     leftVoice?: 'snare' | 'kick' | 'hi-hat' | 'tom' | 'floor';
     timeSignature?: string;
+    subdivision?: number;
     name?: string;
     description?: string;
   } = {}
@@ -126,12 +122,14 @@ export function generatePolyrhythmPattern(
     rightVoice = 'snare',
     leftVoice = 'kick',
     timeSignature = '4/4',
+    subdivision: customSubdivision = 16,
     name,
     description,
   } = options;
 
-  // Calculate measure length from time signature (for subdivision-based compatibility)
-  const measureLength = calculateMeasureLength(timeSignature);
+  // Calculate measure length using the provided subdivision
+  // This affects how note positions are mapped to subdivision indices
+  const measureLength = calculateMeasureLength(timeSignature, customSubdivision);
   
   // Calculate note positions using the new beat-based calculator
   const [beatsPerBar] = parseTimeSignature(timeSignature);
@@ -156,9 +154,8 @@ export function generatePolyrhythmPattern(
   // Both rhythms fit within one measure and repeat every measure
   const cycleLength = measureLength;
   
-  // For display purposes, we still need a subdivision value
-  // We always use 16th notes for polyrhythms (fine enough to fit any ratio)
-  const subdivision = 16;
+  // Store the subdivision value used for this pattern
+  const subdivision = customSubdivision;
 
   const patternName = name || `${numerator}:${denominator} Polyrhythm`;
   const patternDescription = description || 
@@ -285,22 +282,14 @@ export function polyrhythmToCombinedPattern(
     }
   }
   
-  // Calculate notes per bar from time signature and subdivision
-  // Multiply by repeat count to get full pattern length
-  const notesPerBar = cycleLength * polyrhythm.repeat;
-  
-  // Repeat the drum and sticking patterns for each repeat
-  const fullDrumPattern: string[] = [];
-  const fullStickingPattern: string[] = [];
-  
-  for (let r = 0; r < polyrhythm.repeat; r++) {
-    fullDrumPattern.push(...drumPattern);
-    fullStickingPattern.push(...stickingPattern);
-  }
+  // Calculate notes per bar from cycle length
+  // NOTE: Don't multiply by repeat here - the Stave component handles repeats
+  // by expanding the polyrhythm patterns into separate bars via processedPolyrhythmPatterns
+  const notesPerBar = cycleLength;
   
   return {
-    drumPattern: fullDrumPattern.join(' '),
-    stickingPattern: fullStickingPattern.join(' '),
+    drumPattern: drumPattern.join(' '),
+    stickingPattern: stickingPattern.join(' '),
     subdivision: polyrhythm.subdivision,
     notesPerBar,
   };

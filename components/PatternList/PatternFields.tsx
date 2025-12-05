@@ -17,6 +17,7 @@ import { PerBeatVoicingEditor } from './PerBeatVoicingEditor';
 import { PerBeatStickingEditor } from './PerBeatStickingEditor';
 import { CollapsibleSection } from '@/components/shared/CollapsibleSection';
 import { Tooltip } from '@/components/shared/Tooltip';
+import { Settings, Music, Drum, SlidersHorizontal } from 'lucide-react';
 
 interface PatternFieldsProps {
   pattern: Pattern;
@@ -614,7 +615,7 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
   return (
     <div className="dpgen-pattern-fields" style={{ padding: '0.5rem' }}>
       {/* Basic Settings */}
-      <CollapsibleSection title="Basic Settings" icon="fas fa-cog" defaultExpanded={true}>
+      <CollapsibleSection title="Basic Settings" icon={<Settings size={16} />} defaultExpanded={true}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
           {/* Repeat */}
           <div className="dpgen-field">
@@ -717,7 +718,7 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
       </CollapsibleSection>
 
       {/* Rhythm */}
-      <CollapsibleSection title="Rhythm & Accents" icon="fas fa-music" defaultExpanded={true}>
+      <CollapsibleSection title="Rhythm & Accents" icon={<Music size={16} />} defaultExpanded={true}>
         <div className="dpgen-field">
           <label className="dpgen-label">Accents</label>
           <AccentEditor pattern={pattern} />
@@ -726,7 +727,7 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
       </CollapsibleSection>
 
       {/* Voicing & Sticking */}
-      <CollapsibleSection title="Voicing & Sticking" icon="fas fa-drum" defaultExpanded={true}>
+      <CollapsibleSection title="Voicing & Sticking" icon={<Drum size={16} />} defaultExpanded={true}>
         {/* Voicing Pattern */}
         <div className="dpgen-field">
         <label className="dpgen-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -854,7 +855,7 @@ export function PatternFields({ pattern }: PatternFieldsProps) {
       </CollapsibleSection>
 
       {/* Advanced Options */}
-      <CollapsibleSection title="Advanced Options" icon="fas fa-sliders-h" defaultExpanded={false}>
+      <CollapsibleSection title="Advanced Options" icon={<SlidersHorizontal size={16} />} defaultExpanded={false}>
         {/* Left/Right Foot */}
         <div className="dpgen-field" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <label 

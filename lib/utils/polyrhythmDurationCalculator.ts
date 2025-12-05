@@ -94,8 +94,12 @@ function findClosestStandardDuration(beats: number, beatValue: number = 4): numb
 /**
  * Calculate durations and tuplet configurations for a polyrhythm
  * 
- * @param numerator Number of notes in voice 1
- * @param denominator Number of notes in voice 2
+ * For polyrhythms, the key insight is:
+ * - If a voice has N notes in the time of M standard notes, use the M-duration with an N:M tuplet
+ * - Example: 3:2 in 4/4 = 3 notes in time of 2 half notes = use half notes with 3:2 tuplet
+ * 
+ * @param numerator Number of notes in voice 1 (right hand)
+ * @param denominator Number of notes in voice 2 (left hand)
  * @param beatsPerBar Number of beats in the measure
  * @param beatValue Beat value from time signature (4 = quarter note, 8 = eighth note)
  */
@@ -106,46 +110,89 @@ export function calculatePolyrhythmDurations(
   beatValue: number = 4
 ): PolyrhythmDurations {
   // Voice 1 (numerator): n notes in B beats
-  // Each note = B/n beats
+  // Each note = B/n beats (actual duration)
   const rightNoteDurationBeats = beatsPerBar / numerator;
   
   // Voice 2 (denominator): m notes in B beats
-  // Each note = B/m beats
+  // Each note = B/m beats (actual duration)
   const leftNoteDurationBeats = beatsPerBar / denominator;
   
-  // Check if tuplets are needed
-  const rightNeedsTuplet = !isStandardNoteValue(rightNoteDurationBeats, beatValue);
-  const leftNeedsTuplet = !isStandardNoteValue(leftNoteDurationBeats, beatValue);
+  // Check if standard note values work
+  const rightIsStandard = isStandardNoteValue(rightNoteDurationBeats, beatValue);
+  const leftIsStandard = isStandardNoteValue(leftNoteDurationBeats, beatValue);
   
-  // Calculate tuplet configurations
+  // Determine durations and tuplets
+  let rightDuration: string;
+  let leftDuration: string;
+  let rightNeedsTuplet = false;
+  let leftNeedsTuplet = false;
   let rightTupletConfig = null;
   let leftTupletConfig = null;
   
-  if (rightNeedsTuplet) {
-    // For 5:4 in 4/4: right = 0.8 beats each = needs tuplet "5 in time of 4"
-    // The tuplet should span the entire measure (beatsPerBar beats)
-    // So: numerator notes occupy time of denominator notes worth of beats
-    // For 5:4: 5 notes occupy time of 4 quarter notes (the entire measure)
-    rightTupletConfig = {
-      num_notes: numerator,
-      notes_occupied: denominator // numerator notes occupy time of denominator notes (entire measure)
-    };
+  if (rightIsStandard) {
+    // Right voice fits standard durations (e.g., 4 notes in 4/4 = quarter notes)
+    rightDuration = beatsToVexFlowDuration(rightNoteDurationBeats, beatValue);
+  } else {
+    // Right voice needs a tuplet
+    // Find what standard duration the tuplet should be based on
+    // For N notes in time of M, use the duration that M notes would normally have
+    // Example: 3 notes in 4/4 = 3 notes in time of 2 half notes (3:2 tuplet of half notes)
+    //          5 notes in 4/4 = 5 notes in time of 4 quarter notes (5:4 tuplet of quarter notes)
+    rightNeedsTuplet = true;
+    
+    // The tuplet base duration is what the OTHER voice (denominator) uses
+    // Or if both need tuplets, find the nearest standard duration
+    const baseDurationBeats = beatsPerBar / denominator; // Duration of denominator notes
+    if (isStandardNoteValue(baseDurationBeats, beatValue)) {
+      // Use the denominator's note duration as the base
+      rightDuration = beatsToVexFlowDuration(baseDurationBeats, beatValue);
+      rightTupletConfig = {
+        num_notes: numerator,
+        notes_occupied: denominator
+      };
+    } else {
+      // Find nearest standard duration for the base
+      const nearestBase = findClosestStandardDuration(rightNoteDurationBeats, beatValue);
+      rightDuration = beatsToVexFlowDuration(nearestBase, beatValue);
+      // Calculate how many of these notes would fit
+      const notesOccupied = Math.round(beatsPerBar / nearestBase);
+      rightTupletConfig = {
+        num_notes: numerator,
+        notes_occupied: notesOccupied
+      };
+    }
   }
   
-  if (leftNeedsTuplet) {
-    // For 4:3 in 4/4: left = 4/3 beats each = needs tuplet "3 in time of 4"
-    // The tuplet should span the entire measure (beatsPerBar beats)
-    // So: denominator notes occupy time of numerator notes worth of beats
-    // For 4:3: 3 notes occupy time of 4 quarter notes (the entire measure)
-    leftTupletConfig = {
-      num_notes: denominator,
-      notes_occupied: numerator // denominator notes occupy time of numerator notes (entire measure)
-    };
+  if (leftIsStandard) {
+    // Left voice fits standard durations (e.g., 2 notes in 4/4 = half notes)
+    leftDuration = beatsToVexFlowDuration(leftNoteDurationBeats, beatValue);
+  } else {
+    // Left voice needs a tuplet
+    leftNeedsTuplet = true;
+    
+    const baseDurationBeats = beatsPerBar / numerator; // Duration of numerator notes
+    if (isStandardNoteValue(baseDurationBeats, beatValue)) {
+      // Use the numerator's note duration as the base
+      leftDuration = beatsToVexFlowDuration(baseDurationBeats, beatValue);
+      leftTupletConfig = {
+        num_notes: denominator,
+        notes_occupied: numerator
+      };
+    } else {
+      // Find nearest standard duration for the base
+      const nearestBase = findClosestStandardDuration(leftNoteDurationBeats, beatValue);
+      leftDuration = beatsToVexFlowDuration(nearestBase, beatValue);
+      const notesOccupied = Math.round(beatsPerBar / nearestBase);
+      leftTupletConfig = {
+        num_notes: denominator,
+        notes_occupied: notesOccupied
+      };
+    }
   }
   
   return {
-    rightDuration: beatsToVexFlowDuration(rightNoteDurationBeats, beatValue),
-    leftDuration: beatsToVexFlowDuration(leftNoteDurationBeats, beatValue),
+    rightDuration,
+    leftDuration,
     rightNeedsTuplet,
     leftNeedsTuplet,
     rightTupletConfig,

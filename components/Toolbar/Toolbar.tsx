@@ -28,8 +28,13 @@ import { PolyrhythmBuilder } from '../PracticeMode/PolyrhythmBuilder';
 import { AudioSettingsModal } from '../PracticeMode/AudioSettingsModal';
 import { PlaybackSettingsModal } from '../PracticeMode/PlaybackSettingsModal';
 import { ApiSyncSettingsModal } from '../PracticeMode/ApiSyncSettingsModal';
+import { GeneralSettingsModal } from '../PracticeMode/GeneralSettingsModal';
 import { MIDIRecording } from '../PracticeMode/MIDIRecording';
 import { MIDIMappingEditor } from '../PracticeMode/MIDIMappingEditor';
+import { TempoTrainer } from '../PracticeMode/TempoTrainer';
+import { RoutineSelector } from '../PracticeMode/RoutineSelector';
+import { RoutinePlayer } from '../PracticeMode/RoutinePlayer';
+import { PracticeRoutine } from '@/types/routine';
 import { usePresets } from '@/hooks/usePresets';
 import { parseTimeSignature, buildAccentIndices, parseNumberList, parseTokens, formatList } from '@/lib/utils/patternUtils';
 import { exportPDF, exportPNG, exportSVG, exportMIDI, exportPatternCollection, importPatternCollection, sharePatternURL } from '@/lib/utils/exportUtils';
@@ -53,10 +58,14 @@ export function Toolbar() {
   const [showSavePattern, setShowSavePattern] = useState(false);
   const [showLearningPaths, setShowLearningPaths] = useState(false);
   const [showPolyrhythmBuilder, setShowPolyrhythmBuilder] = useState(false);
+  const [showRoutineSelector, setShowRoutineSelector] = useState(false);
+  const [showRoutinePlayer, setShowRoutinePlayer] = useState(false);
+  const [currentRoutine, setCurrentRoutine] = useState<PracticeRoutine | null>(null);
   const [presetsDropdownOpen, setPresetsDropdownOpen] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showPlaybackSettings, setShowPlaybackSettings] = useState(false);
   const [showApiSyncSettings, setShowApiSyncSettings] = useState(false);
+  const [showGeneralSettings, setShowGeneralSettings] = useState(false);
   const [showMIDIMapping, setShowMIDIMapping] = useState(false);
   const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
   const [midiRecordingOpen, setMidiRecordingOpen] = useState(false);
@@ -65,6 +74,7 @@ export function Toolbar() {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showTempoTrainer, setShowTempoTrainer] = useState(false);
   const [apiSyncEnabled, setApiSyncEnabled] = useState(false);
   const [scrollModeDropdownOpen, setScrollModeDropdownOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -112,10 +122,10 @@ export function Toolbar() {
   
   // Close settings dropdown when modals open
   useEffect(() => {
-    if (showAudioSettings || showPlaybackSettings || showApiSyncSettings || showMIDIMapping) {
+    if (showAudioSettings || showPlaybackSettings || showApiSyncSettings || showMIDIMapping || showGeneralSettings) {
       setSettingsDropdownOpen(false);
     }
-  }, [showAudioSettings, showPlaybackSettings, showApiSyncSettings, showMIDIMapping]);
+  }, [showAudioSettings, showPlaybackSettings, showApiSyncSettings, showMIDIMapping, showGeneralSettings]);
 
   // Command Palette shortcut (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -189,10 +199,10 @@ export function Toolbar() {
 
   // Close presets dropdown when modals open
   useEffect(() => {
-    if (showPresetsBrowser || showCombinePresets || showSavePattern || showLearningPaths || showPolyrhythmBuilder) {
+    if (showPresetsBrowser || showCombinePresets || showSavePattern || showLearningPaths || showPolyrhythmBuilder || showRoutineSelector) {
       setPresetsDropdownOpen(false);
     }
-  }, [showPresetsBrowser, showCombinePresets, showSavePattern, showLearningPaths, showPolyrhythmBuilder]);
+  }, [showPresetsBrowser, showCombinePresets, showSavePattern, showLearningPaths, showPolyrhythmBuilder, showRoutineSelector]);
 
   // Handlers
   const handlePlay = () => {
@@ -909,6 +919,16 @@ export function Toolbar() {
           >
             <i className="fas fa-route" /> Learning Paths
           </button>
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item"
+            onClick={() => {
+              setPresetsDropdownOpen(false);
+              setShowRoutineSelector(true);
+            }}
+          >
+            <i className="fas fa-clipboard-list" /> Practice Routines
+          </button>
           <div className="dpgen-toolbar__menu-divider" />
           <button 
             type="button" 
@@ -1177,6 +1197,28 @@ export function Toolbar() {
             }}
           >
             <i className="fas fa-keyboard" /> MIDI Note Mapping
+          </button>
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item"
+            onClick={() => {
+              setSettingsDropdownOpen(false);
+              setShowGeneralSettings(true);
+            }}
+          >
+            <i className="fas fa-user-cog" /> General Settings
+          </button>
+          <div style={{ borderTop: '1px solid var(--dpgen-border)', margin: '0.5rem 0' }} />
+          <button 
+            type="button" 
+            className="dpgen-toolbar__menu-item"
+            onClick={() => {
+              setSettingsDropdownOpen(false);
+              setShowTempoTrainer(true);
+            }}
+            style={showTempoTrainer ? { color: 'var(--dpgen-primary)' } : {}}
+          >
+            <i className="fas fa-tachometer-alt" /> Tempo Trainer
           </button>
         </ToolbarDropdown>
       </ToolbarGroup>
@@ -1463,6 +1505,34 @@ export function Toolbar() {
         <LearningPathModal onClose={() => setShowLearningPaths(false)} />
       )}
 
+      {/* Practice Routines Modal */}
+      {showRoutineSelector && (
+        <RoutineSelector 
+          onClose={() => setShowRoutineSelector(false)} 
+          onStartRoutine={(routine) => {
+            setCurrentRoutine(routine);
+            setShowRoutineSelector(false);
+            setShowRoutinePlayer(true);
+          }}
+        />
+      )}
+
+      {/* Routine Player Modal */}
+      {showRoutinePlayer && currentRoutine && (
+        <RoutinePlayer
+          routine={currentRoutine}
+          onClose={() => {
+            setShowRoutinePlayer(false);
+            setCurrentRoutine(null);
+          }}
+          onComplete={() => {
+            setShowRoutinePlayer(false);
+            setCurrentRoutine(null);
+            showToast('🎉 Routine Complete! Great practice session!', 'success');
+          }}
+        />
+      )}
+
       {/* Polyrhythm Builder Modal */}
       {showPolyrhythmBuilder && (
         <PolyrhythmBuilder onClose={() => setShowPolyrhythmBuilder(false)} />
@@ -1482,9 +1552,40 @@ export function Toolbar() {
         <ApiSyncSettingsModal onClose={() => setShowApiSyncSettings(false)} />
       )}
 
+      {/* General Settings Modal */}
+      {showGeneralSettings && (
+        <GeneralSettingsModal onClose={() => setShowGeneralSettings(false)} />
+      )}
+
       {/* MIDI Mapping Editor Modal */}
       {showMIDIMapping && (
         <MIDIMappingEditor onClose={() => setShowMIDIMapping(false)} />
+      )}
+
+      {/* Tempo Trainer Panel */}
+      {showTempoTrainer && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+          }}
+          onClick={() => setShowTempoTrainer(false)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '400px', width: '90%' }}
+          >
+            <TempoTrainer onClose={() => setShowTempoTrainer(false)} />
+          </div>
+        </div>
       )}
 
       {/* MIDI Recording Modal */}

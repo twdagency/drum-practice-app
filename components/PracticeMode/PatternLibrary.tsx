@@ -7,6 +7,7 @@ import { exportPatternCollection, sharePatternURL, importPatternCollection } fro
 import { useToast } from '@/components/shared/Toast';
 import { CollapsibleSection } from '@/components/shared/CollapsibleSection';
 import { calculateDifficultyRating, getDifficultyColor, getDifficultyLabel } from '@/lib/utils/difficultyUtils';
+import { Library } from 'lucide-react';
 import { usePatternsApi } from '@/hooks/usePatternsApi';
 import { isApiSyncEnabled } from '@/lib/utils/patternSync';
 import { useSession } from 'next-auth/react';
@@ -210,7 +211,7 @@ export function PatternLibrary() {
     <div className="dpgen-card" style={{ marginTop: '1rem' }}>
       <CollapsibleSection
         title="Pattern Library"
-        icon="fas fa-book"
+        icon={<Library size={16} />}
         defaultExpanded={false}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

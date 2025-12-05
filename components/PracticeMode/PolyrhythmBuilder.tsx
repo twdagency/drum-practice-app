@@ -25,6 +25,7 @@ export const PolyrhythmBuilder: React.FC<PolyrhythmBuilderProps> = ({ onClose })
   const [rightVoice, setRightVoice] = useState<'snare' | 'kick' | 'hi-hat' | 'tom' | 'floor'>('snare');
   const [leftVoice, setLeftVoice] = useState<'snare' | 'kick' | 'hi-hat' | 'tom' | 'floor'>('kick');
   const [timeSignature, setTimeSignature] = useState('4/4');
+  const [subdivision, setSubdivision] = useState(16);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   
@@ -55,6 +56,7 @@ export const PolyrhythmBuilder: React.FC<PolyrhythmBuilderProps> = ({ onClose })
         rightVoice,
         leftVoice,
         timeSignature,
+        subdivision,
         name: name || undefined,
         description: description || undefined,
       });
@@ -62,7 +64,7 @@ export const PolyrhythmBuilder: React.FC<PolyrhythmBuilderProps> = ({ onClose })
       console.error('Error generating preview:', error);
       return null;
     }
-  }, [numerator, denominator, rightLimb, leftLimb, rightVoice, leftVoice, timeSignature, name, description]);
+  }, [numerator, denominator, rightLimb, leftLimb, rightVoice, leftVoice, timeSignature, subdivision, name, description]);
 
   const handleGenerate = () => {
     if (!previewPattern) return;
@@ -260,22 +262,40 @@ export const PolyrhythmBuilder: React.FC<PolyrhythmBuilderProps> = ({ onClose })
           </div>
         </div>
 
-        {/* Time Signature */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label className="dpgen-label" style={{ display: 'block', marginBottom: '0.5rem' }}>
-            Time Signature
-          </label>
-          <input
-            type="text"
-            className="dpgen-input"
-            value={timeSignature}
-            onChange={(e) => setTimeSignature(e.target.value)}
-            placeholder="4/4"
-            style={{ width: '100%' }}
-          />
-          <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-text-secondary)', marginTop: '0.25rem' }}>
-            The ratio defines the subdivision - no need to specify note values separately
+        {/* Time Signature & Subdivision */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div>
+            <label className="dpgen-label" style={{ display: 'block', marginBottom: '0.5rem' }}>
+              Time Signature
+            </label>
+            <input
+              type="text"
+              className="dpgen-input"
+              value={timeSignature}
+              onChange={(e) => setTimeSignature(e.target.value)}
+              placeholder="4/4"
+              style={{ width: '100%' }}
+            />
           </div>
+          <div>
+            <label className="dpgen-label" style={{ display: 'block', marginBottom: '0.5rem' }}>
+              Base Subdivision
+            </label>
+            <select
+              className="dpgen-select"
+              value={subdivision}
+              onChange={(e) => setSubdivision(parseInt(e.target.value, 10))}
+              style={{ width: '100%' }}
+            >
+              <option value={4}>Quarter Notes (4)</option>
+              <option value={8}>Eighth Notes (8)</option>
+              <option value={16}>16th Notes (16)</option>
+              <option value={32}>32nd Notes (32)</option>
+            </select>
+          </div>
+        </div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-text-secondary)', marginBottom: '1.5rem' }}>
+          The subdivision determines the precision of note placement. Higher values allow finer timing.
         </div>
 
         {/* Pattern Name and Description */}

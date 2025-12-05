@@ -48,6 +48,9 @@ export interface PracticeSlice {
   setMicrophoneSource: (source: MediaStreamAudioSourceNode | null) => void;
   setMicrophoneSensitivity: (sensitivity: number) => void;
   setMicrophoneThreshold: (threshold: number) => void;
+  setMicrophoneGhostThreshold: (threshold: number) => void;
+  setMicrophoneAccentThreshold: (threshold: number) => void;
+  setMicrophoneDynamicDetection: (enabled: boolean) => void;
   setMicrophoneLatencyAdjustment: (adjustment: number) => void;
   setMicrophonePracticeAccuracyWindow: (window: number) => void;
   setMicrophoneExpectedNotes: (notes: ExpectedNote[]) => void;
@@ -167,9 +170,12 @@ const initialMicrophonePractice: MicrophonePracticeState = {
   showMissedNotes: true,
   sensitivity: persisted.microphone?.sensitivity ?? 70,
   threshold: persisted.microphone?.threshold ?? 0.15,
+  ghostThreshold: persisted.microphone?.ghostThreshold ?? 0.05, // Lower threshold for ghost notes
+  accentThreshold: persisted.microphone?.accentThreshold ?? 0.4, // Higher threshold for accents
   lastHitTime: 0,
   hitCooldown: CONSTANTS.TIMING.HIT_COOLDOWN,
   levelCheckInterval: null,
+  dynamicDetection: persisted.microphone?.dynamicDetection ?? true, // Enable ghost/accent detection
 };
 
 const initialMIDIRecording: MIDIRecordingState = {
@@ -194,6 +200,9 @@ const initialPracticeStats: PracticeStats = {
   tempoAchievements: [],
   currentStreak: 0,
   lastPracticeDate: null,
+  presetBestScores: {},
+  weeklyAccuracy: [],
+  weeklyPracticeTime: [],
 };
 
 const initialPracticeGoals: PracticeGoals = {
@@ -220,6 +229,17 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
         // Ensure patternsPracticed object exists
         if (!loadedPracticeStats.patternsPracticed || typeof loadedPracticeStats.patternsPracticed !== 'object') {
           loadedPracticeStats.patternsPracticed = {};
+        }
+        // Ensure presetBestScores object exists
+        if (!loadedPracticeStats.presetBestScores || typeof loadedPracticeStats.presetBestScores !== 'object') {
+          loadedPracticeStats.presetBestScores = {};
+        }
+        // Ensure weekly arrays exist
+        if (!Array.isArray(loadedPracticeStats.weeklyAccuracy)) {
+          loadedPracticeStats.weeklyAccuracy = [];
+        }
+        if (!Array.isArray(loadedPracticeStats.weeklyPracticeTime)) {
+          loadedPracticeStats.weeklyPracticeTime = [];
         }
       }
     } catch (e) {
@@ -515,6 +535,63 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
             visualFeedback: updated.visualFeedback,
             showTimingErrors: updated.showTimingErrors,
           }));
+        } catch (e) {
+          console.error('Failed to save microphone settings:', e);
+        }
+      }
+      return { microphonePractice: updated };
+    }),
+
+  setMicrophoneGhostThreshold: (threshold) =>
+    set((state) => {
+      const updated = {
+        ...state.microphonePractice,
+        ghostThreshold: Math.max(0.01, Math.min(0.3, threshold)),
+      };
+      if (typeof window !== 'undefined') {
+        try {
+          const existing = window.localStorage.getItem('dpgen_microphone_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
+          settings.ghostThreshold = updated.ghostThreshold;
+          window.localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
+        } catch (e) {
+          console.error('Failed to save microphone settings:', e);
+        }
+      }
+      return { microphonePractice: updated };
+    }),
+
+  setMicrophoneAccentThreshold: (threshold) =>
+    set((state) => {
+      const updated = {
+        ...state.microphonePractice,
+        accentThreshold: Math.max(0.2, Math.min(1.0, threshold)),
+      };
+      if (typeof window !== 'undefined') {
+        try {
+          const existing = window.localStorage.getItem('dpgen_microphone_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
+          settings.accentThreshold = updated.accentThreshold;
+          window.localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
+        } catch (e) {
+          console.error('Failed to save microphone settings:', e);
+        }
+      }
+      return { microphonePractice: updated };
+    }),
+
+  setMicrophoneDynamicDetection: (enabled) =>
+    set((state) => {
+      const updated = {
+        ...state.microphonePractice,
+        dynamicDetection: enabled,
+      };
+      if (typeof window !== 'undefined') {
+        try {
+          const existing = window.localStorage.getItem('dpgen_microphone_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
+          settings.dynamicDetection = updated.dynamicDetection;
+          window.localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
         } catch (e) {
           console.error('Failed to save microphone settings:', e);
         }

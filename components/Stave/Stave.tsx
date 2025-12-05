@@ -780,6 +780,9 @@ export function Stave() {
             
             // Apply tuplet to the appropriate voice if needed
             // The tuplet config tells us which voice needs it and what the configuration is
+            // Store tuplet for later drawing
+            let polyrhythmTuplet: any = null;
+            
             if (needsTuplet && tupletConfig && tupletVoice) {
               try {
                 const notesToTuplet = tupletVoice === 'left' ? leftVoiceNotes : rightVoiceNotes;
@@ -788,18 +791,19 @@ export function Stave() {
                   // Create tuplet with correct configuration
                   // For 4:3: left voice needs tuplet "3 notes in time of 4"
                   // For 5:4: right voice needs tuplet "5 notes in time of 4"
-                  const tuplet = new VF.Tuplet(notesToTuplet, {
+                  polyrhythmTuplet = new VF.Tuplet(notesToTuplet, {
                     num_notes: tupletConfig.num_notes,
                     notes_occupied: tupletConfig.notes_occupied,
+                    bracketed: true,
+                    ratioed: true,
                   });
                   
-                  // Apply tuplet to ALL notes in the group (not just the first)
-                  // VexFlow requires all notes in a tuplet to have the tuplet set
+                  // Apply tuplet to ALL notes in the group
                   notesToTuplet.forEach((note) => {
                     if (note && typeof note.setTuplet === 'function') {
-                    note.setTuplet(tuplet);
-                  }
-                });
+                      note.setTuplet(polyrhythmTuplet);
+                    }
+                  });
                 }
               } catch (e) {
                 console.error('Failed to create tuplet:', e);
@@ -839,29 +843,81 @@ export function Stave() {
                 leftFormatter.format([leftVoice], formatWidth, { align_rests: false });
                 leftVoice.draw(context, leftStave);
                 
-                // Add labels to identify which stave is which
-                context.setFont('Inter', 12, 'bold');
+                // Draw tuplet bracket if needed
+                if (polyrhythmTuplet) {
+                  try {
+                    polyrhythmTuplet.setContext(context).draw();
+                  } catch (e) {
+                    console.error('Failed to draw polyrhythm tuplet:', e);
+                  }
+                }
+                
+                // Add labels to identify which stave is which (at the end, right-aligned)
+                context.setFont('Inter', 11, 'normal');
+                context.setFillStyle(darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)');
+                context.fillText(`${numerator} notes`, leftMargin + actualStaveWidth - 60, staveY + 50);
+                context.fillText(`${denominator} notes`, leftMargin + actualStaveWidth - 60, staveY + staveSpacing + 50);
+                
+                // Draw sticking annotations below each stave - positioned under each note
+                // The stave itself is about 50 pixels high, so we need to go below that plus some margin
+                // staveY is the top of the stave, so staveY + 80 should be safely below
+                context.setFont('Inter', 14, 'bold');
                 context.setFillStyle(darkMode ? '#ffffff' : '#000000');
-                context.fillText(`Right Hand (${numerator} notes)`, leftMargin + actualStaveWidth - 150, staveY - 5);
-                context.fillText(`Left Hand (${denominator} notes)`, leftMargin + actualStaveWidth - 150, staveY + staveSpacing - 5);
+                
+                // Draw R/L annotations below each note based on voice positions
+                // Right stave bottom: staveY + stave height (50) + margin (30) = staveY + 80
+                const rightStaveBottom = staveY + 80; // Well below the stave bottom line
+                // Left stave bottom: same calculation but starting from second stave position
+                const leftStaveBottom = staveY + staveSpacing + 80;
+                
+                // Get note x positions from rendered notes (add small offset to center under note head)
+                if (rightVoiceNotes && rightVoiceNotes.length > 0) {
+                  rightVoiceNotes.forEach((note: any) => {
+                    try {
+                      const noteX = note.getAbsoluteX ? note.getAbsoluteX() : note.getBoundingBox?.()?.x;
+                      if (noteX) {
+                        // Center the text under the note head (add small offset for centering)
+                        context.fillText(rightSticking.charAt(0), noteX + 5, rightStaveBottom);
+                      }
+                    } catch (e) {
+                      // Ignore errors getting note positions
+                    }
+                  });
+                }
+                
+                if (leftVoiceNotes && leftVoiceNotes.length > 0) {
+                  leftVoiceNotes.forEach((note: any) => {
+                    try {
+                      const noteX = note.getAbsoluteX ? note.getAbsoluteX() : note.getBoundingBox?.()?.x;
+                      if (noteX) {
+                        // Center the text under the note head (add small offset for centering)
+                        context.fillText(leftSticking.charAt(0), noteX + 5, leftStaveBottom);
+                      }
+                    } catch (e) {
+                      // Ignore errors getting note positions
+                    }
+                  });
+                }
               
               // Add data attributes to distinguish left and right voice notes for highlighting
-                // Use the same scheduled index mapping approach as other modes
+                // For two-stave mode, we use a simpler approach since notes are on separate staves
                 // positions is already calculated above
                 
               setTimeout(() => {
                 const svgEl = staveRef.current?.querySelector('svg');
                 if (svgEl && rightVoiceNotes && leftVoiceNotes && positions) {
+                    // Get all note groups, filtering out TimeSigNote elements (they have no noteheads)
+                    const allStaveNotes = Array.from(svgEl.querySelectorAll('.vf-stavenote')) as SVGElement[];
+                    const allNotes = allStaveNotes.filter((noteEl) => {
+                      const hasNotehead = noteEl.querySelector('.vf-notehead') !== null;
+                      return hasNotehead;
+                    });
+                    
                     // First, clear all existing polyrhythm attributes to avoid conflicts
-                  const allNotes = Array.from(svgEl.querySelectorAll('.vf-stavenote')) as SVGElement[];
                     allNotes.forEach((noteEl) => {
                       noteEl.removeAttribute('data-voice');
                       noteEl.removeAttribute('data-polyrhythm-note-index');
                     });
-                    
-                    const rightLimb = polyrhythmPattern.rightRhythm.limb.replace('-', ' ').toUpperCase().charAt(0);
-                    const leftLimb = polyrhythmPattern.leftRhythm.limb.replace('-', ' ').toUpperCase().charAt(0);
-                    const combinedSticking = `${rightLimb}/${leftLimb}`;
                     
                     // Create a map from beat position to scheduled note index
                     // Combine all note events and sort by beat position to get scheduled indices
@@ -890,93 +946,52 @@ export function Stave() {
                     // Sort by beat position
                     allNoteEvents.sort((a, b) => a.beatPos - b.beatPos);
                     
-                    // Map each scheduled event to its index
+                    // Map each scheduled event to its index (this matches the playback scheduling)
                     const beatPosToScheduledIndex = new Map<number, number>();
-                    const scheduledIndexToHand = new Map<number, 'left' | 'right' | 'both'>();
                     allNoteEvents.forEach((event, idx) => {
                       beatPosToScheduledIndex.set(event.beatPos, idx);
-                      scheduledIndexToHand.set(idx, event.hand);
                     });
                     
-                    // Now map rendered notes to scheduled indices
-                    // For two-staves mode, notes are rendered on separate staves
-                    // Right-hand notes are on the first stave, left-hand notes are on the second stave
-                    // We need to process them separately and handle aligned notes correctly
+                    // For two-stave mode: notes are rendered in order:
+                    // - First N notes are right-hand notes (on the first stave)
+                    // - Next M notes are left-hand notes (on the second stave)
+                    // We can directly map them by their render index
                     
-                    // First, find all right-hand notes (should be the first N notes, where N = rightVoiceNotes.length)
-                    let rightNoteIndex = 0;
-                    for (let i = 0; i < rightVoiceNotes.length && rightNoteIndex < allNotes.length; i++) {
+                    // Map right-hand notes (indices 0 to rightVoiceNotes.length - 1)
+                    for (let i = 0; i < rightVoiceNotes.length && i < allNotes.length; i++) {
                       const rightPos = positions.rightPositions[i];
                       const scheduledIndex = beatPosToScheduledIndex.get(rightPos);
                       const alignment = positions.alignments.find(a => a.rightIndex === i);
                       
                       if (scheduledIndex !== undefined) {
-                        const hand = scheduledIndexToHand.get(scheduledIndex) || 'right';
-                        
-                        // Find the corresponding SVG element (right-hand notes are first)
-                        while (rightNoteIndex < allNotes.length) {
-                          const noteEl = allNotes[rightNoteIndex];
-                          const annotation = noteEl.querySelector('.vf-annotation text');
-                          const text = annotation?.textContent?.trim() || '';
-                          
-                          // Skip if already has attributes
-                          if (noteEl.getAttribute('data-polyrhythm-note-index') !== null) {
-                            rightNoteIndex++;
-                            continue;
-                          }
-                          
-                          // Match by annotation - right-hand notes should have rightLimb annotation
-                          if (text === rightLimb || (alignment && (text === combinedSticking || text.includes('/')))) {
-                            // For aligned notes, set voice='both', otherwise use the hand
-                            const voice = alignment ? 'both' : hand;
-                            noteEl.setAttribute('data-voice', voice);
-                            noteEl.setAttribute('data-polyrhythm-note-index', scheduledIndex.toString());
-                            rightNoteIndex++;
-                            break;
-                          }
-                          rightNoteIndex++;
-                        }
+                        const noteEl = allNotes[i];
+                        // For aligned notes, both hands play together
+                        const voice = alignment ? 'both' : 'right';
+                        noteEl.setAttribute('data-voice', voice);
+                        noteEl.setAttribute('data-polyrhythm-note-index', scheduledIndex.toString());
                       }
                     }
                     
-                    // Then, find all left-hand notes (should be after the right-hand notes)
-                    // In two-staves mode, left-hand notes are on the second stave
-                    let leftNoteIndex = rightVoiceNotes.length; // Start after right-hand notes
-                    for (let j = 0; j < leftVoiceNotes.length && leftNoteIndex < allNotes.length; j++) {
-                      const alignment = positions.alignments.find(a => a.leftIndex === j);
+                    // Map left-hand notes (indices rightVoiceNotes.length to end)
+                    const leftStartIndex = rightVoiceNotes.length;
+                    for (let j = 0; j < leftVoiceNotes.length; j++) {
+                      const noteIndex = leftStartIndex + j;
+                      if (noteIndex >= allNotes.length) break;
+                      
                       const leftPos = positions.leftPositions[j];
                       const scheduledIndex = beatPosToScheduledIndex.get(leftPos);
+                      const alignment = positions.alignments.find(a => a.leftIndex === j);
                       
                       if (scheduledIndex !== undefined) {
-                        const hand = scheduledIndexToHand.get(scheduledIndex) || 'left';
-                        
-                        // Find the corresponding SVG element (left-hand notes come after right-hand notes)
-                        while (leftNoteIndex < allNotes.length) {
-                          const noteEl = allNotes[leftNoteIndex];
-                          const annotation = noteEl.querySelector('.vf-annotation text');
-                          const text = annotation?.textContent?.trim() || '';
-                          
-                          // Skip if already has attributes
-                          if (noteEl.getAttribute('data-polyrhythm-note-index') !== null) {
-                            leftNoteIndex++;
-                            continue;
-                          }
-                          
-                          // Match by annotation - left-hand notes should have leftLimb annotation
-                          if (text === leftLimb || (alignment && (text === combinedSticking || text.includes('/')))) {
-                            // For aligned notes, set voice='both', otherwise use the hand
-                            const voice = alignment ? 'both' : hand;
-                            noteEl.setAttribute('data-voice', voice);
-                            noteEl.setAttribute('data-polyrhythm-note-index', scheduledIndex.toString());
-                            leftNoteIndex++;
-                            break;
-                          }
-                          leftNoteIndex++;
-                        }
+                        const noteEl = allNotes[noteIndex];
+                        // For aligned notes, both hands play together
+                        const voice = alignment ? 'both' : 'left';
+                        noteEl.setAttribute('data-voice', voice);
+                        noteEl.setAttribute('data-polyrhythm-note-index', scheduledIndex.toString());
                       }
                     }
-                  }
-                }, 100);
+                }
+              }, 100);
               } else {
                 // Stacked mode: combine voices into single stave
                 // Note: stave already has clef/time signature from earlier setup
@@ -991,22 +1006,34 @@ export function Stave() {
                 // VexFlow will stack keys vertically when they're in the same note
                 const formatter = new VF.Formatter();
                 
-                // For stacked mode, format separately to get correct spacing, then draw both voices
-                // After drawing, rearrange SVG elements to be in chronological order (not sequential by voice)
+                // For stacked mode, format voices SEPARATELY then draw on same stave
+                // VexFlow's joinVoices requires matching tick counts, which polyrhythms don't have
                 if (polyrhythmDisplayMode === 'stacked') {
-                  // Format each voice separately (like two-staves mode) to get correct spacing
+                  const formatWidth = Math.max(200, actualStaveWidth - 120);
+                  
+                  // Format each voice independently - don't join them
+                  // This allows different tick counts (e.g., 3 notes vs 2 notes)
                   const rightFormatter = new VF.Formatter();
                   rightFormatter.joinVoices([rightVoice]);
-                  const formatWidth = Math.max(200, actualStaveWidth - 120);
-                  rightFormatter.format([rightVoice], formatWidth, { align_rests: false });
+                  rightFormatter.format([rightVoice], formatWidth);
                   
                   const leftFormatter = new VF.Formatter();
                   leftFormatter.joinVoices([leftVoice]);
-                  leftFormatter.format([leftVoice], formatWidth, { align_rests: false });
+                  leftFormatter.format([leftVoice], formatWidth);
                   
-                  // Draw both voices on the same stave - VexFlow will stack aligned notes
+                  // Draw both voices on the same stave
+                  // Notes will overlap at different positions based on their timing
                   rightVoice.draw(context, stave);
                   leftVoice.draw(context, stave);
+                  
+                  // Draw tuplet bracket if needed
+                  if (polyrhythmTuplet) {
+                    try {
+                      polyrhythmTuplet.setContext(context).draw();
+                    } catch (e) {
+                      console.error('Failed to draw polyrhythm tuplet in stacked mode:', e);
+                    }
+                  }
                   
                   // After drawing, rearrange SVG note groups to be in chronological order
                   // Then set data attributes based on beat positions
@@ -1015,7 +1042,13 @@ export function Stave() {
                     const svgEl = staveRef.current?.querySelector('svg');
                     if (svgEl && rightVoiceNotes && leftVoiceNotes && positions) {
                       // Get all note groups (both right and left voice notes)
-                      const allNoteGroups = Array.from(svgEl.querySelectorAll('.vf-stavenote')) as SVGElement[];
+                      // Filter out TimeSigNote elements - they have .vf-stavenote class but no noteheads
+                      const allStaveNotes = Array.from(svgEl.querySelectorAll('.vf-stavenote')) as SVGElement[];
+                      const allNoteGroups = allStaveNotes.filter((noteEl) => {
+                        // Real notes have noteheads, time signature notes don't
+                        const hasNotehead = noteEl.querySelector('.vf-notehead') !== null;
+                        return hasNotehead;
+                      });
                       
                       if (allNoteGroups.length > 0) {
                         // Get the parent group that contains all notes (usually the voice group)
@@ -1035,7 +1068,6 @@ export function Stave() {
                             parentGroup.appendChild(element);
                           });
                           
-                          
                           // Now set data attributes based on beat positions (after rearrangement)
                           // First, clear all existing polyrhythm attributes
                           allNoteGroups.forEach((noteEl) => {
@@ -1043,21 +1075,18 @@ export function Stave() {
                             noteEl.removeAttribute('data-polyrhythm-note-index');
                           });
                           
-                          const rightLimb = polyrhythmPattern.rightRhythm.limb.replace('-', ' ').toUpperCase().charAt(0);
-                          const leftLimb = polyrhythmPattern.leftRhythm.limb.replace('-', ' ').toUpperCase().charAt(0);
-                          const combinedSticking = `${rightLimb}/${leftLimb}`;
-                          
                           // Create a map from beat position to scheduled note index
-                          const allNoteEvents: Array<{ beatPos: number; hand: 'left' | 'right' | 'both'; rightIndex?: number; leftIndex?: number }> = [];
+                          // Combine all note events and sort by beat position to get scheduled indices
+                          const allNoteEvents: Array<{ beatPos: number; hand: 'left' | 'right' | 'both' }> = [];
                           
                           // Add right hand notes
                           for (let i = 0; i < positions.rightPositions.length; i++) {
                             const beatPos = positions.rightPositions[i];
                             const alignment = positions.alignments.find(a => a.rightIndex === i);
                             if (alignment) {
-                              allNoteEvents.push({ beatPos, hand: 'both', rightIndex: i, leftIndex: alignment.leftIndex });
+                              allNoteEvents.push({ beatPos, hand: 'both' });
                             } else {
-                              allNoteEvents.push({ beatPos, hand: 'right', rightIndex: i });
+                              allNoteEvents.push({ beatPos, hand: 'right' });
                             }
                           }
                           
@@ -1066,26 +1095,17 @@ export function Stave() {
                             const alignment = positions.alignments.find(a => a.leftIndex === j);
                             if (!alignment) {
                               const beatPos = positions.leftPositions[j];
-                              allNoteEvents.push({ beatPos, hand: 'left', leftIndex: j });
+                              allNoteEvents.push({ beatPos, hand: 'left' });
                             }
                           }
                           
                           // Sort by beat position
                           allNoteEvents.sort((a, b) => a.beatPos - b.beatPos);
                           
-                          // Map each scheduled event to its index
-                          const beatPosToScheduledIndex = new Map<number, number>();
-                          const scheduledIndexToHand = new Map<number, 'left' | 'right' | 'both'>();
-                          allNoteEvents.forEach((event, idx) => {
-                            beatPosToScheduledIndex.set(event.beatPos, idx);
-                            scheduledIndexToHand.set(idx, event.hand);
-                          });
-                          
-                          // Map notes by their chronological order (after rearrangement)
-                          // Notes are now in chronological order, so we can match them directly to scheduled notes
-                          // But we verify annotations match to ensure correctness
+                          // Notes are now sorted by X position (time), so we can directly map them
+                          // to scheduled events (which are also sorted by beat position)
                           for (let i = 0; i < notesWithPositions.length && i < allNoteEvents.length; i++) {
-                            const { element: noteEl, x } = notesWithPositions[i];
+                            const { element: noteEl } = notesWithPositions[i];
                             const event = allNoteEvents[i];
                             
                             // Skip if already has attributes
@@ -1093,26 +1113,9 @@ export function Stave() {
                               continue;
                             }
                             
-                            const annotation = noteEl.querySelector('.vf-annotation text');
-                            const text = annotation?.textContent?.trim() || '';
-                            
-                            // Verify annotation matches expected (for debugging)
-                            const expectedAnnotation = event.hand === 'both' ? combinedSticking :
-                                                      event.hand === 'right' ? rightLimb : leftLimb;
-                            const annotationMatches = text === expectedAnnotation || 
-                                                      (event.hand === 'both' && (text.includes('/') || text === combinedSticking)) ||
-                                                      (text === '' && event.hand !== 'both'); // Allow empty for rests
-                            
-                            if (!annotationMatches && text !== '') {
-                              console.warn(`[Rendering] Annotation mismatch at index ${i}: expected "${expectedAnnotation}" (hand=${event.hand}), got "${text}"`);
-                            }
-                            
-                            // Set attributes based on the scheduled event
-                            const scheduledIndex = beatPosToScheduledIndex.get(event.beatPos);
-                            if (scheduledIndex !== undefined) {
-                              noteEl.setAttribute('data-voice', event.hand);
-                              noteEl.setAttribute('data-polyrhythm-note-index', scheduledIndex.toString());
-                            }
+                            // Set attributes directly - notes are in chronological order
+                            noteEl.setAttribute('data-voice', event.hand);
+                            noteEl.setAttribute('data-polyrhythm-note-index', i.toString());
                           }
                         }
                       }
@@ -1131,8 +1134,14 @@ export function Stave() {
                   setTimeout(() => {
                     const svgEl = staveRef.current?.querySelector('svg');
                     if (svgEl && rightVoiceNotes && leftVoiceNotes && positions) {
+                      // Get all note groups, filtering out TimeSigNote elements (they have no noteheads)
+                      const allStaveNotes = Array.from(svgEl.querySelectorAll('.vf-stavenote')) as SVGElement[];
+                      const allNotes = allStaveNotes.filter((noteEl) => {
+                        const hasNotehead = noteEl.querySelector('.vf-notehead') !== null;
+                        return hasNotehead;
+                      });
+                      
                       // First, clear all existing polyrhythm attributes to avoid conflicts
-                      const allNotes = Array.from(svgEl.querySelectorAll('.vf-stavenote')) as SVGElement[];
                       allNotes.forEach((noteEl) => {
                         noteEl.removeAttribute('data-voice');
                         noteEl.removeAttribute('data-polyrhythm-note-index');
@@ -1480,56 +1489,67 @@ export function Stave() {
                       if (noteGroup) {
                         noteGroup.setAttribute('data-ghost-note', 'true');
                         
+                        // Remove any existing parentheses first (prevents duplicates on re-render)
+                        noteGroup.querySelectorAll('.dpgen-ghost-note-paren').forEach(el => el.remove());
+                        
                         // Add parentheses as SVG text elements directly
                         try {
-                          // Get the notehead position for X coordinate
-                          const notehead = noteGroup.querySelector('path[data-name="notehead"]') || 
-                                         noteGroup.querySelector('circle') ||
-                                         noteGroup.querySelector('ellipse') ||
-                                         noteGroup.querySelector('path');
+                          // Get the note group's bounding box to position parentheses
+                          const groupBBox = noteGroup.getBBox();
                           
-                          if (notehead) {
-                            const bbox = (notehead as SVGGElement).getBBox();
-                            const x = bbox.x;
-                            
-                            // Calculate Y position - keep fixed at 96 for all notes
-                            const y = 96;
-                            
-                            // Check if this is a quarter note - they need more X spacing
-                            const noteDuration = ghostDurations[i] || '';
-                            const isQuarterNote = noteDuration === 'q' || noteDuration === 'qr';
-                            
-                            // Calculate spacing based on notehead size
-                            // Quarter notes have larger noteheads, so use notehead width to calculate spacing
-                            const noteheadWidth = bbox.width;
-                            // For quarter notes, use much more aggressive spacing to properly wrap around the larger notehead
-                            const leftXOffset = isQuarterNote ? -(noteheadWidth * 0.85 + 12) : -8;  // A bit more space for quarter notes
-                            const rightXOffset = isQuarterNote ? (noteheadWidth * 0.65 + 10) : 2;  // A bit more space for quarter notes
-                            
-                            // Create left parenthesis
-                            const leftParenText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                            leftParenText.textContent = '(';
-                            leftParenText.setAttribute('x', (x + leftXOffset).toString());
-                            leftParenText.setAttribute('y', y.toString());
-                            leftParenText.setAttribute('font-family', 'Arial');
-                            leftParenText.setAttribute('font-size', '20');
-                            leftParenText.setAttribute('font-weight', 'bold');
-                            leftParenText.setAttribute('fill', darkMode ? '#ffffff' : '#000000');
-                            leftParenText.setAttribute('class', 'dpgen-ghost-note-paren');
-                            noteGroup.appendChild(leftParenText);
-                            
-                            // Create right parenthesis
-                            const rightParenText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                            rightParenText.textContent = ')';
-                            rightParenText.setAttribute('x', (x + bbox.width + rightXOffset).toString());
-                            rightParenText.setAttribute('y', y.toString());
-                            rightParenText.setAttribute('font-family', 'Arial');
-                            rightParenText.setAttribute('font-size', '20');
-                            rightParenText.setAttribute('font-weight', 'bold');
-                            rightParenText.setAttribute('fill', darkMode ? '#ffffff' : '#000000');
-                            rightParenText.setAttribute('class', 'dpgen-ghost-note-paren');
-                            noteGroup.appendChild(rightParenText);
+                          // Find the Y position of the notehead (the lowest path element that's not a stem)
+                          // Stems go up, noteheads are at the bottom
+                          let noteheadY = groupBBox.y + groupBBox.height; // Default to bottom of group
+                          let noteheadX = groupBBox.x;
+                          let noteheadWidth = 12; // Default width estimate
+                          
+                          // Try to find actual notehead for better positioning
+                          const paths = noteGroup.querySelectorAll('path');
+                          for (const path of paths) {
+                            const pathBBox = (path as SVGPathElement).getBBox();
+                            // Noteheads are small ovals, stems are thin lines
+                            // Look for paths with width > 6 and height < 15 (noteheads, not stems)
+                            if (pathBBox.width >= 6 && pathBBox.height >= 4 && pathBBox.height <= 15) {
+                              noteheadY = pathBBox.y + pathBBox.height / 2;
+                              noteheadX = pathBBox.x;
+                              noteheadWidth = pathBBox.width;
+                              break;
+                            }
                           }
+                          
+                          // Also check for ellipse/circle noteheads
+                          const ellipse = noteGroup.querySelector('ellipse, circle');
+                          if (ellipse) {
+                            const ellipseBBox = (ellipse as SVGGraphicsElement).getBBox();
+                            noteheadY = ellipseBBox.y + ellipseBBox.height / 2;
+                            noteheadX = ellipseBBox.x;
+                            noteheadWidth = ellipseBBox.width;
+                          }
+                          
+                          // Y position for text (slightly below notehead center for baseline alignment)
+                          const textY = noteheadY + 5;
+                          
+                          // Create left parenthesis - position to the left of the notehead
+                          const leftParenText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                          leftParenText.textContent = '(';
+                          leftParenText.setAttribute('x', (noteheadX - 7).toString());
+                          leftParenText.setAttribute('y', textY.toString());
+                          leftParenText.setAttribute('font-family', 'Arial, sans-serif');
+                          leftParenText.setAttribute('font-size', '14');
+                          leftParenText.setAttribute('fill', darkMode ? '#ffffff' : '#000000');
+                          leftParenText.setAttribute('class', 'dpgen-ghost-note-paren');
+                          noteGroup.appendChild(leftParenText);
+                          
+                          // Create right parenthesis - position to the right of the notehead
+                          const rightParenText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                          rightParenText.textContent = ')';
+                          rightParenText.setAttribute('x', (noteheadX + noteheadWidth + 1).toString());
+                          rightParenText.setAttribute('y', textY.toString());
+                          rightParenText.setAttribute('font-family', 'Arial, sans-serif');
+                          rightParenText.setAttribute('font-size', '14');
+                          rightParenText.setAttribute('fill', darkMode ? '#ffffff' : '#000000');
+                          rightParenText.setAttribute('class', 'dpgen-ghost-note-paren');
+                          noteGroup.appendChild(rightParenText);
                         } catch (e) {
                           console.error('[Ghost Note] Failed to add SVG text parentheses:', e);
                         }
@@ -1937,6 +1957,22 @@ export function Stave() {
       // Use a small threshold to account for floating point precision
       if (opacity <= 0.01) {
         return false; // Exclude invisible notes
+      }
+      
+      // Filter out TimeSigNote elements - they have .vf-stavenote class but no noteheads
+      // Real notes have noteheads, time signature notes don't
+      const hasNotehead = noteEl.querySelector('.vf-notehead') !== null;
+      if (!hasNotehead) {
+        return false; // Exclude time signature and other non-note elements
+      }
+      
+      // Filter out rest notes - they shouldn't be highlighted during playback
+      // Rests have the class 'vf-rest' or contain rest glyphs
+      const isRest = noteEl.classList.contains('vf-rest') || 
+                     noteEl.querySelector('.vf-rest') !== null ||
+                     noteEl.querySelector('[data-rest="true"]') !== null;
+      if (isRest) {
+        return false; // Exclude rest notes
       }
       
       return true;
@@ -4145,7 +4181,7 @@ function buildPolyrhythmNotes({
         }
       }
       
-      // Add combined sticking annotation
+      // Add combined sticking annotation - position BELOW the note
       const combinedSticking = `${rightSticking.charAt(0)}/${leftSticking.charAt(0)}`;
       try {
         const annotation = new VF.Annotation(combinedSticking);
@@ -4153,9 +4189,8 @@ function buildPolyrhythmNotes({
         if (darkMode) {
           annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
         }
-        annotation.setJustification(1);
-        annotation.setVerticalJustification(2);
-        annotation.setYShift(140);
+        annotation.setJustification(1); // Center horizontally
+        annotation.setVerticalJustification(3); // VexFlow: 3 = BOTTOM (below note)
         note.addModifier(annotation, 0);
       } catch (e) {
         console.error('Failed to add combined sticking annotation:', e);
@@ -4187,19 +4222,22 @@ function buildPolyrhythmNotes({
         }
       }
       
-      // Add right sticking annotation
+      // Add right sticking annotation - position below the stave
+      // For two-stave mode, don't add annotations here; we'll draw them separately after rendering
+      // For stacked mode, add inline annotations
+      if (useStackedMode) {
         try {
-        const annotation = new VF.Annotation(rightSticking.charAt(0));
+          const annotation = new VF.Annotation(rightSticking.charAt(0));
           annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', 14, '600');
           if (darkMode) {
             annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
           }
-          annotation.setJustification(1);
-          annotation.setVerticalJustification(2);
-        annotation.setYShift(140);
+          annotation.setJustification(1); // Center
+          annotation.setVerticalJustification(3); // Bottom
           note.addModifier(annotation, 0);
         } catch (e) {
           console.error('Failed to add right sticking annotation:', e);
+        }
       }
       
       rightNotes.push(note);
@@ -4214,16 +4252,11 @@ function buildPolyrhythmNotes({
     const hasLeftAccent = leftAccents.includes(j);
     
     if (useStackedMode && alignedLeftIndices.has(j)) {
-      // Stacked mode: use a rest in left voice when it aligns with right (combined note is in right voice)
-      // Use the same duration as the right voice note to ensure proper alignment and spacing
-      // Accent is already added to the combined note in the right voice
-      const rest = new VF.StaveNote({
-        clef: 'percussion',
-        keys: ['b/4'],
-        duration: `${durations.rightDuration}r`, // Match right duration for alignment
-      });
-      // No annotation on rests
-      leftNotes.push(rest);
+      // Stacked mode: use a GhostNote in left voice when it aligns with right
+      // GhostNote is invisible but takes up space for proper alignment
+      // The combined note (with both drums) is already in the right voice
+      const ghostNote = new VF.GhostNote({ duration: durations.rightDuration });
+      leftNotes.push(ghostNote);
     } else {
       // Separate staves or no alignment: create separate note for left hand
     const note = new VF.StaveNote({
@@ -4249,22 +4282,24 @@ function buildPolyrhythmNotes({
         }
       }
     
-    // Add left sticking annotation
-      try {
-        const annotation = new VF.Annotation(leftSticking.charAt(0));
-        annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', 14, '600');
-        if (darkMode) {
-          annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
+    // Add left sticking annotation - only in stacked mode
+      // For two-stave mode, annotations are drawn separately
+      if (useStackedMode) {
+        try {
+          const annotation = new VF.Annotation(leftSticking.charAt(0));
+          annotation.setFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', 14, '600');
+          if (darkMode) {
+            annotation.setStyle({ fillStyle: '#ffffff', strokeStyle: '#ffffff' });
+          }
+          annotation.setJustification(1); // Center
+          annotation.setVerticalJustification(3); // Bottom
+          note.addModifier(annotation, 0);
+        } catch (e) {
+          console.error('Failed to add left sticking annotation:', e);
         }
-        annotation.setJustification(1);
-        annotation.setVerticalJustification(2);
-        annotation.setYShift(140);
-        note.addModifier(annotation, 0);
-      } catch (e) {
-        console.error('Failed to add left sticking annotation:', e);
-    }
+      }
     
-    leftNotes.push(note);
+      leftNotes.push(note);
     }
   }
   

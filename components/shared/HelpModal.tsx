@@ -1,459 +1,300 @@
 /**
  * Help Modal Component
- * Displays user guide and instructions
+ * Displays user guide and instructions - compact tabbed design
  */
 
 'use client';
 
 import React, { useState } from 'react';
+import { Modal } from './Modal';
+import { 
+  HelpCircle, 
+  Rocket, 
+  Music, 
+  Zap, 
+  Target, 
+  Keyboard, 
+  Download, 
+  Lightbulb, 
+  Wrench 
+} from 'lucide-react';
 
 interface HelpModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+type Section = 'start' | 'patterns' | 'advanced' | 'practice' | 'shortcuts' | 'export' | 'tips' | 'troubleshoot';
+
 export function HelpModal({ isOpen, onClose }: HelpModalProps) {
-  const [activeSection, setActiveSection] = useState<string>('getting-started');
+  const [activeSection, setActiveSection] = useState<Section>('start');
 
-  if (!isOpen) return null;
-
-  const sections = [
-    { id: 'getting-started', title: 'Getting Started', icon: '🚀' },
-    { id: 'creating-patterns', title: 'Creating Patterns', icon: '🎵' },
-    { id: 'advanced-features', title: 'Advanced Features', icon: '⚡' },
-    { id: 'practice-modes', title: 'Practice Modes', icon: '🥁' },
-    { id: 'keyboard-shortcuts', title: 'Keyboard Shortcuts', icon: '⌨️' },
-    { id: 'exporting-sharing', title: 'Exporting & Sharing', icon: '📤' },
-    { id: 'tips', title: 'Tips & Best Practices', icon: '💡' },
-    { id: 'troubleshooting', title: 'Troubleshooting', icon: '🔧' },
+  const sections: { id: Section; title: string; icon: React.ReactNode }[] = [
+    { id: 'start', title: 'Getting Started', icon: <Rocket size={14} /> },
+    { id: 'patterns', title: 'Patterns', icon: <Music size={14} /> },
+    { id: 'advanced', title: 'Advanced', icon: <Zap size={14} /> },
+    { id: 'practice', title: 'Practice', icon: <Target size={14} /> },
+    { id: 'shortcuts', title: 'Shortcuts', icon: <Keyboard size={14} /> },
+    { id: 'export', title: 'Export', icon: <Download size={14} /> },
+    { id: 'tips', title: 'Tips', icon: <Lightbulb size={14} /> },
+    { id: 'troubleshoot', title: 'Help', icon: <Wrench size={14} /> },
   ];
 
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'getting-started':
-        return (
-          <div>
-            <h3>First Steps</h3>
-            <ol style={{ lineHeight: '1.8' }}>
-              <li><strong>Add a Pattern</strong>: Click the "Add Pattern" button to create your first drum pattern</li>
-              <li><strong>Set Time Signature</strong>: Choose your time signature (e.g., 4/4, 3/4, 7/8)</li>
-              <li><strong>Choose Subdivision</strong>: Select the note subdivision (4=quarter notes, 8=eighth notes, 16=sixteenth notes, etc.)</li>
-              <li><strong>Enter Voicing Pattern</strong>: Type your drum pattern using drum notation</li>
-              <li><strong>Enter Sticking Pattern</strong>: Type your sticking pattern (R=Right, L=Left, K=Kick)</li>
-            </ol>
+  const content: Record<Section, React.ReactNode> = {
+    start: (
+      <>
+        <h4 style={{ marginTop: 0 }}>First Steps</h4>
+        <ol style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li><strong>Add Pattern</strong> - Click "Add Pattern" to create</li>
+          <li><strong>Time Signature</strong> - Choose 4/4, 3/4, 7/8, etc.</li>
+          <li><strong>Subdivision</strong> - 4=quarter, 8=eighth, 16=sixteenth</li>
+          <li><strong>Voicing</strong> - Enter drum tokens (S, K, H, etc.)</li>
+          <li><strong>Sticking</strong> - Enter R/L/K pattern</li>
+        </ol>
 
-            <h3 style={{ marginTop: '2rem' }}>Basic Pattern Notation</h3>
-            
-            <h4>Drum Voices</h4>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li><strong>S</strong> - Snare drum</li>
-              <li><strong>K</strong> - Kick drum</li>
-              <li><strong>H</strong> - Hi-hat</li>
-              <li><strong>F</strong> - Floor tom</li>
-              <li><strong>Ht</strong> or <strong>I</strong> - High tom</li>
-              <li><strong>Mt</strong> or <strong>M</strong> - Mid tom</li>
-              <li><strong>T</strong> - Tom (maps to high tom)</li>
-              <li><strong>C</strong> - Crash cymbal</li>
-              <li><strong>Y</strong> - Ride cymbal</li>
-            </ul>
+        <h4>Drum Notation</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem', fontSize: '0.8rem' }}>
+          <div><code>S</code> - Snare</div>
+          <div><code>K</code> - Kick</div>
+          <div><code>H</code> - Hi-hat</div>
+          <div><code>F</code> - Floor tom</div>
+          <div><code>T</code> - High tom</div>
+          <div><code>M</code> - Mid tom</div>
+          <div><code>C</code> - Crash</div>
+          <div><code>Y</code> - Ride</div>
+        </div>
 
-            <h4 style={{ marginTop: '1.5rem' }}>Simultaneous Hits</h4>
-            <p>Use <code style={{ background: 'var(--dpgen-bg)', padding: '0.2rem 0.4rem', borderRadius: '4px' }}>+</code> to indicate simultaneous hits:</p>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li><code>S+K</code> - Snare and kick together</li>
-              <li><code>H+K</code> - Hi-hat and kick together</li>
-            </ul>
+        <h4>Special Notation</h4>
+        <ul style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li><code>S+K</code> - Simultaneous hits</li>
+          <li><code>-</code> - Rest (no hit)</li>
+          <li><code>(S)</code> - Ghost note (soft)</li>
+        </ul>
+      </>
+    ),
+    patterns: (
+      <>
+        <h4 style={{ marginTop: 0 }}>Creating Patterns</h4>
+        <ol style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li>Enter voicing in "Voicing Pattern" field</li>
+          <li>Enter sticking in "Sticking Pattern" field</li>
+          <li>Adjust subdivision for note density</li>
+          <li>Set accents using accent editor</li>
+          <li>Set repeat count for loops</li>
+        </ol>
 
-            <h4 style={{ marginTop: '1.5rem' }}>Rests</h4>
-            <p>Use <code style={{ background: 'var(--dpgen-bg)', padding: '0.2rem 0.4rem', borderRadius: '4px' }}>-</code> to indicate a rest (no hit):</p>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li><code>S - S -</code> - Snare on beats 1 and 3, rest on beats 2 and 4</li>
-            </ul>
+        <h4>Per-Beat Subdivisions</h4>
+        <p style={{ margin: '0.5rem 0', fontSize: '0.8rem', lineHeight: 1.5 }}>
+          Enable "Advanced Mode" to set different subdivisions per beat.
+          Great for complex patterns mixing 16ths and 8ths.
+        </p>
 
-            <h4 style={{ marginTop: '1.5rem' }}>Ghost Notes</h4>
-            <p>Wrap a note in parentheses for ghost notes (softer hits):</p>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li><code>(S)</code> - Ghost snare</li>
-              <li><code>S (S) S (S)</code> - Alternating regular and ghost snare hits</li>
-            </ul>
-          </div>
-        );
+        <h4>Presets</h4>
+        <p style={{ margin: '0.5rem 0', fontSize: '0.8rem', lineHeight: 1.5 }}>
+          Browse 175+ preset patterns: click "Browse Presets", filter by category,
+          and click "Load" to add.
+        </p>
+      </>
+    ),
+    advanced: (
+      <>
+        <h4 style={{ marginTop: 0 }}>Ornaments</h4>
+        <ul style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li><code>lR</code> / <code>rL</code> - Flam</li>
+          <li><code>llR</code> / <code>rrL</code> - Drag</li>
+          <li><code>lllR</code> / <code>rrrL</code> - Ruff</li>
+        </ul>
 
-      case 'creating-patterns':
-        return (
-          <div>
-            <h3>Standard Patterns</h3>
-            <ol style={{ lineHeight: '1.8' }}>
-              <li>Enter your voicing pattern in the "Voicing Pattern" field</li>
-              <li>Enter your sticking pattern in the "Sticking Pattern" field</li>
-              <li>Adjust the subdivision to change note density</li>
-              <li>Set accents using the accent editor</li>
-              <li>Adjust the repeat count to play the pattern multiple times</li>
-            </ol>
+        <h4>Polyrhythms</h4>
+        <ol style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li>Click "Add Polyrhythm"</li>
+          <li>Set ratio (4:3 = R plays 4, L plays 3)</li>
+          <li>Choose display (Stacked/Two Staves)</li>
+          <li>Set click mode (Both/Right/Left)</li>
+        </ol>
 
-            <h3 style={{ marginTop: '2rem' }}>Advanced Per-Beat Subdivisions</h3>
-            <p>Enable "Advanced Mode" to set different subdivisions for each beat:</p>
-            <ol style={{ lineHeight: '1.8' }}>
-              <li>Toggle "Advanced Mode" under the Subdivision section</li>
-              <li>Set subdivisions for each beat (e.g., Beat 1: 16th notes, Beat 2: 8th notes)</li>
-              <li>Enter voicing and sticking patterns for each beat</li>
-              <li>Use the randomize buttons to generate random per-beat patterns</li>
-            </ol>
+        <h4>Accents</h4>
+        <p style={{ margin: '0.5rem 0', fontSize: '0.8rem', lineHeight: 1.5 }}>
+          Use the accent editor to mark specific beats louder.
+          Pattern: <code>&gt;</code> for accent, <code>-</code> for normal.
+        </p>
+      </>
+    ),
+    practice: (
+      <>
+        <h4 style={{ marginTop: 0 }}>MIDI Practice</h4>
+        <ol style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li>Click "MIDI Practice" in toolbar</li>
+          <li>Connect MIDI device</li>
+          <li>Calibrate (optional)</li>
+          <li>Start playback and play along</li>
+        </ol>
 
-            <h3 style={{ marginTop: '2rem' }}>Pattern Presets</h3>
-            <p>Browse and load from 175+ preset patterns:</p>
-            <ol style={{ lineHeight: '1.8' }}>
-              <li>Click "Browse Presets" in the toolbar</li>
-              <li>Filter by category (Beginner, Intermediate, Advanced, etc.)</li>
-              <li>Search for specific patterns</li>
-              <li>Click "Load" to add a pattern to your list</li>
-            </ol>
-          </div>
-        );
+        <h4>Microphone Practice</h4>
+        <ol style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li>Click "Microphone Practice"</li>
+          <li>Select microphone</li>
+          <li>Calibrate sensitivity</li>
+          <li>Start playback and play along</li>
+        </ol>
 
-      case 'advanced-features':
-        return (
-          <div>
-            <h3>Ornaments</h3>
-            
-            <h4>Flams</h4>
-            <p>Use lowercase <code>l</code> or <code>r</code> before a note for a flam:</p>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li><code>lR</code> - Left-hand flam on right-hand note</li>
-              <li><code>rL</code> - Right-hand flam on left-hand note</li>
-            </ul>
-
-            <h4 style={{ marginTop: '1.5rem' }}>Drags</h4>
-            <p>Use two lowercase letters for a drag (ruff):</p>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li><code>llR</code> - Drag on right-hand note</li>
-              <li><code>rrL</code> - Drag on left-hand note</li>
-            </ul>
-
-            <h4 style={{ marginTop: '1.5rem' }}>Ruffs</h4>
-            <p>Use three lowercase letters for a ruff:</p>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li><code>lllR</code> - Ruff on right-hand note</li>
-              <li><code>rrrL</code> - Ruff on left-hand note</li>
-            </ul>
-
-            <h3 style={{ marginTop: '2rem' }}>Polyrhythms</h3>
-            <p>Create polyrhythms where each hand plays a different rhythm:</p>
-            <ol style={{ lineHeight: '1.8' }}>
-              <li>Click "Add Polyrhythm" in the toolbar</li>
-              <li>Set the ratio (e.g., 4:3 means right hand plays 4 notes while left plays 3)</li>
-              <li>Choose display mode (Stacked or Two Staves)</li>
-              <li>Set click mode (Both Hands, Right Hand Only, Left Hand Only)</li>
-            </ol>
-          </div>
-        );
-
-      case 'practice-modes':
-        return (
-          <div>
-            <h3>MIDI Practice</h3>
-            <p>Practice with a MIDI drum pad or keyboard:</p>
-            <ol style={{ lineHeight: '1.8' }}>
-              <li>Click "MIDI Practice" in the toolbar</li>
-              <li>Connect your MIDI device</li>
-              <li>Calibrate your device (optional)</li>
-              <li>Start playback and play along</li>
-              <li>View real-time accuracy and timing feedback</li>
-            </ol>
-
-            <h3 style={{ marginTop: '2rem' }}>Microphone Practice</h3>
-            <p>Practice with audio input from a microphone:</p>
-            <ol style={{ lineHeight: '1.8' }}>
-              <li>Click "Microphone Practice" in the toolbar</li>
-              <li>Select your microphone device</li>
-              <li>Calibrate sensitivity (optional)</li>
-              <li>Start playback and play along</li>
-              <li>View real-time accuracy feedback</li>
-            </ol>
-
-            <h3 style={{ marginTop: '2rem' }}>Practice Statistics</h3>
-            <p>Track your practice progress:</p>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li>Total practice time</li>
-              <li>Number of sessions</li>
-              <li>Current streak</li>
-              <li>Average accuracy</li>
-              <li>Average timing</li>
-              <li>Daily practice charts</li>
-              <li>Goal tracking</li>
-            </ul>
-          </div>
-        );
-
-      case 'keyboard-shortcuts':
-        return (
-          <div>
-            <h3>Keyboard Shortcuts</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--dpgen-bg)', borderRadius: '8px' }}>
-                <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>Space</kbd>
-                <span>Play/Pause</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--dpgen-bg)', borderRadius: '8px' }}>
-                <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>Esc</kbd>
-                <span>Stop playback</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--dpgen-bg)', borderRadius: '8px' }}>
-                <span>
-                  <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>Ctrl</kbd>
-                  <span style={{ margin: '0 0.25rem' }}>+</span>
-                  <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>N</kbd>
-                </span>
-                <span>Add new pattern</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--dpgen-bg)', borderRadius: '8px' }}>
-                <span>
-                  <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>Ctrl</kbd>
-                  <span style={{ margin: '0 0.25rem' }}>+</span>
-                  <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>Shift</kbd>
-                  <span style={{ margin: '0 0.25rem' }}>+</span>
-                  <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>N</kbd>
-                </span>
-                <span>Generate random pattern</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--dpgen-bg)', borderRadius: '8px' }}>
-                <span>
-                  <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>Ctrl</kbd>
-                  <span style={{ margin: '0 0.25rem' }}>+</span>
-                  <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>R</kbd>
-                </span>
-                <span>Randomize all patterns</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--dpgen-bg)', borderRadius: '8px' }}>
-                <kbd style={{ padding: '0.25rem 0.5rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '4px', fontFamily: 'monospace' }}>?</kbd>
-                <span>Show keyboard shortcuts</span>
-              </div>
+        <h4>Tempo Trainer</h4>
+        <p style={{ margin: '0.5rem 0', fontSize: '0.8rem', lineHeight: 1.5 }}>
+          Gradually increases tempo as you maintain accuracy.
+          Set start/target BPM and accuracy threshold.
+        </p>
+      </>
+    ),
+    shortcuts: (
+      <>
+        <h4 style={{ marginTop: 0 }}>Keyboard Shortcuts</h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          {[
+            { keys: 'Space', desc: 'Play/Pause' },
+            { keys: 'Esc', desc: 'Stop' },
+            { keys: 'Ctrl+N', desc: 'Add pattern' },
+            { keys: 'Ctrl+Shift+N', desc: 'Random pattern' },
+            { keys: 'Ctrl+R', desc: 'Randomize all' },
+            { keys: '?', desc: 'Show shortcuts' },
+          ].map((s, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', background: 'var(--dpgen-bg)', borderRadius: '4px' }}>
+              <kbd style={{ fontSize: '0.75rem', fontFamily: 'monospace', padding: '0.125rem 0.375rem', background: 'var(--dpgen-card)', border: '1px solid var(--dpgen-border)', borderRadius: '3px' }}>{s.keys}</kbd>
+              <span style={{ fontSize: '0.8rem' }}>{s.desc}</span>
             </div>
-          </div>
-        );
+          ))}
+        </div>
+      </>
+    ),
+    export: (
+      <>
+        <h4 style={{ marginTop: 0 }}>Export Options</h4>
+        <ul style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li><strong>MIDI</strong> - Export as .mid file</li>
+          <li><strong>SVG</strong> - Vector notation image</li>
+          <li><strong>PNG</strong> - Raster notation image</li>
+          <li><strong>PDF</strong> - Print-ready document</li>
+          <li><strong>URL</strong> - Shareable link</li>
+          <li><strong>JSON</strong> - Full pattern data</li>
+        </ul>
 
-      case 'exporting-sharing':
-        return (
-          <div>
-            <h3>Export Options</h3>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li><strong>MIDI Export</strong> - Export patterns as MIDI files</li>
-              <li><strong>SVG Export</strong> - Export notation as SVG images</li>
-              <li><strong>PNG Export</strong> - Export notation as PNG images</li>
-              <li><strong>PDF Export</strong> - Export notation as PDF (print-friendly)</li>
-              <li><strong>Shareable URL</strong> - Generate a URL to share patterns</li>
-              <li><strong>Export Collection</strong> - Export all patterns as JSON</li>
-              <li><strong>Import Collection</strong> - Import patterns from JSON</li>
-            </ul>
+        <h4>Pattern Library</h4>
+        <p style={{ margin: '0.5rem 0', fontSize: '0.8rem', lineHeight: 1.5 }}>
+          Save patterns to your library for later use.
+          Sign in to sync across devices.
+        </p>
+      </>
+    ),
+    tips: (
+      <>
+        <h4 style={{ marginTop: 0 }}>Pattern Creation</h4>
+        <ul style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li>Start simple, increase complexity</li>
+          <li>Use ghost notes for groove</li>
+          <li>Try per-beat subdivisions</li>
+          <li>Add accents for dynamics</li>
+        </ul>
 
-            <h3 style={{ marginTop: '2rem' }}>Pattern Library</h3>
-            <p>Save patterns to your personal library:</p>
-            <ol style={{ lineHeight: '1.8' }}>
-              <li>Click "Pattern Library" in the toolbar</li>
-              <li>Click "Save Current Patterns" to save all patterns</li>
-              <li>Search and filter saved patterns</li>
-              <li>Load patterns from your library</li>
-              <li>Share patterns with others</li>
-            </ol>
-          </div>
-        );
+        <h4>Practice Tips</h4>
+        <ul style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li>Start slow, increase gradually</li>
+          <li>Use visual metronome</li>
+          <li>Track progress with stats</li>
+          <li>Set practice goals</li>
+        </ul>
+      </>
+    ),
+    troubleshoot: (
+      <>
+        <h4 style={{ marginTop: 0 }}>Playback Issues</h4>
+        <ul style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li>Check audio is not muted</li>
+          <li>Allow audio permissions</li>
+          <li>Refresh page if stuck</li>
+        </ul>
 
-      case 'tips':
-        return (
-          <div>
-            <h3>Pattern Creation</h3>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li>Start simple and gradually increase complexity</li>
-              <li>Use ghost notes to add dynamics and groove</li>
-              <li>Experiment with different subdivisions</li>
-              <li>Try per-beat subdivisions for complex patterns</li>
-              <li>Use accents to emphasize important beats</li>
-            </ul>
+        <h4>MIDI Issues</h4>
+        <ul style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li>Ensure device is connected</li>
+          <li>Check browser MIDI permissions</li>
+          <li>Try recalibrating</li>
+        </ul>
 
-            <h3 style={{ marginTop: '2rem' }}>Practice Tips</h3>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li>Start slow and gradually increase tempo</li>
-              <li>Use the visual metronome to maintain steady timing</li>
-              <li>Practice with both MIDI and microphone modes</li>
-              <li>Track your progress with practice statistics</li>
-              <li>Set practice goals to stay motivated</li>
-            </ul>
-
-            <h3 style={{ marginTop: '2rem' }}>Performance</h3>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li>Patterns with many repeats may take longer to render</li>
-              <li>Use the search feature to quickly find patterns</li>
-              <li>Collapse pattern sections you're not editing</li>
-              <li>Export patterns you want to keep</li>
-            </ul>
-
-            <h3 style={{ marginTop: '2rem' }}>Accessibility</h3>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li>All interactive elements support keyboard navigation</li>
-              <li>Use arrow keys to navigate between patterns</li>
-              <li>Screen reader support is available for all features</li>
-              <li>High contrast mode available in dark mode</li>
-            </ul>
-          </div>
-        );
-
-      case 'troubleshooting':
-        return (
-          <div>
-            <h3>Playback Issues</h3>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li>Ensure your audio is not muted</li>
-              <li>Check browser audio permissions</li>
-              <li>Try refreshing the page if playback stops</li>
-            </ul>
-
-            <h3 style={{ marginTop: '2rem' }}>MIDI Issues</h3>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li>Ensure your MIDI device is connected</li>
-              <li>Check browser MIDI permissions</li>
-              <li>Try recalibrating your device</li>
-            </ul>
-
-            <h3 style={{ marginTop: '2rem' }}>Rendering Issues</h3>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li>Large patterns may take time to render</li>
-              <li>Try reducing the number of repeats</li>
-              <li>Clear browser cache if notation doesn't display</li>
-            </ul>
-
-            <h3 style={{ marginTop: '2rem' }}>Performance Issues</h3>
-            <ul style={{ lineHeight: '1.8' }}>
-              <li>Close other browser tabs</li>
-              <li>Reduce the number of patterns</li>
-              <li>Disable visual effects if needed</li>
-            </ul>
-          </div>
-        );
-
-      default:
-        return null;
-    }
+        <h4>Performance</h4>
+        <ul style={{ lineHeight: 1.7, paddingLeft: '1.25rem', margin: 0 }}>
+          <li>Close other tabs</li>
+          <li>Reduce pattern count</li>
+          <li>Lower repeat count</li>
+        </ul>
+      </>
+    ),
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2000,
-      }}
-      onClick={onClose}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Help & Guide"
+      icon={<HelpCircle size={20} strokeWidth={1.5} />}
+      size="lg"
     >
-      <div
-        style={{
-          background: 'var(--dpgen-card)',
-          borderRadius: 'var(--dpgen-radius)',
-          padding: '0',
-          maxWidth: '900px',
-          width: '90%',
-          maxHeight: '90vh',
-          boxShadow: 'var(--dpgen-shadow)',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--dpgen-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--dpgen-text)', margin: 0 }}>
-            <i className="fas fa-question-circle" style={{ marginRight: '0.5rem', color: 'var(--dpgen-primary)' }} />
-            Help & Instructions
-          </h2>
+      {/* Tab Navigation */}
+      <div style={{ 
+        display: 'flex', 
+        flexWrap: 'wrap',
+        gap: '0.375rem', 
+        marginBottom: '1rem',
+        paddingBottom: '1rem',
+        borderBottom: '1px solid var(--dpgen-border)',
+      }}>
+        {sections.map((section) => (
           <button
-            onClick={onClose}
+            key={section.id}
+            onClick={() => setActiveSection(section.id)}
             style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              padding: '0.375rem 0.625rem',
+              background: activeSection === section.id ? 'var(--dpgen-primary)' : 'var(--dpgen-bg)',
+              color: activeSection === section.id ? 'white' : 'var(--dpgen-text)',
+              border: activeSection === section.id ? 'none' : '1px solid var(--dpgen-border)',
+              borderRadius: '6px',
               cursor: 'pointer',
-              color: 'var(--dpgen-muted)',
-              padding: '0.25rem',
+              fontSize: '0.75rem',
+              fontWeight: 500,
             }}
-            aria-label="Close"
           >
-            <i className="fas fa-times" />
+            {section.icon}
+            {section.title}
           </button>
-        </div>
+        ))}
+      </div>
 
-        {/* Content */}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {/* Sidebar */}
-          <div
-            style={{
-              width: '250px',
-              borderRight: '1px solid var(--dpgen-border)',
-              padding: '1rem',
-              overflowY: 'auto',
-              background: 'var(--dpgen-bg)',
-            }}
-          >
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {sections.map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    background: activeSection === section.id ? 'var(--dpgen-primary)' : 'transparent',
-                    color: activeSection === section.id ? 'white' : 'var(--dpgen-text)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    fontSize: '0.875rem',
-                    fontWeight: activeSection === section.id ? 600 : 400,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeSection !== section.id) {
-                      e.currentTarget.style.background = 'var(--dpgen-bg)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeSection !== section.id) {
-                      e.currentTarget.style.background = 'transparent';
-                    }
-                  }}
-                >
-                  <span style={{ marginRight: '0.5rem' }}>{section.icon}</span>
-                  {section.title}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Main Content */}
-          <div
-            style={{
-              flex: 1,
-              padding: '2rem',
-              overflowY: 'auto',
-              color: 'var(--dpgen-text)',
-            }}
-          >
-            <div
-              style={{
-                maxWidth: '600px',
-                lineHeight: '1.6',
-              }}
-            >
-              {renderContent()}
-            </div>
-          </div>
+      {/* Content */}
+      <div style={{ 
+        fontSize: '0.875rem', 
+        lineHeight: 1.6,
+        color: 'var(--dpgen-text)',
+      }}>
+        <style>{`
+          .help-content h4 {
+            margin: 1rem 0 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--dpgen-text);
+          }
+          .help-content code {
+            background: var(--dpgen-bg);
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-family: monospace;
+          }
+        `}</style>
+        <div className="help-content">
+          {content[activeSection]}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
-
-
-

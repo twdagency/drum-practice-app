@@ -13,6 +13,8 @@ function PricingContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<string>('');
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [promoCode, setPromoCode] = useState<string>('');
+  const [promoApplied, setPromoApplied] = useState<boolean>(false);
 
   // Fetch plans from API (so we get server-side environment variables)
   useEffect(() => {
@@ -29,6 +31,16 @@ function PricingContent() {
       });
   }, []);
 
+  // Check for stored promo code (from exit intent popup)
+  useEffect(() => {
+    const storedPromo = localStorage.getItem('dpgen_promo_code');
+    if (storedPromo) {
+      setPromoCode(storedPromo);
+      setPromoApplied(true);
+      setMessage(`🎉 Promo code ${storedPromo} applied! 20% off your first year.`);
+    }
+  }, []);
+
   useEffect(() => {
     // Check for canceled parameter
     if (searchParams.get('canceled')) {
@@ -36,11 +48,29 @@ function PricingContent() {
     }
   }, [searchParams]);
 
+  const handleApplyPromo = () => {
+    if (promoCode.trim()) {
+      localStorage.setItem('dpgen_promo_code', promoCode.trim().toUpperCase());
+      setPromoApplied(true);
+      setMessage(`🎉 Promo code ${promoCode.toUpperCase()} will be applied at checkout.`);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    localStorage.removeItem('dpgen_promo_code');
+    setPromoCode('');
+    setPromoApplied(false);
+    setMessage('');
+  };
+
   const handleCheckout = async (plan: SubscriptionPlan) => {
     setLoading(plan.id);
     setMessage('');
 
     try {
+      // Get promo code from state or localStorage
+      const appliedPromo = promoCode || localStorage.getItem('dpgen_promo_code');
+      
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
@@ -48,22 +78,23 @@ function PricingContent() {
         },
         body: JSON.stringify({
           priceId: plan.stripePriceId,
-          // Include email if user is logged in (optional - Stripe will collect if not provided)
           customerEmail: session?.user?.email,
+          promoCode: appliedPromo || undefined,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        // Show more detailed error message
         const errorMsg = data.error || data.message || 'Failed to create checkout session';
         console.error('Checkout API error:', data);
         throw new Error(errorMsg);
       }
 
+      // Clear the stored promo code after successful checkout creation
+      localStorage.removeItem('dpgen_promo_code');
+
       // Redirect to Stripe Checkout
-      // Stripe will collect email and payment info, user can create account after
       if (data.url) {
         window.location.href = data.url;
       }
@@ -87,12 +118,55 @@ function PricingContent() {
           </p>
         </div>
 
+        {/* Promo Code Section */}
+        <div className="max-w-md mx-auto mb-8">
+          <div className="bg-slate-900/60 backdrop-blur-xl rounded-xl p-4 border border-slate-800/50">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Have a promo code?
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                placeholder="Enter code"
+                disabled={promoApplied}
+                className="flex-1 px-4 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent transition-all disabled:opacity-50 font-mono"
+              />
+              {promoApplied ? (
+                <button
+                  onClick={handleRemovePromo}
+                  className="px-4 py-2.5 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-300 hover:bg-slate-700/70 transition-all text-sm font-medium"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  onClick={handleApplyPromo}
+                  disabled={!promoCode.trim()}
+                  className="px-4 py-2.5 bg-white text-slate-900 rounded-lg hover:bg-slate-100 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Apply
+                </button>
+              )}
+            </div>
+            {promoApplied && (
+              <p className="text-sm text-green-400 mt-2 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Code applied! Discount will be shown at checkout.
+              </p>
+            )}
+          </div>
+        </div>
+
         {/* Message Display */}
         {message && (
           <div className="max-w-2xl mx-auto mb-8">
             <div className={`p-4 rounded-xl border ${
-              message.includes('canceled') 
-                ? 'bg-slate-900/60 border-slate-800/50 text-slate-300'
+              message.includes('🎉') 
+                ? 'bg-green-950/30 border-green-800/50 text-green-300'
                 : 'bg-slate-900/60 border-slate-800/50 text-slate-300'
             }`}>
               {message}
@@ -180,6 +254,11 @@ function PricingContent() {
                     </span>
                   )}
                 </p>
+                {promoApplied && plan.interval === 'year' && (
+                  <p className="text-sm text-green-400 mt-2">
+                    + Additional 20% off with {promoCode}!
+                  </p>
+                )}
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -237,6 +316,14 @@ function PricingContent() {
               </h3>
               <p className="text-slate-400">
                 We accept all major credit cards, debit cards, and other payment methods through Stripe.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-white mb-2">
+                How do promo codes work?
+              </h3>
+              <p className="text-slate-400">
+                Enter your promo code above before clicking Subscribe. The discount will be applied automatically at checkout.
               </p>
             </div>
           </div>

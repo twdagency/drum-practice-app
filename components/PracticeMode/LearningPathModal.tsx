@@ -1,5 +1,6 @@
 /**
  * Learning Path Modal - View and navigate through learning paths
+ * Updated with lucide-react icons and new Modal system
  */
 
 'use client';
@@ -8,21 +9,112 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLearningPaths } from '@/hooks/useLearningPaths';
 import { usePresets } from '@/hooks/usePresets';
 import { useStore } from '@/store/useStore';
+import { useAchievements } from '@/hooks/useAchievements';
 import { LearningPath, LearningPathProgress } from '@/types/learningPath';
 import { Preset } from '@/types/preset';
-import { parseTimeSignature, buildAccentIndices, parseNumberList, parseTokens, formatList, calculateNotesPerBar } from '@/lib/utils/patternUtils';
+import { parseTimeSignature, buildAccentIndices, parseNumberList, parseTokens, formatList } from '@/lib/utils/patternUtils';
 import { createDefaultLearningPaths } from '@/lib/utils/createDefaultLearningPaths';
 import { saveLearningPath } from '@/lib/utils/learningPathStorage';
+import { Modal, ModalSection } from '@/components/shared/Modal';
+import { BadgeNotification } from '@/components/shared/BadgeNotification';
+import { PRACTICE_ROUTINES } from '@/lib/data/routines';
+import { PracticeRoutine } from '@/types/routine';
+import {
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  Play,
+  Route,
+  TrendingUp,
+  ListOrdered,
+  Clock,
+  Loader2,
+  Search,
+  Filter,
+  Target,
+  Award,
+  RotateCcw,
+  ChevronRight,
+  BookOpen,
+  Zap,
+  Star,
+  Dumbbell,
+  Rocket,
+  Guitar,
+  Flame,
+  LucideIcon,
+  ClipboardList,
+} from 'lucide-react';
+
+// Routine icon mapping
+const ROUTINE_ICON_MAP: Record<string, LucideIcon> = {
+  'zap': Zap,
+  'target': Target,
+  'dumbbell': Dumbbell,
+  'rocket': Rocket,
+  'guitar': Guitar,
+  'book-open': BookOpen,
+  'flame': Flame,
+};
+
+const getRoutineIcon = (iconName: string, size: number = 16) => {
+  const IconComponent = ROUTINE_ICON_MAP[iconName] || Zap;
+  return <IconComponent size={size} />;
+};
+
+// Get recommended routines based on learning path
+const getRecommendedRoutines = (path: LearningPath): PracticeRoutine[] => {
+  const pathDifficulty = path.difficulty;
+  const pathCategory = path.category.toLowerCase();
+  
+  return PRACTICE_ROUTINES
+    .filter(routine => {
+      // Match difficulty level (within 2 levels)
+      const difficultyMatch = routine.difficulty === 'beginner' && pathDifficulty <= 4 ||
+                             routine.difficulty === 'intermediate' && pathDifficulty >= 3 && pathDifficulty <= 7 ||
+                             routine.difficulty === 'advanced' && pathDifficulty >= 6;
+      
+      // Match category if possible
+      const categoryMatch = routine.tags.some(tag => 
+        pathCategory.includes(tag) || tag.includes(pathCategory)
+      ) || routine.category === 'comprehensive';
+      
+      return difficultyMatch || categoryMatch;
+    })
+    .slice(0, 3);
+};
 
 interface LearningPathModalProps {
   onClose: () => void;
 }
+
+// Category icons mapping
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  'beginner': <BookOpen size={16} />,
+  'rudiments': <Target size={16} />,
+  'technique': <Zap size={16} />,
+  'beats': <Star size={16} />,
+  'fills': <TrendingUp size={16} />,
+  'default': <Route size={16} />,
+};
+
+const getCategoryIcon = (category: string) => {
+  return CATEGORY_ICONS[category.toLowerCase()] || CATEGORY_ICONS['default'];
+};
 
 export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose }) => {
   const { paths, progress, loading, categories, refreshPaths, completeStep, resetProgress } = useLearningPaths();
   const { presets } = usePresets();
   const addPattern = useStore((state) => state.addPattern);
   const practicePadMode = useStore((state) => state.practicePadMode);
+  const { 
+    state: achievementState, 
+    newBadge, 
+    clearNewBadge,
+    trackStepCompleted, 
+    trackLearningPathCompleted,
+    trackFirstAction,
+  } = useAchievements();
   
   const [selectedPath, setSelectedPath] = useState<LearningPath | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -47,12 +139,10 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
   const filteredPaths = useMemo(() => {
     let filtered = paths;
 
-    // Apply category filter
     if (selectedCategory) {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
 
-    // Apply search query
     if (searchQuery.trim()) {
       const lowerQuery = searchQuery.toLowerCase();
       filtered = filtered.filter(p =>
@@ -62,7 +152,6 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
       );
     }
 
-    // Sort by difficulty, then by name
     return filtered.sort((a, b) => {
       if (a.difficulty !== b.difficulty) {
         return a.difficulty - b.difficulty;
@@ -71,7 +160,6 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
     });
   }, [paths, selectedCategory, searchQuery]);
 
-  // Get progress for a path
   const getPathProgress = (pathId: string): LearningPathProgress | null => {
     return progress[pathId] || null;
   };
@@ -80,22 +168,16 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
   const handleLoadPreset = (preset: Preset) => {
     const [beats, beatType] = parseTimeSignature(preset.timeSignature);
     
-    // Check if this is a combined preset that should be split into individual patterns
     const isCombinedPreset = preset.id === '16th-note-grid-all-combinations-combined' || 
                              (preset.tags && preset.tags.includes('combined'));
     
     if (isCombinedPreset && preset.id === '16th-note-grid-all-combinations-combined') {
-      // Split the combined preset into 14 individual patterns
-      // Each pattern is 16 positions (4 bars × 4 beats)
       const drumTokens = parseTokens(preset.drumPattern);
       const stickingTokens = parseTokens(preset.stickingPattern);
-      const phraseValues = parseNumberList(preset.phrase);
       
-      // The combined pattern has 14 individual patterns, each stored as 64 positions (4 bars × 4 beats × 4 positions per beat)
-      // But we only need the base 4-position pattern - the system will repeat it based on repeat: 4
       const patternsPerCombination = 14;
-      const positionsPerPatternInCombined = 64; // How it's stored in the combined preset
-      const basePatternLength = 4; // The actual pattern length we want (one beat)
+      const positionsPerPatternInCombined = 64;
+      const basePatternLength = 4;
       
       const individualPatternNames = [
         'S S S S', '- S S S', 'S - S S', 'S S - S', 'S S S -',
@@ -105,31 +187,23 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
       
       for (let i = 0; i < patternsPerCombination; i++) {
         const startPos = i * positionsPerPatternInCombined;
-        // Extract only the first 4 positions (the base pattern) - it repeats 16 times in the combined preset
         const patternDrumTokens = drumTokens.slice(startPos, startPos + basePatternLength);
         const patternStickingTokens = stickingTokens.slice(startPos, startPos + basePatternLength);
-        
-        // Phrase is always "4 4 4 4" (4 beats, 4 notes per beat)
         const patternPhraseValues = [4, 4, 4, 4];
         
         let patternDrumPattern = formatList(patternDrumTokens);
         let patternStickingPattern = formatList(patternStickingTokens);
         
-        // Apply practice pad mode conversion if needed
         if (practicePadMode) {
           const convertedDrumPattern = patternDrumTokens.map(token => {
-            if (token === '-' || token === 'R') {
-              return token;
-            }
+            if (token === '-' || token === 'R') return token;
             return 'S';
           });
           patternDrumPattern = formatList(convertedDrumPattern);
           
           const filteredSticking = patternStickingTokens.map(token => {
             const upperToken = token.toUpperCase();
-            if (upperToken === 'K') {
-              return Math.random() > 0.5 ? 'R' : 'L';
-            }
+            if (upperToken === 'K') return Math.random() > 0.5 ? 'R' : 'L';
             return token;
           });
           patternStickingPattern = formatList(filteredSticking);
@@ -138,8 +212,8 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
         const patternPhrase = formatList(patternPhraseValues);
         const patternAccentIndices = buildAccentIndices(patternPhraseValues);
         
-        const pattern = {
-          id: 0, // Will be replaced by addPattern
+        addPattern({
+          id: 0,
           timeSignature: preset.timeSignature,
           beats,
           beatType,
@@ -147,63 +221,50 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
           phrase: patternPhrase,
           drumPattern: patternDrumPattern,
           stickingPattern: patternStickingPattern,
-          repeat: 4, // Each individual pattern repeats 4 times (4 bars)
+          repeat: 4,
           accentIndices: patternAccentIndices,
           leftFoot: false,
           rightFoot: false,
           _presetName: `16th Note Grid: ${individualPatternNames[i]}`,
           _presetDescription: `From combined preset: ${individualPatternNames[i]}`,
           _presetAccents: patternAccentIndices,
-        };
-        
-        addPattern(pattern);
+        });
       }
-      
       return;
     }
     
-    // Regular preset loading (non-combined)
     const phraseValues = parseNumberList(preset.phrase);
     const accentIndices = buildAccentIndices(phraseValues);
 
-    // In Practice Pad mode, convert drum hits to "S" but preserve rest notes
     let drumPattern = preset.drumPattern;
     let stickingPattern = preset.stickingPattern;
     
     if (practicePadMode) {
-      // Parse the original pattern and convert drum hits to "S", but keep rest notes as "-"
       const drumTokens = parseTokens(preset.drumPattern);
       const convertedDrumPattern = drumTokens.map(token => {
-        // Keep rest notes as-is
-        if (token === '-' || token === 'R') {
-          return token;
-        }
-        // Convert any drum hit (S, K, H, T, F, etc.) to "S"
+        if (token === '-' || token === 'R') return token;
         return 'S';
       });
       drumPattern = formatList(convertedDrumPattern);
       
-      // Remove all "K" from sticking pattern
       const stickingTokens = parseTokens(stickingPattern);
       const filteredSticking = stickingTokens.map(token => {
         const upperToken = token.toUpperCase();
-        if (upperToken === 'K') {
-          return Math.random() > 0.5 ? 'R' : 'L';
-        }
+        if (upperToken === 'K') return Math.random() > 0.5 ? 'R' : 'L';
         return token;
       });
       stickingPattern = formatList(filteredSticking);
     }
 
-    const pattern = {
-      id: 0, // Will be replaced by addPattern
+    addPattern({
+      id: 0,
       timeSignature: preset.timeSignature,
       beats,
       beatType,
       subdivision: preset.subdivision,
       phrase: preset.phrase,
-      drumPattern, // Use converted drumPattern (all "S" if practice pad mode)
-      stickingPattern, // Use converted stickingPattern (no "K" if practice pad mode)
+      drumPattern,
+      stickingPattern,
       repeat: preset.repeat,
       accentIndices,
       leftFoot: false,
@@ -211,71 +272,62 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
       _presetName: preset.name,
       _presetDescription: preset.description,
       _presetAccents: accentIndices,
-    };
-
-    addPattern(pattern);
+    });
   };
 
-  // Load a step from the learning path
   const handleLoadStep = (path: LearningPath, stepIndex: number) => {
     const step = path.steps[stepIndex];
     const preset = presets.find(p => p.id === step.presetId);
-    
     if (preset) {
       handleLoadPreset(preset);
-      // Mark step as completed (optional - could be manual)
-      // completeStep(path.id, stepIndex);
+      
+      // Mark step as completed and track achievements
+      completeStep(path.id, stepIndex);
+      trackStepCompleted();
+      
+      // Track first step if this is the first ever
+      if (achievementState.stepsCompleted === 0) {
+        trackFirstAction('complete_step');
+      }
+      
+      // Check if path is now complete
+      const pathProgress = getPathProgress(path.id);
+      const newStepsCompleted = (pathProgress?.stepsCompleted || 0) + 1;
+      if (newStepsCompleted >= path.steps.length) {
+        trackLearningPathCompleted();
+      }
+      
+      refreshPaths();
     }
   };
 
-  // Get preset for a step
   const getStepPreset = (presetId: string): Preset | undefined => {
     return presets.find(p => p.id === presetId);
   };
 
+  // Loading state
   if (loading) {
     return (
-      <div
-        className="dpgen-modal-overlay"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}
-        onClick={onClose}
-      >
-        <div
-          className="dpgen-modal-content"
-          style={{
-            background: 'var(--dpgen-bg)',
-            borderRadius: '10px',
-            padding: '2rem',
-            maxWidth: '800px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-          }}
-          onClick={(e) => e.stopPropagation()}
+      <>
+        <Modal
+          isOpen={true}
+          onClose={onClose}
+          title="Learning Paths"
+          icon={<Route size={20} />}
+          size="lg"
         >
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem', marginBottom: '1rem' }} />
-            <p>Loading learning paths...</p>
+          <div style={{ textAlign: 'center', padding: '3rem' }}>
+            <Loader2 size={40} style={{ animation: 'spin 1s linear infinite', marginBottom: '1rem', color: 'var(--dpgen-accent)' }} />
+            <p style={{ color: 'var(--dpgen-muted)' }}>Loading learning paths...</p>
           </div>
-        </div>
-      </div>
+        </Modal>
+        <BadgeNotification badge={newBadge} onClose={clearNewBadge} />
+      </>
     );
   }
 
+  // Path detail view
   if (selectedPath) {
-    // Show path details and steps
     const pathProgress = getPathProgress(selectedPath.id);
     const currentStepIndex = pathProgress?.currentStepIndex || 0;
     const stepsCompleted = pathProgress?.stepsCompleted || 0;
@@ -285,335 +337,315 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
       : 0;
 
     return (
-      <div
-        className="dpgen-modal-overlay"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}
-        onClick={onClose}
-      >
-        <div
-          className="dpgen-modal-content"
-          style={{
-            background: 'var(--dpgen-bg)',
-            borderRadius: '10px',
-            padding: '2rem',
-            maxWidth: '900px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-            <div style={{ flex: 1 }}>
-              <button
-                type="button"
-                onClick={() => setSelectedPath(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--dpgen-text)',
-                  cursor: 'pointer',
-                  marginBottom: '0.5rem',
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <i className="fas fa-arrow-left" /> Back to paths
-              </button>
-              <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>{selectedPath.name}</h2>
-              <p style={{ margin: '0.5rem 0 0 0', color: 'var(--dpgen-text-secondary)' }}>
-                {selectedPath.description}
-              </p>
-            </div>
+      <>
+      <Modal
+        isOpen={true}
+        onClose={onClose}
+        title={selectedPath.name}
+        icon={getCategoryIcon(selectedPath.category)}
+        size="xl"
+        footer={
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
             <button
-              type="button"
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                color: 'var(--dpgen-text)',
-                padding: '0.25rem 0.5rem',
-              }}
-            >
-              ×
-            </button>
-          </div>
-
-          {/* Progress Bar */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
-              <span>Progress: {stepsCompleted} / {selectedPath.steps.length} steps</span>
-              <span>{Math.round(progressPercent)}%</span>
-            </div>
-            <div
-              style={{
-                width: '100%',
-                height: '24px',
-                background: 'var(--dpgen-border)',
-                borderRadius: '12px',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  width: `${progressPercent}%`,
-                  height: '100%',
-                  background: isCompleted
-                    ? 'var(--dpgen-success, #4caf50)'
-                    : 'var(--dpgen-primary, #007bff)',
-                  transition: 'width 0.3s ease',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Path Info */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '1rem',
-            marginBottom: '1.5rem',
-            padding: '1rem',
-            background: 'var(--dpgen-card-bg, rgba(0,0,0,0.05))',
-            borderRadius: '8px',
-          }}>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-text-secondary)', marginBottom: '0.25rem' }}>
-                Difficulty
-              </div>
-              <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>
-                {selectedPath.difficulty}/10
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-text-secondary)', marginBottom: '0.25rem' }}>
-                Steps
-              </div>
-              <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>
-                {selectedPath.steps.length}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-text-secondary)', marginBottom: '0.25rem' }}>
-                Estimated Time
-              </div>
-              <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>
-                {selectedPath.estimatedDuration || 'N/A'} min
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-text-secondary)', marginBottom: '0.25rem' }}>
-                Category
-              </div>
-              <div style={{ fontSize: '1rem', fontWeight: 'bold', textTransform: 'capitalize' }}>
-                {selectedPath.category}
-              </div>
-            </div>
-          </div>
-
-          {/* Steps List */}
-          <div style={{ marginTop: '1.5rem' }}>
-            <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Steps</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {selectedPath.steps.map((step, index) => {
-                const preset = getStepPreset(step.presetId);
-                const isCurrentStep = index === currentStepIndex;
-                const isPastStep = index < currentStepIndex;
-                const isCompletedStep = isPastStep || (pathProgress?.completed && index < pathProgress.stepsCompleted);
-
-                if (!preset) return null;
-
-                return (
-                  <div
-                    key={step.presetId}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      padding: '1rem',
-                      background: isCurrentStep
-                        ? 'var(--dpgen-primary-bg, rgba(0, 123, 255, 0.1))'
-                        : isCompletedStep
-                        ? 'var(--dpgen-success-bg, rgba(76, 175, 80, 0.1))'
-                        : 'var(--dpgen-card-bg, rgba(0,0,0,0.05))',
-                      border: isCurrentStep ? '2px solid var(--dpgen-primary, #007bff)' : '1px solid var(--dpgen-border)',
-                      borderRadius: '8px',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: isCompletedStep
-                        ? 'var(--dpgen-success, #4caf50)'
-                        : isCurrentStep
-                        ? 'var(--dpgen-primary, #007bff)'
-                        : 'var(--dpgen-border)',
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 'bold',
-                      flexShrink: 0,
-                    }}>
-                      {isCompletedStep ? (
-                        <i className="fas fa-check" style={{ fontSize: '0.875rem' }} />
-                      ) : (
-                        index + 1
-                      )}
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                        {preset.name || step.presetName || `Step ${index + 1}`}
-                      </div>
-                      <div style={{ fontSize: '0.875rem', color: 'var(--dpgen-text-secondary)' }}>
-                        {preset.description || `${preset.timeSignature} • ${preset.subdivision} notes • Difficulty: ${preset.difficulty}/10`}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                      {isCurrentStep && (
-                        <span style={{
-                          padding: '0.25rem 0.75rem',
-                          background: 'var(--dpgen-primary, #007bff)',
-                          color: 'white',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          fontWeight: 'bold',
-                        }}>
-                          Current
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        className="dpgen-button dpgen-button-primary"
-                        onClick={() => handleLoadStep(selectedPath, index)}
-                        style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-                      >
-                        <i className="fas fa-play" style={{ marginRight: '0.5rem' }} />
-                        Load
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-            <button
-              type="button"
-              className="dpgen-button dpgen-button-secondary"
               onClick={() => {
                 if (confirm('Are you sure you want to reset your progress on this learning path?')) {
                   resetProgress(selectedPath.id);
                   refreshPaths();
                 }
               }}
+              style={{
+                padding: '0.6rem 1rem',
+                background: 'transparent',
+                border: '1px solid var(--dpgen-border)',
+                borderRadius: '8px',
+                color: 'var(--dpgen-text)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+              }}
             >
+              <RotateCcw size={16} />
               Reset Progress
             </button>
-            <button
-              type="button"
-              className="dpgen-button dpgen-button-primary"
-              onClick={onClose}
-            >
-              Close
-            </button>
+          </div>
+        }
+      >
+        {/* Back button */}
+        <button
+          onClick={() => setSelectedPath(null)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--dpgen-accent)',
+            cursor: 'pointer',
+            marginBottom: '1rem',
+            fontSize: '0.875rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: 0,
+          }}
+        >
+          <ArrowLeft size={16} /> Back to paths
+        </button>
+
+        {/* Description */}
+        <p style={{ margin: '0 0 1.25rem 0', color: 'var(--dpgen-muted)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+          {selectedPath.description}
+        </p>
+
+        {/* Progress Bar */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {isCompleted && <Award size={16} style={{ color: '#10b981' }} />}
+              Progress: {stepsCompleted} / {selectedPath.steps.length} steps
+            </span>
+            <span style={{ fontWeight: 600, color: isCompleted ? '#10b981' : 'var(--dpgen-accent)' }}>
+              {Math.round(progressPercent)}%
+            </span>
+          </div>
+          <div style={{
+            width: '100%',
+            height: '10px',
+            background: 'var(--dpgen-border)',
+            borderRadius: '5px',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              width: `${progressPercent}%`,
+              height: '100%',
+              background: isCompleted
+                ? 'linear-gradient(90deg, #10b981, #34d399)'
+                : 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+              transition: 'width 0.3s ease',
+            }} />
           </div>
         </div>
-      </div>
+
+        {/* Stats Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '1rem',
+          marginBottom: '1.5rem',
+        }}>
+          {[
+            { label: 'Difficulty', value: `${selectedPath.difficulty}/10`, icon: <TrendingUp size={16} /> },
+            { label: 'Steps', value: selectedPath.steps.length, icon: <ListOrdered size={16} /> },
+            { label: 'Est. Time', value: `${selectedPath.estimatedDuration || 'N/A'} min`, icon: <Clock size={16} /> },
+            { label: 'Category', value: selectedPath.category, icon: getCategoryIcon(selectedPath.category) },
+          ].map((stat, i) => (
+            <div key={i} style={{
+              padding: '0.75rem',
+              background: 'var(--dpgen-bg)',
+              borderRadius: '8px',
+              textAlign: 'center',
+            }}>
+              <div style={{ color: 'var(--dpgen-muted)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                {stat.icon}
+                <span style={{ fontSize: '0.7rem' }}>{stat.label}</span>
+              </div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 600, textTransform: 'capitalize' }}>{stat.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Steps */}
+        <ModalSection title="Steps" icon={<ListOrdered size={16} />}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {selectedPath.steps.map((step, index) => {
+              const preset = getStepPreset(step.presetId);
+              const isCurrentStep = index === currentStepIndex;
+              const isPastStep = index < currentStepIndex;
+              const isCompletedStep = isPastStep || (pathProgress?.completed && index < (pathProgress.stepsCompleted || 0));
+
+              if (!preset) return null;
+
+              return (
+                <div
+                  key={step.presetId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem',
+                    background: isCurrentStep
+                      ? 'rgba(59, 130, 246, 0.1)'
+                      : isCompletedStep
+                      ? 'rgba(16, 185, 129, 0.1)'
+                      : 'var(--dpgen-bg)',
+                    border: isCurrentStep ? '2px solid var(--dpgen-accent)' : '1px solid var(--dpgen-border)',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: isCompletedStep
+                      ? '#10b981'
+                      : isCurrentStep
+                      ? 'var(--dpgen-accent)'
+                      : 'var(--dpgen-border)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    flexShrink: 0,
+                  }}>
+                    {isCompletedStep ? <Check size={14} /> : index + 1}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, fontSize: '0.875rem', marginBottom: '0.125rem' }}>
+                      {preset.name || step.presetName || `Step ${index + 1}`}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>
+                      {preset.timeSignature} • {preset.subdivision} notes • Difficulty: {preset.difficulty}/10
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    {isCurrentStep && (
+                      <span style={{
+                        padding: '0.2rem 0.5rem',
+                        background: 'var(--dpgen-accent)',
+                        color: 'white',
+                        borderRadius: '4px',
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                      }}>
+                        Current
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleLoadStep(selectedPath, index)}
+                      style={{
+                        padding: '0.4rem 0.75rem',
+                        background: 'var(--dpgen-accent)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                    >
+                      <Play size={12} />
+                      Load
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </ModalSection>
+
+        {/* Recommended Routines */}
+        {getRecommendedRoutines(selectedPath).length > 0 && (
+          <ModalSection title="Recommended Routines" icon={<ClipboardList size={16} />}>
+            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.8rem', color: 'var(--dpgen-muted)' }}>
+              Practice these routines to complement your learning path:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {getRecommendedRoutines(selectedPath).map(routine => (
+                <div
+                  key={routine.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem',
+                    background: 'var(--dpgen-bg)',
+                    border: '1px solid var(--dpgen-border)',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'var(--dpgen-accent-light)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--dpgen-accent)',
+                    flexShrink: 0,
+                  }}>
+                    {getRoutineIcon(routine.icon)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{routine.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--dpgen-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span>{routine.totalDuration} min</span>
+                      <span>•</span>
+                      <span style={{ textTransform: 'capitalize' }}>{routine.difficulty}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ModalSection>
+        )}
+      </Modal>
+      <BadgeNotification badge={newBadge} onClose={clearNewBadge} />
+    </>
     );
   }
 
-  // Show paths list
+  // Paths list view
   return (
-    <div
-      className="dpgen-modal-overlay"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={onClose}
+    <>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Learning Paths"
+      icon={<Route size={20} />}
+      size="xl"
     >
-      <div
-        className="dpgen-modal-content"
-        style={{
-          background: 'var(--dpgen-bg)',
-          borderRadius: '10px',
-          padding: '2rem',
-          maxWidth: '900px',
-          width: '90%',
-          maxHeight: '90vh',
-          overflow: 'auto',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>Learning Paths</h2>
-          <button
-            type="button"
-            onClick={onClose}
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--dpgen-muted)' }} />
+          <input
+            type="text"
+            placeholder="Search paths..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.5rem',
-              cursor: 'pointer',
+              width: '100%',
+              padding: '0.6rem 0.75rem 0.6rem 2.25rem',
+              border: '1px solid var(--dpgen-border)',
+              borderRadius: '8px',
+              background: 'var(--dpgen-bg)',
               color: 'var(--dpgen-text)',
-              padding: '0.25rem 0.5rem',
+              fontSize: '0.875rem',
             }}
-          >
-            ×
-          </button>
+          />
         </div>
-
-        {/* Filters */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <input
-              type="text"
-              className="dpgen-input"
-              placeholder="Search paths..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </div>
+        <div style={{ position: 'relative' }}>
+          <Filter size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--dpgen-muted)' }} />
           <select
-            className="dpgen-select"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            style={{ minWidth: '150px' }}
+            style={{
+              padding: '0.6rem 2rem 0.6rem 2.25rem',
+              border: '1px solid var(--dpgen-border)',
+              borderRadius: '8px',
+              background: 'var(--dpgen-bg)',
+              color: 'var(--dpgen-text)',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              appearance: 'none',
+            }}
           >
             <option value="">All Categories</option>
             {categories.map(cat => (
@@ -621,124 +653,120 @@ export const LearningPathModal: React.FC<LearningPathModalProps> = ({ onClose })
             ))}
           </select>
         </div>
+      </div>
 
-        {/* Paths List */}
-        {filteredPaths.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--dpgen-text-secondary)' }}>
-            <i className="fas fa-route" style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }} />
-            <p>No learning paths found.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: '1rem' }}>
-            {filteredPaths.map((path) => {
-              const pathProgress = getPathProgress(path.id);
-              const progressPercent = path.steps.length > 0
-                ? ((pathProgress?.stepsCompleted || 0) / path.steps.length) * 100
-                : 0;
-              const isCompleted = pathProgress?.completed || false;
+      {/* Paths List */}
+      {filteredPaths.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--dpgen-muted)' }}>
+          <Route size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+          <p>No learning paths found.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {filteredPaths.map((path) => {
+            const pathProgress = getPathProgress(path.id);
+            const progressPercent = path.steps.length > 0
+              ? ((pathProgress?.stepsCompleted || 0) / path.steps.length) * 100
+              : 0;
+            const isCompleted = pathProgress?.completed || false;
 
-              return (
-                <div
-                  key={path.id}
-                  onClick={() => setSelectedPath(path)}
-                  style={{
-                    padding: '1.5rem',
-                    background: 'var(--dpgen-card-bg, rgba(0,0,0,0.05))',
-                    border: '1px solid var(--dpgen-border)',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--dpgen-primary, #007bff)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--dpgen-border)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+            return (
+              <div
+                key={path.id}
+                onClick={() => setSelectedPath(path)}
+                style={{
+                  padding: '1rem',
+                  background: 'var(--dpgen-bg)',
+                  border: '1px solid var(--dpgen-border)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--dpgen-accent)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--dpgen-border)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'start', gap: '0.75rem', flex: 1 }}>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      background: isCompleted ? 'rgba(16, 185, 129, 0.15)' : 'var(--dpgen-accent-light)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: isCompleted ? '#10b981' : 'var(--dpgen-accent)',
+                      flexShrink: 0,
+                    }}>
+                      {getCategoryIcon(path.category)}
+                    </div>
                     <div style={{ flex: 1 }}>
-                      <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         {path.name}
-                        {isCompleted && (
-                          <i className="fas fa-check-circle" style={{ marginLeft: '0.5rem', color: 'var(--dpgen-success, #4caf50)' }} />
-                        )}
+                        {isCompleted && <CheckCircle2 size={16} style={{ color: '#10b981' }} />}
                       </h3>
-                      <p style={{ margin: 0, color: 'var(--dpgen-text-secondary)', fontSize: '0.875rem' }}>
-                        {path.description}
+                      <p style={{ margin: '0.25rem 0 0 0', color: 'var(--dpgen-muted)', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                        {path.description.length > 100 ? path.description.slice(0, 100) + '...' : path.description}
                       </p>
                     </div>
+                  </div>
+                  <ChevronRight size={20} style={{ color: 'var(--dpgen-muted)', flexShrink: 0 }} />
+                </div>
+
+                {/* Progress */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.25rem', color: 'var(--dpgen-muted)' }}>
+                    <span>{pathProgress?.stepsCompleted || 0} / {path.steps.length} steps</span>
+                    <span style={{ fontWeight: 500 }}>{Math.round(progressPercent)}%</span>
+                  </div>
+                  <div style={{
+                    width: '100%',
+                    height: '6px',
+                    background: 'var(--dpgen-border)',
+                    borderRadius: '3px',
+                    overflow: 'hidden',
+                  }}>
                     <div style={{
-                      padding: '0.5rem 1rem',
+                      width: `${progressPercent}%`,
+                      height: '100%',
                       background: isCompleted
-                        ? 'var(--dpgen-success-bg, rgba(76, 175, 80, 0.1))'
-                        : 'var(--dpgen-primary-bg, rgba(0, 123, 255, 0.1))',
-                      color: isCompleted
-                        ? 'var(--dpgen-success, #4caf50)'
-                        : 'var(--dpgen-primary, #007bff)',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: 'bold',
-                      textTransform: 'capitalize',
-                    }}>
-                      {path.category}
-                    </div>
-                  </div>
-
-                  {/* Progress */}
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
-                      <span>{pathProgress?.stepsCompleted || 0} / {path.steps.length} steps</span>
-                      <span>{Math.round(progressPercent)}%</span>
-                    </div>
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '8px',
-                        background: 'var(--dpgen-border)',
-                        borderRadius: '4px',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${progressPercent}%`,
-                          height: '100%',
-                          background: isCompleted
-                            ? 'var(--dpgen-success, #4caf50)'
-                            : 'var(--dpgen-primary, #007bff)',
-                          transition: 'width 0.3s ease',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Meta Info */}
-                  <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.75rem', color: 'var(--dpgen-text-secondary)' }}>
-                    <span>
-                      <i className="fas fa-chart-line" style={{ marginRight: '0.25rem' }} />
-                      Difficulty: {path.difficulty}/10
-                    </span>
-                    <span>
-                      <i className="fas fa-list-ol" style={{ marginRight: '0.25rem' }} />
-                      {path.steps.length} steps
-                    </span>
-                    {path.estimatedDuration && (
-                      <span>
-                        <i className="fas fa-clock" style={{ marginRight: '0.25rem' }} />
-                        {path.estimatedDuration} min
-                      </span>
-                    )}
+                        ? 'linear-gradient(90deg, #10b981, #34d399)'
+                        : 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                      transition: 'width 0.3s ease',
+                    }} />
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+
+                {/* Meta Info */}
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.7rem', color: 'var(--dpgen-muted)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <TrendingUp size={12} />
+                    Difficulty: {path.difficulty}/10
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <ListOrdered size={12} />
+                    {path.steps.length} steps
+                  </span>
+                  {path.estimatedDuration && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Clock size={12} />
+                      {path.estimatedDuration} min
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Modal>
+    <BadgeNotification badge={newBadge} onClose={clearNewBadge} />
+    </>
   );
 };
-

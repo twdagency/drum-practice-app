@@ -30,6 +30,12 @@ import { AutoSyncWrapper } from '@/components/shared/AutoSyncWrapper';
 import { ProgressTrackingWrapper } from '@/components/shared/ProgressTrackingWrapper';
 import { QuickControlPanel } from '@/components/shared/QuickControlPanel';
 import { AuthButton } from '@/components/auth/AuthButton';
+import { WelcomeModal, useWelcomeModal } from '@/components/shared/WelcomeModal';
+import { PresetsBrowser } from '@/components/PracticeMode/PresetsBrowser';
+import { LearningPathModal } from '@/components/PracticeMode/LearningPathModal';
+import { RoutineSelector } from '@/components/PracticeMode/RoutineSelector';
+import { RoutinePlayer } from '@/components/PracticeMode/RoutinePlayer';
+import { PracticeRoutine } from '@/types/routine';
 
 export default function App() {
   const { data: session, status } = useSession();
@@ -206,6 +212,49 @@ export default function App() {
   // Track practice statistics
   usePracticeStats();
 
+  // Welcome modal for logged-in users
+  const { showWelcome, closeWelcome } = useWelcomeModal();
+  
+  // States for modals triggered from welcome screen
+  const [showPresetsFromWelcome, setShowPresetsFromWelcome] = useState(false);
+  const [showLearningFromWelcome, setShowLearningFromWelcome] = useState(false);
+  const [showRoutinesFromWelcome, setShowRoutinesFromWelcome] = useState(false);
+  const [selectedRoutineFromWelcome, setSelectedRoutineFromWelcome] = useState<PracticeRoutine | null>(null);
+
+  // Handle welcome modal actions
+  const handleWelcomeAction = (action: 'create' | 'presets' | 'learning' | 'routines') => {
+    closeWelcome();
+    
+    switch (action) {
+      case 'create':
+        // Add a new pattern
+        addPattern({
+          id: Date.now(),
+          timeSignature: '4/4',
+          beats: 4,
+          beatType: 4,
+          subdivision: 16,
+          phrase: '4 4 4 4',
+          drumPattern: 'S - - - S - - - S - - - S - - -',
+          stickingPattern: 'R L R L R L R L R L R L R L R L',
+          repeat: 1,
+          accentIndices: [0, 4, 8, 12],
+          leftFoot: false,
+          rightFoot: false,
+        });
+        break;
+      case 'presets':
+        setShowPresetsFromWelcome(true);
+        break;
+      case 'learning':
+        setShowLearningFromWelcome(true);
+        break;
+      case 'routines':
+        setShowRoutinesFromWelcome(true);
+        break;
+    }
+  };
+
   // Load patterns from URL hash on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -266,13 +315,15 @@ export default function App() {
     }
   }, [addPattern, setBPM, setPatterns]);
 
-  // Redirect to login if not authenticated
+  // Auth check - allow guest access for development/testing
+  // In production, you may want to enforce authentication
   useEffect(() => {
     if (status === 'loading') return; // Still loading
     
-    if (status === 'unauthenticated' || !session) {
-      router.push('/login?callbackUrl=/app');
-    }
+    // Allow guest access - don't redirect if unauthenticated
+    // if (status === 'unauthenticated' || !session) {
+    //   router.push('/login?callbackUrl=/app');
+    // }
   }, [status, session, router]);
 
   // Show loading state while checking auth
@@ -287,10 +338,10 @@ export default function App() {
     );
   }
 
-  // Don't render app if not authenticated (redirect will happen)
-  if (!session) {
-    return null;
-  }
+  // Allow guest access - render app even without session
+  // if (!session) {
+  //   return null;
+  // }
 
   // Initialize progress tracking (ToastProvider is now in root layout)
 
@@ -424,6 +475,46 @@ export default function App() {
         
       </div>
     </main>
+
+    {/* Welcome Modal */}
+    {showWelcome && (
+      <WelcomeModal
+        onClose={closeWelcome}
+        onAction={handleWelcomeAction}
+      />
+    )}
+
+    {/* Modals triggered from Welcome Screen */}
+    {showPresetsFromWelcome && (
+      <PresetsBrowser onClose={() => setShowPresetsFromWelcome(false)} />
+    )}
+
+    {showLearningFromWelcome && (
+      <LearningPathModal onClose={() => setShowLearningFromWelcome(false)} />
+    )}
+
+    {showRoutinesFromWelcome && !selectedRoutineFromWelcome && (
+      <RoutineSelector
+        onClose={() => setShowRoutinesFromWelcome(false)}
+        onStartRoutine={(routine) => {
+          setSelectedRoutineFromWelcome(routine);
+        }}
+      />
+    )}
+
+    {selectedRoutineFromWelcome && (
+      <RoutinePlayer
+        routine={selectedRoutineFromWelcome}
+        onClose={() => {
+          setSelectedRoutineFromWelcome(null);
+          setShowRoutinesFromWelcome(false);
+        }}
+        onComplete={() => {
+          setSelectedRoutineFromWelcome(null);
+          setShowRoutinesFromWelcome(false);
+        }}
+      />
+    )}
     </>
   )
 }

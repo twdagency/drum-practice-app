@@ -1,18 +1,29 @@
 /**
  * Hook to track practice statistics when practice sessions start and end
+ * Enhanced to track preset patterns, BPM achievements, and detailed accuracy
  */
 
 'use client';
 
 import { useEffect, useRef } from 'react';
 import { useStore } from '@/store/useStore';
-import { PracticeSession } from '@/types/practice';
+import { PracticeSession, PresetBestScore } from '@/types/practice';
+
+// Calculate mastery level based on accuracy and attempts
+function calculateMastery(accuracy: number, attempts: number): PresetBestScore['mastery'] {
+  if (accuracy >= 95 && attempts >= 10) return 'master';
+  if (accuracy >= 85 && attempts >= 5) return 'proficient';
+  if (accuracy >= 70 && attempts >= 3) return 'intermediate';
+  if (accuracy >= 50 && attempts >= 2) return 'learning';
+  return 'beginner';
+}
 
 export function usePracticeStats() {
   const midiPractice = useStore((state) => state.midiPractice);
   const microphonePractice = useStore((state) => state.microphonePractice);
   const isPlaying = useStore((state) => state.isPlaying);
   const patterns = useStore((state) => state.patterns);
+  const bpm = useStore((state) => state.bpm);
   const practiceStartTime = useStore((state) => state.practiceStartTime);
   const setPracticeStartTime = useStore((state) => state.setPracticeStartTime);
   const updatePracticeStats = useStore((state) => state.updatePracticeStats);
@@ -20,11 +31,19 @@ export function usePracticeStats() {
   
   const sessionStartTimeRef = useRef<number | null>(null);
   const lastSessionIdRef = useRef<string | null>(null);
+  const sessionBpmRef = useRef<number>(120);
   
   // Check if any practice mode is active
   const isPracticeActive = midiPractice.enabled || microphonePractice.enabled;
   const currentPracticeMode = midiPractice.enabled ? 'midi' : 'microphone';
   const currentPracticeState = midiPractice.enabled ? midiPractice : microphonePractice;
+  
+  // Capture BPM when session starts
+  useEffect(() => {
+    if (isPracticeActive && isPlaying && !sessionStartTimeRef.current) {
+      sessionBpmRef.current = bpm;
+    }
+  }, [isPracticeActive, isPlaying, bpm]);
   
   // Start tracking when practice begins
   useEffect(() => {
@@ -32,10 +51,11 @@ export function usePracticeStats() {
       // Practice just started - record session start time
       const startTime = Date.now();
       sessionStartTimeRef.current = startTime;
+      sessionBpmRef.current = bpm;
       setPracticeStartTime(startTime);
-      console.log('[Practice Stats] Session started at', new Date(startTime).toISOString());
+      console.log('[Practice Stats] Session started at', new Date(startTime).toISOString(), 'BPM:', bpm);
     }
-  }, [isPracticeActive, isPlaying, currentPracticeState.startTime, setPracticeStartTime]);
+  }, [isPracticeActive, isPlaying, currentPracticeState.startTime, setPracticeStartTime, bpm]);
   
   // End tracking and record session when practice stops
   useEffect(() => {
@@ -57,25 +77,46 @@ export function usePracticeStats() {
             ? (matchedNotes / expectedNotes.length) * 100 
             : undefined;
           
-          // Calculate average timing error (from matched hits)
-          const matchedHits = actualHits.filter(hit => hit.matched && hit.perfect !== undefined);
+          // Calculate timing breakdown
+          const matchedHits = actualHits.filter(hit => hit.matched);
+          const perfectHits = matchedHits.filter(hit => hit.perfect).length;
+          const earlyHits = matchedHits.filter(hit => hit.early && !hit.perfect).length;
+          const lateHits = matchedHits.filter(hit => !hit.early && !hit.perfect).length;
+          
           const timingAvg = matchedHits.length > 0
             ? matchedHits.reduce((sum, hit) => sum + Math.abs(hit.timingError), 0) / matchedHits.length
             : undefined;
           
-          // Get pattern ID (use first pattern if multiple)
-          const patternId = patterns.length > 0 ? patterns[0].id : null;
+          // Calculate dynamic (ghost/accent) accuracy
+          const hitsWithDynamic = actualHits.filter(h => h.dynamicMatch !== undefined);
+          const dynamicMatches = hitsWithDynamic.filter(h => h.dynamicMatch).length;
+          const dynamicAccuracy = hitsWithDynamic.length > 0
+            ? (dynamicMatches / hitsWithDynamic.length) * 100
+            : undefined;
           
-          // Create session record
+          // Get pattern info
+          const patternId = patterns.length > 0 ? patterns[0].id : null;
+          const presetId = patterns.length > 0 ? (patterns[0] as any).presetId : undefined;
+          const presetName = patterns.length > 0 ? (patterns[0] as any).name : undefined;
+          
+          // Create session record with enhanced data
           const session: PracticeSession = {
             id: `session-${sessionStartTimeRef.current}-${endTime}`,
             patternId,
+            presetId,
+            presetName,
             startTime: sessionStartTimeRef.current,
             endTime,
             duration,
             accuracy,
             hits: actualHits.length,
             timingAvg,
+            bpm: sessionBpmRef.current,
+            practiceMode: currentPracticeMode,
+            dynamicAccuracy,
+            earlyHits,
+            lateHits,
+            perfectHits,
           };
           
           // Update practice stats
@@ -89,42 +130,101 @@ export function usePracticeStats() {
             updatedPatternsPracticed[patternKey] = (updatedPatternsPracticed[patternKey] || 0) + duration;
           }
           
+          // Update preset best scores
+          const updatedPresetBestScores = { ...practiceStats.presetBestScores };
+          if (presetId && accuracy !== undefined) {
+            const existing = updatedPresetBestScores[presetId];
+            const isNewBest = !existing || accuracy > existing.bestAccuracy;
+            const isNewBpmBest = accuracy >= 80 && (!existing || sessionBpmRef.current > (existing.bestBpm || 0));
+            
+            updatedPresetBestScores[presetId] = {
+              presetId,
+              presetName: presetName || presetId,
+              bestAccuracy: Math.max(accuracy, existing?.bestAccuracy || 0),
+              bestTiming: timingAvg !== undefined 
+                ? Math.min(timingAvg, existing?.bestTiming || Infinity)
+                : existing?.bestTiming || 0,
+              bestBpm: isNewBpmBest ? sessionBpmRef.current : (existing?.bestBpm || 0),
+              attempts: (existing?.attempts || 0) + 1,
+              totalTime: (existing?.totalTime || 0) + duration,
+              lastPracticed: endTime,
+              accuracyHistory: [
+                ...(existing?.accuracyHistory || []).slice(-19), // Keep last 20
+                { timestamp: endTime, accuracy, bpm: sessionBpmRef.current },
+              ],
+              mastery: calculateMastery(
+                Math.max(accuracy, existing?.bestAccuracy || 0),
+                (existing?.attempts || 0) + 1
+              ),
+            };
+          }
+          
+          // Update tempo achievements
+          let updatedTempoAchievements = [...practiceStats.tempoAchievements];
+          if (patternId !== null && accuracy !== undefined && accuracy >= 80) {
+            const existingAchievement = updatedTempoAchievements.find(a => a.patternId === patternId);
+            if (existingAchievement) {
+              if (sessionBpmRef.current > existingAchievement.maxBpm) {
+                existingAchievement.maxBpm = sessionBpmRef.current;
+              }
+            } else {
+              updatedTempoAchievements.push({ patternId, maxBpm: sessionBpmRef.current });
+            }
+          }
+          
           // Update streak (check if practice was today)
           const today = new Date().toISOString().split('T')[0];
           const lastPracticeDate = practiceStats.lastPracticeDate;
           let updatedStreak = practiceStats.currentStreak;
           
           if (lastPracticeDate !== today) {
-            // Check if last practice was yesterday (to continue streak)
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = yesterday.toISOString().split('T')[0];
             
             if (lastPracticeDate === yesterdayStr) {
-              // Continue streak
               updatedStreak = practiceStats.currentStreak + 1;
             } else if (lastPracticeDate === null || lastPracticeDate < yesterdayStr) {
-              // Streak broken, start new streak
               updatedStreak = 1;
             }
-            // If lastPracticeDate === today, keep current streak (already practiced today)
           }
+          
+          // Update weekly aggregates
+          const weeklyAccuracy = updateWeeklyArray(
+            practiceStats.weeklyAccuracy,
+            accuracy || 0
+          );
+          const weeklyPracticeTime = updateWeeklyArray(
+            practiceStats.weeklyPracticeTime,
+            duration
+          );
           
           // Update stats
           updatePracticeStats({
             sessions: updatedSessions,
             totalPracticeTime: updatedTotalTime,
             patternsPracticed: updatedPatternsPracticed,
+            presetBestScores: updatedPresetBestScores,
+            tempoAchievements: updatedTempoAchievements,
             currentStreak: updatedStreak,
             lastPracticeDate: today,
+            weeklyAccuracy,
+            weeklyPracticeTime,
           });
           
           console.log('[Practice Stats] Session recorded:', {
             duration: `${duration}s`,
             accuracy: accuracy !== undefined ? `${accuracy.toFixed(1)}%` : 'N/A',
+            bpm: sessionBpmRef.current,
             hits: actualHits.length,
+            perfectHits,
+            earlyHits,
+            lateHits,
+            dynamicAccuracy: dynamicAccuracy !== undefined ? `${dynamicAccuracy.toFixed(1)}%` : 'N/A',
             timingAvg: timingAvg !== undefined ? `${timingAvg.toFixed(1)}ms` : 'N/A',
             streak: updatedStreak,
+            presetId,
+            presetName,
           });
           
           lastSessionIdRef.current = session.id;
@@ -141,9 +241,11 @@ export function usePracticeStats() {
     currentPracticeState.expectedNotes,
     currentPracticeState.actualHits,
     patterns,
+    bpm,
     practiceStats,
     updatePracticeStats,
     setPracticeStartTime,
+    currentPracticeMode,
   ]);
   
   // Reset session tracking if practice is disabled
@@ -157,4 +259,8 @@ export function usePracticeStats() {
   }, [isPracticeActive, practiceStartTime, setPracticeStartTime]);
 }
 
-
+// Helper to update weekly arrays (keeps last 7 entries, adds new value)
+function updateWeeklyArray(arr: number[], newValue: number): number[] {
+  const updated = [...arr, newValue];
+  return updated.slice(-7);
+}

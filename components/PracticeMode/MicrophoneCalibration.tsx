@@ -1,6 +1,6 @@
 /**
  * Microphone Latency Calibration Component
- * Helps users calibrate their microphone latency using audio analysis
+ * Compact design with auto-calibration feature
  */
 
 'use client';
@@ -9,31 +9,20 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { useMicrophoneDevices } from '@/hooks/useMicrophoneDevices';
 import { CONSTANTS } from '@/lib/utils/constants';
+import { Mic, Zap, Target, Settings, X } from 'lucide-react';
 
 interface CalibrationHit {
-  time: number; // Raw time from start
-  adjustedTime: number; // Time with latency adjustment
+  time: number;
+  level: number;
   timingError: number;
-  rawTime: number;
-}
-
-interface CalibrationState {
-  active: boolean;
-  startTime: number | null;
-  currentBeat: number;
-  expectedBeatTimes: number[];
-  hitTimes: CalibrationHit[];
-  hitCounts: { perfect: number; good: number; off: number };
-  beatInterval: NodeJS.Timeout | null;
-  audioContext: AudioContext | null;
-  analyser: AnalyserNode | null;
-  dataArray: Uint8Array | null;
 }
 
 interface MicrophoneCalibrationProps {
   onClose: () => void;
   onApply?: (latency: number) => void;
 }
+
+type CalibrationMode = 'auto' | 'manual' | 'test';
 
 export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibrationProps) {
   const bpm = useStore((state) => state.bpm);
@@ -48,1020 +37,611 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
   const [sensitivity, setSensitivity] = useState<number>(microphonePractice.sensitivity);
   const [threshold, setThreshold] = useState<number>(microphonePractice.threshold);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [audioLevel, setAudioLevel] = useState<number>(0); // 0-100 for display
+  const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [mode, setMode] = useState<CalibrationMode>('auto');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   
-  const [calibration, setCalibration] = useState<CalibrationState>({
-    active: false,
-    startTime: null,
-    currentBeat: 0,
-    expectedBeatTimes: [],
-    hitTimes: [],
-    hitCounts: { perfect: 0, good: 0, off: 0 },
-    beatInterval: null,
-    audioContext: null,
-    analyser: null,
-    dataArray: null,
-  });
-
-  const ringRef = useRef<HTMLDivElement>(null);
-  const targetRef = useRef<HTMLDivElement>(null);
-  const beatNumberRef = useRef<HTMLDivElement>(null);
-  const lastHitRef = useRef<HTMLDivElement>(null);
+  // Auto-calibration state
+  const [autoCalActive, setAutoCalActive] = useState(false);
+  const [autoCalHits, setAutoCalHits] = useState<number[]>([]);
+  const [autoCalStatus, setAutoCalStatus] = useState<string>('');
+  
+  // Test mode state
+  const [testActive, setTestActive] = useState(false);
+  const [testHits, setTestHits] = useState<CalibrationHit[]>([]);
+  const [testBeatIndex, setTestBeatIndex] = useState(0);
+  
+  // Refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
-  const isActiveRef = useRef<boolean>(false);
-  const beatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const resetColorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
   const levelCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const streamRef = useRef<MediaStream | null>(null); // Store stream in ref for access in checkAudioLevel
-  const latencyAdjustmentRef = useRef<number>(latencyAdjustment);
+  const streamRef = useRef<MediaStream | null>(null);
   const lastHitTimeRef = useRef<number>(0);
-  const sensitivityRef = useRef<number>(sensitivity);
-  const thresholdRef = useRef<number>(threshold);
-  const calibrationRef = useRef(calibration);
-  
-  // Update refs when values change
-  useEffect(() => {
-    latencyAdjustmentRef.current = latencyAdjustment;
-    sensitivityRef.current = sensitivity;
-    thresholdRef.current = threshold;
-    calibrationRef.current = calibration;
-  }, [latencyAdjustment, sensitivity, threshold, calibration]);
+  const testIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const testStartTimeRef = useRef<number>(0);
 
-  // Initialize selected device from localStorage or first available
+  // Initialize device from localStorage
   useEffect(() => {
     if (devices.length > 0 && !selectedDeviceId) {
-      // Try to load from localStorage first
       if (typeof window !== 'undefined') {
         try {
           const saved = localStorage.getItem('dpgen_microphone_practice_settings');
           if (saved) {
             const parsed = JSON.parse(saved);
-            if (parsed.deviceId) {
-              const deviceExists = devices.some(d => d.deviceId === parsed.deviceId);
-              if (deviceExists) {
-                setSelectedDeviceId(parsed.deviceId);
-                return;
-              }
+            if (parsed.deviceId && devices.some(d => d.deviceId === parsed.deviceId)) {
+              setSelectedDeviceId(parsed.deviceId);
+              return;
             }
           }
-        } catch (e) {
-          console.error('Failed to load device from localStorage:', e);
-        }
+        } catch (e) {}
       }
-      // Fallback to first device
       setSelectedDeviceId(devices[0].deviceId);
     }
   }, [devices, selectedDeviceId]);
 
-  // Stop calibration when modal closes or component unmounts
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      handleStop();
+      stopAll();
     };
   }, []);
 
-  // Request microphone access
-  const requestMicrophone = async (deviceId?: string) => {
-    try {
-      const constraints: MediaStreamConstraints = {
-        audio: deviceId ? { deviceId: { exact: deviceId } } : true,
-      };
-      
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-      setStream(newStream);
-      return newStream;
-    } catch (err) {
-      console.error('Failed to access microphone:', err);
-      alert('Failed to access microphone. Please check permissions.');
-      return null;
+  const stopAll = () => {
+    if (levelCheckIntervalRef.current) {
+      clearInterval(levelCheckIntervalRef.current);
+      levelCheckIntervalRef.current = null;
     }
-  };
-
-  // Play click sound - use shared AudioContext to avoid conflicts
-  const playClickSound = async (isAccent: boolean) => {
-    try {
-      // Use shared AudioContext from audioLoader (same as playback)
-      const { getAudioContext } = await import('@/lib/audio/audioLoader');
-      const ctx = getAudioContext();
-      
-      // Resume audio context if suspended (required for user interaction)
-      if (ctx.state === 'suspended') {
-        await ctx.resume();
-      }
-      
-      // Ensure context is running
-      if (ctx.state !== 'running') {
-        console.warn('[Calibration] Audio context not running, state:', ctx.state);
-        // Try one more time to resume
-        try {
-          await ctx.resume();
-        } catch (e) {
-          console.error('[Calibration] Failed to resume AudioContext:', e);
-          return;
-        }
-        if (ctx.state === 'closed' || ctx.state === 'suspended' || ctx.state === 'interrupted') {
-          return;
-        }
-      }
-      
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      oscillator.frequency.value = isAccent ? 800 : 600;
-      oscillator.type = 'sine';
-      
-      // Increase volume significantly - browser may duck audio when mic is active
-      const startGain = isAccent ? 0.9 : 0.8; // Much louder (was 0.5/0.4)
-      gainNode.gain.setValueAtTime(startGain, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-      
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.15);
-      
-      console.log('[Calibration] Click sound played', { isAccent, state: ctx.state, currentTime: ctx.currentTime });
-    } catch (error) {
-      console.error('[Calibration] Error playing click sound:', error);
+    if (testIntervalRef.current) {
+      clearInterval(testIntervalRef.current);
+      testIntervalRef.current = null;
     }
-  };
-
-  // Check audio level for hits
-  const checkAudioLevel = () => {
-    if (!analyserRef.current || !dataArrayRef.current || !isActiveRef.current) {
-      if (!analyserRef.current) console.warn('[Calibration] No analyser ref');
-      if (!dataArrayRef.current) console.warn('[Calibration] No dataArray ref');
-      if (!isActiveRef.current) console.warn('[Calibration] Not active');
-      setAudioLevel(0);
-      return;
-    }
-
-    // Use ref to get latest startTime (avoid stale closure)
-    const currentCalibration = calibrationRef.current;
-    if (!currentCalibration.startTime) {
-      setAudioLevel(0);
-      return;
-    }
-    
-    // Verify stream is still active (use ref to avoid closure issues)
-    const currentStream = streamRef.current;
-    if (currentStream) {
-      const tracks = currentStream.getAudioTracks();
-      const activeTracks = tracks.filter(t => t.readyState === 'live' && t.enabled);
-      if (activeTracks.length === 0) {
-        console.warn('[Calibration] No active audio tracks in stream');
-        setAudioLevel(0);
-        return;
-      }
-    } else {
-      console.warn('[Calibration] No stream ref available');
-    }
-
-    // Get audio data - use time domain data for amplitude detection (better for drum hits)
-    try {
-      analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
-    } catch (error) {
-      console.error('[Calibration] Error getting audio data:', error);
-      setAudioLevel(0);
-      return;
-    }
-    
-    // Calculate RMS (Root Mean Square) volume for more accurate amplitude detection
-    let sum = 0;
-    let maxAmplitude = 0;
-    for (let i = 0; i < dataArrayRef.current.length; i++) {
-      const sample = dataArrayRef.current[i];
-      const normalized = (sample - 128) / 128; // Convert 0-255 to -1 to 1
-      const absNormalized = Math.abs(normalized);
-      sum += normalized * normalized; // Square for RMS
-      if (absNormalized > maxAmplitude) {
-        maxAmplitude = absNormalized;
-      }
-    }
-    const rms = Math.sqrt(sum / dataArrayRef.current.length);
-    
-    // Debug: Log audio levels occasionally (every 50 checks = ~2.5 seconds)
-    if (!(window as any).__calDebugCount) {
-      (window as any).__calDebugCount = 0;
-    }
-    (window as any).__calDebugCount++;
-    if ((window as any).__calDebugCount % 50 === 0) {
-      const normalizedVolume = Math.min(1, maxAmplitude);
-      const displayLevel = Math.min(100, normalizedVolume * 100);
-      const currentStream = streamRef.current;
-      console.log(`[Calibration] Audio levels - RMS: ${rms.toFixed(4)}, Max: ${maxAmplitude.toFixed(4)}, Display: ${displayLevel.toFixed(1)}%`);
-      console.log(`[Calibration] Stream status - Active: ${currentStream?.active}, Tracks: ${currentStream?.getAudioTracks().length}, Enabled: ${currentStream?.getAudioTracks().filter(t => t.readyState === 'live' && t.enabled).length}`);
-      
-      // If audio levels are very low, warn
-      if (rms < 0.001 && maxAmplitude < 0.01) {
-        console.warn('[Calibration] WARNING: Very low audio levels detected! Check microphone connection and permissions.');
-      }
-    }
-    
-    // Use peak amplitude directly for better transient detection (drum hits)
-    // RMS is smoother but peak amplitude responds better to sudden transients
-    const normalizedVolume = Math.min(1, maxAmplitude); // Peak amplitude, clamped to 0-1
-    
-    // Sensitivity: Higher sensitivity = Lower effective threshold
-    // At 100% sensitivity, threshold is divided by 1 (most sensitive)
-    // At 50% sensitivity, threshold is divided by 0.5 = doubled (less sensitive)
-    // At 10% sensitivity, threshold is divided by 0.1 = 10x (least sensitive)
-    const sensitivityMultiplier = sensitivityRef.current / 100;
-    const adjustedThreshold = thresholdRef.current / sensitivityMultiplier;
-    
-    // Update audio level for display (0-100)
-    // Show raw level (not relative to threshold) so user can see actual volume
-    const displayLevel = Math.min(100, normalizedVolume * 100);
-    setAudioLevel(displayLevel);
-    
-    // Debug: Log if we're getting any audio at all (every 100 checks = ~5 seconds)
-    if (!(window as any).__calLevelDebugCount) {
-      (window as any).__calLevelDebugCount = 0;
-    }
-    (window as any).__calLevelDebugCount++;
-    if ((window as any).__calLevelDebugCount % 100 === 0) {
-      console.log(`[Calibration] Current audio level: ${displayLevel.toFixed(1)}% (RMS: ${rms.toFixed(4)}, Max: ${maxAmplitude.toFixed(4)})`);
-    }
-    
-    // Debug logging (throttled to every 50 checks = ~2.5 seconds)
-    if (!(window as any).__micCalDebugCount) {
-      (window as any).__micCalDebugCount = 0;
-    }
-    (window as any).__micCalDebugCount++;
-    if ((window as any).__micCalDebugCount % 50 === 0) {
-      console.log('[Microphone Calibration] Audio levels:', {
-        volume: normalizedVolume.toFixed(3),
-        threshold: adjustedThreshold.toFixed(3),
-        rawThreshold: thresholdRef.current.toFixed(3),
-        sensitivity: sensitivityRef.current,
-        willTrigger: normalizedVolume > adjustedThreshold,
-        maxAmplitude: maxAmplitude.toFixed(3),
-        rms: rms.toFixed(3),
-      });
-    }
-    
-    // Check cooldown (50ms minimum between hits)
-    const now = performance.now();
-    const timeSinceLastHit = now - lastHitTimeRef.current;
-    if (timeSinceLastHit < CONSTANTS.TIMING.HIT_COOLDOWN) {
-      return;
-    }
-    
-    // Detect hit if volume exceeds threshold
-    if (normalizedVolume > adjustedThreshold) {
-      console.log('[Microphone Calibration] Hit detected!', {
-        normalizedVolume: normalizedVolume.toFixed(3),
-        adjustedThreshold: adjustedThreshold.toFixed(3),
-        rawThreshold: thresholdRef.current.toFixed(3),
-        sensitivity: sensitivityRef.current,
-        maxAmplitude: maxAmplitude.toFixed(3),
-        rms: rms.toFixed(3),
-        startTime: currentCalibration.startTime,
-        now,
-      });
-      lastHitTimeRef.current = now;
-      const elapsed = now - currentCalibration.startTime!;
-      const adjustedTime = elapsed - latencyAdjustmentRef.current;
-
-      console.log('[Microphone Calibration] Hit timing:', {
-        elapsed: elapsed.toFixed(1),
-        adjustedTime: adjustedTime.toFixed(1),
-        latencyAdjustment: latencyAdjustmentRef.current,
-        expectedBeatTimes: currentCalibration.expectedBeatTimes.length,
-      });
-
-      // Find closest expected beat using RAW elapsed time (not adjusted)
-      // Only consider beats within 1.5x the beat duration (similar to MIDI calibration)
-      const msPerBeat = 60000 / bpm;
-      let closestBeatIndex: number | null = null;
-      let minDistance = Infinity;
-      
-      currentCalibration.expectedBeatTimes.forEach((expectedTime, index) => {
-        const distance = Math.abs(expectedTime - elapsed);
-        // Only consider beats within 1.5 beats (prevent huge errors)
-        if (distance < minDistance && distance < msPerBeat * 1.5) {
-          minDistance = distance;
-          closestBeatIndex = index;
-        }
-      });
-
-      // If no beat found within window, skip this hit (but log it)
-      if (closestBeatIndex === null) {
-        console.log('[Microphone Calibration] Hit outside beat window, skipping:', {
-          elapsed: elapsed.toFixed(1),
-          msPerBeat: msPerBeat.toFixed(1),
-          window: (msPerBeat * 1.5).toFixed(1),
-          expectedBeats: currentCalibration.expectedBeatTimes.map(t => t.toFixed(1)),
-        });
-        return;
-      }
-
-      const closestBeatTime = currentCalibration.expectedBeatTimes[closestBeatIndex];
-      
-      console.log('[Microphone Calibration] Beat matched:', {
-        closestBeatIndex,
-        closestBeatTime: closestBeatTime.toFixed(1),
-        elapsed: elapsed.toFixed(1),
-        distance: Math.abs(closestBeatTime - elapsed).toFixed(1),
-      });
-      // Calculate timing error using ADJUSTED time (elapsed - latency)
-      const timingError = adjustedTime - closestBeatTime;
-      const absTimingError = Math.abs(timingError);
-
-      // Determine hit quality
-      const PERFECT_THRESHOLD = 25;
-      const GOOD_THRESHOLD = 50;
-
-      let hitQuality: 'perfect' | 'good' | 'off' = 'off';
-      if (absTimingError <= PERFECT_THRESHOLD) {
-        hitQuality = 'perfect';
-      } else if (absTimingError <= GOOD_THRESHOLD) {
-        hitQuality = 'good';
-      }
-
-      // Update hit counts
-      console.log('[Microphone Calibration] Recording hit:', {
-        timingError: timingError.toFixed(1),
-        absTimingError: absTimingError.toFixed(1),
-        hitQuality,
-      });
-      
-      setCalibration(prev => ({
-        ...prev,
-        hitTimes: [
-          ...prev.hitTimes,
-          {
-            time: elapsed,
-            adjustedTime,
-            timingError,
-            rawTime: elapsed,
-          },
-        ],
-        hitCounts: {
-          ...prev.hitCounts,
-          [hitQuality]: prev.hitCounts[hitQuality] + 1,
-        },
-      }));
-
-      // Update UI
-      if (targetRef.current) {
-        if (hitQuality === 'perfect') {
-          targetRef.current.style.background = '#10b981';
-          targetRef.current.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
-        } else if (hitQuality === 'good') {
-          targetRef.current.style.background = '#f59e0b';
-          targetRef.current.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.5)';
-        } else {
-          targetRef.current.style.background = '#ef4444';
-          targetRef.current.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.5)';
-        }
-      }
-
-      // Update last hit text
-      if (lastHitRef.current) {
-        const sign = timingError >= 0 ? '+' : '';
-        let text = '';
-        if (hitQuality === 'perfect') {
-          text = `Perfect! (±${Math.round(absTimingError)}ms)`;
-          lastHitRef.current.style.color = '#10b981';
-        } else if (hitQuality === 'good') {
-          text = `${timingError >= 0 ? 'Late' : 'Early'} by ${Math.round(absTimingError)}ms (±${Math.round(absTimingError)}ms)`;
-          lastHitRef.current.style.color = '#f59e0b';
-        } else {
-          text = `${timingError >= 0 ? 'Late' : 'Early'} by ${Math.round(absTimingError)}ms (±${Math.round(absTimingError)}ms)`;
-          lastHitRef.current.style.color = '#ef4444';
-        }
-        lastHitRef.current.textContent = text;
-      }
-
-      // Clear reset timeout and set new one
-      if (resetColorTimeoutRef.current) {
-        clearTimeout(resetColorTimeoutRef.current);
-      }
-      
-      resetColorTimeoutRef.current = setTimeout(() => {
-        if (targetRef.current) {
-          targetRef.current.style.background = 'var(--dpgen-primary)';
-          targetRef.current.style.boxShadow = '0 0 20px rgba(60, 109, 240, 0.5)';
-        }
-        if (lastHitRef.current) {
-          lastHitRef.current.textContent = 'Ready...';
-          lastHitRef.current.style.color = 'var(--dpgen-text)';
-        }
-      }, 1500); // 1.5 beats
-    }
-  };
-
-  // Start calibration
-  const handleStart = async () => {
-    if (calibration.active) {
-      handleStop();
-      return;
-    }
-
-    if (!selectedDeviceId) {
-      alert('Please select a microphone device first.');
-      return;
-    }
-
-    // Request microphone access
-    const newStream = await requestMicrophone(selectedDeviceId);
-    if (!newStream) {
-      return;
-    }
-    
-    // Store stream in ref for access in checkAudioLevel
-    streamRef.current = newStream;
-
-    // Create audio context and analyser
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    audioContextRef.current = ctx;
-    
-    if (ctx.state === 'suspended') {
-      await ctx.resume();
-    }
-
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = CONSTANTS.AUDIO.FFT_SIZE;
-    analyser.smoothingTimeConstant = CONSTANTS.AUDIO.SMOOTHING_TIME_CONSTANT;
-    
-    const source = ctx.createMediaStreamSource(newStream);
-    source.connect(analyser);
-    
-    analyserRef.current = analyser;
-    // For time domain data, we need fftSize (not frequencyBinCount which is half)
-    const bufferLength = analyser.fftSize;
-    const dataArray = new Uint8Array(new ArrayBuffer(bufferLength));
-    dataArrayRef.current = dataArray;
-    
-    console.log('[Microphone Calibration] Initialized analyser:', {
-      fftSize: analyser.fftSize,
-      frequencyBinCount: analyser.frequencyBinCount,
-      bufferLength,
-      stream: newStream.active,
-      trackCount: newStream.getTracks().length,
-    });
-
-    const startTime = performance.now();
-    const msPerBeat = 60000 / bpm;
-
-    // Generate expected beat times (16 beats)
-    const expectedBeatTimes: number[] = [];
-    for (let i = 0; i < 16; i++) {
-      expectedBeatTimes.push(i * msPerBeat);
-    }
-
-    // Reset UI
-    if (targetRef.current) {
-      targetRef.current.style.background = 'var(--dpgen-primary)';
-      targetRef.current.style.boxShadow = '0 0 20px rgba(60, 109, 240, 0.5)';
-    }
-    if (lastHitRef.current) {
-      lastHitRef.current.textContent = 'Ready...';
-      lastHitRef.current.style.color = 'var(--dpgen-text)';
-    }
-
-    const newCalibration = {
-      active: true,
-      startTime,
-      currentBeat: 0,
-      expectedBeatTimes,
-      hitTimes: [],
-      hitCounts: { perfect: 0, good: 0, off: 0 },
-      beatInterval: null,
-      audioContext: ctx,
-      analyser,
-      dataArray,
-    };
-    
-    setCalibration(newCalibration);
-    
-    // Update ref immediately (don't wait for useEffect)
-    calibrationRef.current = newCalibration;
-
-    isActiveRef.current = true;
-    
-    console.log('[Microphone Calibration] Calibration started:', {
-      startTime,
-      expectedBeatTimes: expectedBeatTimes.length,
-      msPerBeat,
-      firstBeatTime: expectedBeatTimes[0],
-      secondBeatTime: expectedBeatTimes[1],
-    });
-
-    // Schedule beats
-    const scheduleBeats = () => {
-      let beatIndex = 0;
-      
-      const playNextBeat = () => {
-        if (!isActiveRef.current || beatIndex >= 16) {
-          handleStop();
-          return;
-        }
-
-        const beatTime = startTime + (beatIndex * msPerBeat);
-        const now = performance.now();
-        const delay = Math.max(0, beatTime - now);
-
-        beatIntervalRef.current = setTimeout(() => {
-          if (!isActiveRef.current) return;
-
-          playClickSound(beatIndex === 0);
-          
-          // Update beat number
-          if (beatNumberRef.current) {
-            beatNumberRef.current.textContent = ((beatIndex % 4) + 1).toString();
-          }
-
-          // Animate ring
-          if (ringRef.current) {
-            ringRef.current.style.opacity = '1';
-            ringRef.current.style.width = '80px';
-            ringRef.current.style.height = '80px';
-            ringRef.current.style.transition = 'all 0s';
-
-            setTimeout(() => {
-              if (ringRef.current) {
-                ringRef.current.style.transition = `width ${msPerBeat}ms linear, height ${msPerBeat}ms linear`;
-                ringRef.current.style.width = '200px';
-                ringRef.current.style.height = '200px';
-              }
-            }, 10);
-
-            setTimeout(() => {
-              if (ringRef.current) {
-                ringRef.current.style.opacity = '0';
-              }
-            }, msPerBeat);
-          }
-
-          beatIndex++;
-          playNextBeat();
-        }, delay);
-      };
-
-      playNextBeat();
-    };
-
-    // Start level checking - use time domain data for hit detection
-    // Make sure we have the right buffer size for time domain data (need fftSize, not frequencyBinCount)
-    if (!dataArrayRef.current || dataArrayRef.current.length !== analyser.fftSize) {
-      dataArrayRef.current = new Uint8Array(new ArrayBuffer(analyser.fftSize));
-      console.log('[Microphone Calibration] Recreated dataArray with fftSize:', analyser.fftSize);
-    }
-    
-    const levelCheckInterval = setInterval(() => {
-      checkAudioLevel();
-    }, CONSTANTS.AUDIO.LEVEL_CHECK_INTERVAL);
-
-    levelCheckIntervalRef.current = levelCheckInterval;
-    
-    console.log('[Microphone Calibration] Started level checking with analyser:', {
-      fftSize: analyser.fftSize,
-      frequencyBinCount: analyser.frequencyBinCount,
-      dataArrayLength: dataArrayRef.current.length,
-      bufferLength,
-    });
-
-    scheduleBeats();
-  };
-
-    // Stop calibration
-    const handleStop = () => {
-      isActiveRef.current = false;
-
-      // Clear intervals
-      if (beatIntervalRef.current) {
-        clearTimeout(beatIntervalRef.current);
-        beatIntervalRef.current = null;
-      }
-
-      if (levelCheckIntervalRef.current) {
-        clearInterval(levelCheckIntervalRef.current);
-        levelCheckIntervalRef.current = null;
-      }
-      
-      // Clear stream ref
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
-
-      if (resetColorTimeoutRef.current) {
-        clearTimeout(resetColorTimeoutRef.current);
-        resetColorTimeoutRef.current = null;
-      }
-
-      // Stop audio stream
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
-      }
-
-      // Close audio context
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(console.error);
-        audioContextRef.current = null;
-      }
-
-      analyserRef.current = null;
-      dataArrayRef.current = null;
-
-      // Reset audio level
-      setAudioLevel(0);
-
-      setCalibration(prev => ({
-        ...prev,
-        active: false,
-        beatInterval: null,
-        audioContext: null,
-        analyser: null,
-        dataArray: null,
-      }));
-    };
-
-  // Reset stats
-  const handleReset = () => {
-    setCalibration(prev => ({
-      ...prev,
-      hitTimes: [],
-      hitCounts: { perfect: 0, good: 0, off: 0 },
-    }));
-
-    if (targetRef.current) {
-      targetRef.current.style.background = 'var(--dpgen-primary)';
-      targetRef.current.style.boxShadow = '0 0 20px rgba(60, 109, 240, 0.5)';
     }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    setAutoCalActive(false);
+    setTestActive(false);
+    setAudioLevel(0);
+  };
 
-    if (lastHitRef.current) {
-      lastHitRef.current.textContent = 'Ready...';
-      lastHitRef.current.style.color = 'var(--dpgen-text)';
+  const setupMicrophone = async () => {
+    if (!selectedDeviceId) return false;
+    
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: { exact: selectedDeviceId } },
+      });
+      
+      streamRef.current = newStream;
+      setStream(newStream);
+      
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      await ctx.resume();
+      audioContextRef.current = ctx;
+      
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.3;
+      analyserRef.current = analyser;
+      
+      const source = ctx.createMediaStreamSource(newStream);
+      source.connect(analyser);
+      
+      dataArrayRef.current = new Uint8Array(analyser.fftSize);
+      
+      // Start level monitoring
+      levelCheckIntervalRef.current = setInterval(() => {
+        if (!analyserRef.current || !dataArrayRef.current) return;
+        
+        analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
+        
+        let maxAmp = 0;
+        for (let i = 0; i < dataArrayRef.current.length; i++) {
+          const amp = Math.abs(dataArrayRef.current[i] - 128) / 128;
+          if (amp > maxAmp) maxAmp = amp;
+        }
+        
+        setAudioLevel(maxAmp * 100);
+        
+        // Detect hits for auto-calibration
+        if (autoCalActive) {
+          const now = performance.now();
+          const sensitivityMult = sensitivity / 100;
+          const adjustedThreshold = 0.1 / sensitivityMult; // Use a baseline threshold for detection
+          
+          if (maxAmp > adjustedThreshold && now - lastHitTimeRef.current > 100) {
+            lastHitTimeRef.current = now;
+            setAutoCalHits(prev => [...prev, maxAmp]);
+          }
+        }
+        
+        // Detect hits for test mode
+        if (testActive) {
+          const now = performance.now();
+          const sensitivityMult = sensitivity / 100;
+          const adjustedThreshold = threshold / sensitivityMult;
+          
+          if (maxAmp > adjustedThreshold && now - lastHitTimeRef.current > 50) {
+            lastHitTimeRef.current = now;
+            const elapsed = now - testStartTimeRef.current;
+            const msPerBeat = 60000 / bpm;
+            const closestBeat = Math.round(elapsed / msPerBeat);
+            const expectedTime = closestBeat * msPerBeat;
+            const timingError = elapsed - expectedTime - latencyAdjustment;
+            
+            setTestHits(prev => [...prev, { time: elapsed, level: maxAmp, timingError }]);
+          }
+        }
+      }, 20);
+      
+      return true;
+    } catch (err) {
+      console.error('Failed to setup microphone:', err);
+      return false;
     }
   };
 
-  // Apply calibration
+  // Auto-calibration
+  const startAutoCalibration = async () => {
+    const success = await setupMicrophone();
+    if (!success) return;
+    
+    setAutoCalHits([]);
+    setAutoCalActive(true);
+    setAutoCalStatus('Hit your drum/pad 5-10 times at normal volume...');
+  };
+
+  const finishAutoCalibration = () => {
+    setAutoCalActive(false);
+    
+    if (autoCalHits.length < 3) {
+      setAutoCalStatus('Not enough hits detected. Try again.');
+      return;
+    }
+    
+    // Calculate optimal threshold from hits
+    const avgLevel = autoCalHits.reduce((a, b) => a + b, 0) / autoCalHits.length;
+    const minLevel = Math.min(...autoCalHits);
+    
+    // Set threshold to 60% of minimum hit level (to catch ghost notes)
+    const optimalThreshold = Math.max(0.05, Math.min(0.5, minLevel * 0.6));
+    
+    // Set sensitivity based on average level
+    // If hits are quiet, increase sensitivity; if loud, decrease
+    const optimalSensitivity = Math.max(30, Math.min(100, Math.round(70 * (0.3 / avgLevel))));
+    
+    setThreshold(optimalThreshold);
+    setSensitivity(optimalSensitivity);
+    setAutoCalStatus(`✓ Calibrated! Threshold: ${optimalThreshold.toFixed(2)}, Sensitivity: ${optimalSensitivity}%`);
+    
+    stopAll();
+  };
+
+  // Test mode
+  const startTest = async () => {
+    const success = await setupMicrophone();
+    if (!success) return;
+    
+    setTestHits([]);
+    setTestBeatIndex(0);
+    setTestActive(true);
+    testStartTimeRef.current = performance.now();
+    
+    // Play click sounds
+    const msPerBeat = 60000 / bpm;
+    let beatCount = 0;
+    
+    const playClick = async () => {
+      if (beatCount >= 8) {
+        stopTest();
+        return;
+      }
+      
+      // Play click
+      const ctx = audioContextRef.current;
+      if (ctx) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = beatCount % 4 === 0 ? 800 : 600;
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+      }
+      
+      setTestBeatIndex(beatCount);
+      beatCount++;
+    };
+    
+    playClick();
+    testIntervalRef.current = setInterval(playClick, msPerBeat);
+  };
+
+  const stopTest = () => {
+    if (testIntervalRef.current) {
+      clearInterval(testIntervalRef.current);
+      testIntervalRef.current = null;
+    }
+    setTestActive(false);
+    
+    // Calculate average timing error
+    if (testHits.length > 0) {
+      const avgError = testHits.reduce((sum, h) => sum + h.timingError, 0) / testHits.length;
+      // Suggest latency adjustment
+      const suggestedLatency = Math.round(latencyAdjustment - avgError);
+      setLatencyAdjustment(Math.max(-200, Math.min(200, suggestedLatency)));
+    }
+  };
+
   const handleApply = () => {
-    // Save all calibration settings
     setMicrophoneLatencyAdjustment(latencyAdjustment);
     setMicrophoneSensitivity(sensitivity);
     setMicrophoneThreshold(threshold);
-    if (onApply) {
-      onApply(latencyAdjustment);
+    
+    if (typeof window !== 'undefined') {
+      try {
+        const existing = localStorage.getItem('dpgen_microphone_practice_settings');
+        const settings = existing ? JSON.parse(existing) : {};
+        settings.deviceId = selectedDeviceId;
+        settings.latencyAdjustment = latencyAdjustment;
+        settings.sensitivity = sensitivity;
+        settings.threshold = threshold;
+        localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
+      } catch (e) {}
     }
+    
+    if (onApply) onApply(latencyAdjustment);
+    stopAll();
     onClose();
   };
 
+  const testStats = testHits.length > 0 ? {
+    perfect: testHits.filter(h => Math.abs(h.timingError) <= 25).length,
+    good: testHits.filter(h => Math.abs(h.timingError) > 25 && Math.abs(h.timingError) <= 50).length,
+    off: testHits.filter(h => Math.abs(h.timingError) > 50).length,
+    avgError: Math.round(testHits.reduce((sum, h) => sum + h.timingError, 0) / testHits.length),
+  } : null;
+
   return (
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleStop();
-          onClose();
-        }
-      }}
+      onClick={(e) => e.target === e.currentTarget && (stopAll(), onClose())}
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        inset: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 3000,
+        zIndex: 10000,
+        padding: '1rem',
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--dpgen-card)',
-          borderRadius: 'var(--dpgen-radius)',
-          padding: '2rem',
-          maxWidth: '500px',
-          width: '90%',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          boxShadow: 'var(--dpgen-shadow)',
+          borderRadius: '12px',
+          padding: '1.25rem',
+          maxWidth: '420px',
+          width: '100%',
+          maxHeight: 'calc(100vh - 2rem)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>Microphone Calibration</h2>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Mic size={20} strokeWidth={1.5} style={{ color: 'var(--dpgen-primary)' }} />
+            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Calibration</h2>
+          </div>
           <button
-            onClick={() => {
-              handleStop();
-              onClose();
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.5rem',
-              cursor: 'pointer',
-              padding: '0.25rem 0.5rem',
-              borderRadius: '4px',
-              color: 'var(--dpgen-text)',
-            }}
+            onClick={() => (stopAll(), onClose())}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--dpgen-muted)', padding: '4px', display: 'flex' }}
           >
-            ×
+            <X size={20} strokeWidth={1.5} />
           </button>
         </div>
 
-        {/* Device Selection */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-            Microphone Device
-          </label>
-          <select
-            value={selectedDeviceId}
-            onChange={(e) => {
-              const deviceId = e.target.value;
-              setSelectedDeviceId(deviceId);
-              // Save device selection to localStorage
-              if (typeof window !== 'undefined' && deviceId) {
-                try {
-                  const existing = localStorage.getItem('dpgen_microphone_practice_settings');
-                  const settings = existing ? JSON.parse(existing) : {};
-                  settings.deviceId = deviceId;
-                  localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
-                } catch (e) {
-                  console.error('Failed to save device selection:', e);
-                }
-              }
-            }}
-            disabled={calibration.active}
-            style={{
-              width: '100%',
-              padding: '0.5rem',
-              borderRadius: '6px',
-              border: '1px solid var(--dpgen-border)',
-              background: 'var(--dpgen-bg)',
-              color: 'var(--dpgen-text)',
-            }}
-          >
-            <option value="">Select microphone...</option>
-            {devices.map((device) => (
-              <option key={device.deviceId} value={device.deviceId}>
-                {device.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Device Selection - Compact */}
+        <select
+          value={selectedDeviceId}
+          onChange={(e) => setSelectedDeviceId(e.target.value)}
+          disabled={autoCalActive || testActive}
+          style={{
+            width: '100%',
+            padding: '0.5rem',
+            borderRadius: '6px',
+            border: '1px solid var(--dpgen-border)',
+            background: 'var(--dpgen-bg)',
+            color: 'var(--dpgen-text)',
+            marginBottom: '1rem',
+            fontSize: '0.875rem',
+          }}
+        >
+          <option value="">Select microphone...</option>
+          {devices.map((d) => (
+            <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+          ))}
+        </select>
 
-        {/* Sensitivity and Threshold */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-            Sensitivity: {sensitivity}%
-          </label>
-          <input
-            type="range"
-            min={CONSTANTS.AUDIO.SENSITIVITY_MIN}
-            max={CONSTANTS.AUDIO.SENSITIVITY_MAX}
-            value={sensitivity}
-            onChange={(e) => setSensitivity(parseInt(e.target.value, 10))}
-            disabled={calibration.active}
-            style={{ width: '100%' }}
-          />
-          <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem', marginBottom: '0' }}>
-            Higher sensitivity makes the microphone more responsive to quieter sounds. Lower sensitivity requires louder hits to trigger.
-          </p>
-
-          <label style={{ display: 'block', marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 500 }}>
-            Threshold: {threshold.toFixed(2)}
-          </label>
-          <input
-            type="range"
-            min={CONSTANTS.AUDIO.THRESHOLD_MIN}
-            max={CONSTANTS.AUDIO.THRESHOLD_MAX}
-            step="0.01"
-            value={threshold}
-            onChange={(e) => setThreshold(parseFloat(e.target.value))}
-            disabled={calibration.active}
-            style={{ width: '100%' }}
-          />
-          <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem', marginBottom: '0' }}>
-            The minimum audio level required to register a hit. Lower values trigger on quieter sounds, higher values require louder hits. Works together with sensitivity.
-          </p>
-        </div>
-
-        {/* Latency Adjustment */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-            Latency Adjustment: {latencyAdjustment}ms
-          </label>
-          <input
-            type="range"
-            min={CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MIN}
-            max={CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MAX}
-            value={latencyAdjustment}
-            onChange={(e) => setLatencyAdjustment(parseInt(e.target.value, 10))}
-            style={{ width: '100%' }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-            <span>{CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MIN}ms</span>
-            <span>{CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MAX}ms</span>
-          </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem', marginBottom: '0' }}>
-            Compensates for audio processing delay. If hits appear consistently early, increase this value. If consistently late, decrease it. Adjust during calibration to get "Perfect" hits.
-          </p>
-        </div>
-
-        {/* Live Audio Level Feedback */}
-        {calibration.active && (
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-              Audio Level
-            </label>
-            <div style={{
-              width: '100%',
-              height: '24px',
-              background: 'var(--dpgen-bg)',
-              border: '1px solid var(--dpgen-border)',
-              borderRadius: '4px',
-              overflow: 'hidden',
-              position: 'relative',
-            }}>
-              <div
-                style={{
-                  width: `${Math.min(100, audioLevel)}%`,
-                  height: '100%',
-                  background: audioLevel >= 100 
-                    ? 'linear-gradient(to right, #10b981, #f59e0b, #ef4444)' 
-                    : audioLevel >= 75
-                    ? 'linear-gradient(to right, #10b981, #f59e0b)'
-                    : '#10b981',
-                  transition: 'width 0.05s ease-out, background 0.2s ease',
-                  borderRadius: '4px',
-                }}
-              />
-              {/* Threshold indicator line */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: `${Math.min(100, (threshold * (sensitivity / 100)) * 100)}%`,
-                  top: 0,
-                  bottom: 0,
-                  width: '2px',
-                  background: '#ef4444',
-                  opacity: 0.7,
-                  pointerEvents: 'none',
-                }}
-              />
-            </div>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              fontSize: '0.75rem', 
-              color: 'var(--dpgen-muted)', 
-              marginTop: '0.25rem' 
-            }}>
-              <span>0%</span>
-              <span style={{ fontWeight: 600 }}>{Math.round(audioLevel)}%</span>
-              <span>100%</span>
-            </div>
-          </div>
-        )}
-
-        {/* Calibration Visual */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          marginBottom: '2rem',
-          minHeight: '300px',
-          position: 'relative',
-        }}>
-          {/* Target Container */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-            {/* Ring */}
-            <div
-              ref={ringRef}
+        {/* Mode Tabs */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          {([
+            { key: 'auto' as CalibrationMode, label: 'Auto', Icon: Zap },
+            { key: 'test' as CalibrationMode, label: 'Test', Icon: Target },
+            { key: 'manual' as CalibrationMode, label: 'Manual', Icon: Settings },
+          ]).map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              onClick={() => { stopAll(); setMode(key); }}
+              disabled={autoCalActive || testActive}
               style={{
-                position: 'absolute',
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                border: '3px solid var(--dpgen-primary)',
-                opacity: 0,
-                pointerEvents: 'none',
-                transition: 'opacity 0.2s ease',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                margin: 0,
-              }}
-            />
-            
-            {/* Target */}
-            <div
-              ref={targetRef}
-              style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                background: 'var(--dpgen-primary)',
-                boxShadow: '0 0 20px rgba(60, 109, 240, 0.5)',
+                flex: 1,
+                padding: '0.5rem 0.75rem',
+                border: mode === key ? '2px solid var(--dpgen-primary)' : '1px solid var(--dpgen-border)',
+                borderRadius: '6px',
+                background: mode === key ? 'var(--dpgen-primary)' : 'var(--dpgen-bg)',
+                color: mode === key ? 'white' : 'var(--dpgen-text)',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                fontWeight: 500,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '2rem',
-                fontWeight: 600,
-                color: 'white',
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                zIndex: 1,
+                gap: '0.375rem',
               }}
             >
-              <div ref={beatNumberRef}>1</div>
-            </div>
-          </div>
-          
-          {/* Last Hit Feedback */}
-          <div
-            ref={lastHitRef}
-            style={{
-              fontSize: '1rem',
-              fontWeight: 600,
-              color: 'var(--dpgen-text)',
-              marginBottom: '1rem',
-              minHeight: '1.5rem',
-              textAlign: 'center',
-              transition: 'color 0.3s ease',
-            }}
-          >
-            Ready...
-          </div>
-          
-          {/* Stats */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
-            gap: '1rem',
-            width: '100%',
-            marginTop: '1rem',
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', marginBottom: '0.25rem' }}>Total</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>{calibration.hitTimes.length}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', marginBottom: '0.25rem' }}>Perfect</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#10b981' }}>{calibration.hitCounts.perfect}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', marginBottom: '0.25rem' }}>Good</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#f59e0b' }}>{calibration.hitCounts.good}</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', marginBottom: '0.25rem' }}>Off</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#ef4444' }}>{calibration.hitCounts.off}</div>
-            </div>
-          </div>
+              <Icon size={14} strokeWidth={2} />
+              {label}
+            </button>
+          ))}
         </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+        {/* Content Area - Scrollable if needed */}
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+          {/* Auto Calibration Mode */}
+          {mode === 'auto' && (
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', margin: '0 0 1rem' }}>
+                Hit your drum/pad at normal volume. We'll detect the optimal settings automatically.
+              </p>
+              
+              {/* Level Meter */}
+              <div style={{
+                height: '20px',
+                background: 'var(--dpgen-bg)',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                marginBottom: '0.75rem',
+              }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(100, audioLevel)}%`,
+                  background: audioLevel > 40 ? '#ef4444' : audioLevel > 15 ? '#22c55e' : '#6b7280',
+                  transition: 'width 0.05s',
+                }} />
+              </div>
+              
+              {/* Hit Counter */}
+              {autoCalActive && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 700 }}>{autoCalHits.length}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>hits detected</div>
+                </div>
+              )}
+              
+              {autoCalStatus && (
+                <p style={{ fontSize: '0.8rem', color: autoCalStatus.startsWith('✓') ? '#22c55e' : 'var(--dpgen-muted)', marginBottom: '1rem' }}>
+                  {autoCalStatus}
+                </p>
+              )}
+              
+              {!autoCalActive ? (
+                <button
+                  onClick={startAutoCalibration}
+                  disabled={!selectedDeviceId}
+                  style={{
+                    padding: '0.75rem 2rem',
+                    background: 'var(--dpgen-primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                  }}
+                >
+                  Start Auto-Calibration
+                </button>
+              ) : (
+                <button
+                  onClick={finishAutoCalibration}
+                  disabled={autoCalHits.length < 3}
+                  style={{
+                    padding: '0.75rem 2rem',
+                    background: autoCalHits.length >= 3 ? '#22c55e' : '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: autoCalHits.length >= 3 ? 'pointer' : 'not-allowed',
+                    fontWeight: 500,
+                  }}
+                >
+                  {autoCalHits.length >= 3 ? 'Apply Settings' : `Need ${3 - autoCalHits.length} more hits`}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Test Mode */}
+          {mode === 'test' && (
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', margin: '0 0 1rem' }}>
+                Play along with the clicks. We'll measure your timing and suggest latency adjustment.
+              </p>
+              
+              {/* Beat Indicator */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: testActive && testBeatIndex % 4 === i ? 'var(--dpgen-primary)' : 'var(--dpgen-bg)',
+                    border: '2px solid var(--dpgen-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.25rem',
+                    fontWeight: 600,
+                    color: testActive && testBeatIndex % 4 === i ? 'white' : 'var(--dpgen-text)',
+                  }}>
+                    {i + 1}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Test Results */}
+              {testStats && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
+                  <span style={{ color: '#22c55e' }}>✓ {testStats.perfect}</span>
+                  <span style={{ color: '#f59e0b' }}>● {testStats.good}</span>
+                  <span style={{ color: '#ef4444' }}>✗ {testStats.off}</span>
+                  <span>Avg: {testStats.avgError > 0 ? '+' : ''}{testStats.avgError}ms</span>
+                </div>
+              )}
+              
+              <button
+                onClick={testActive ? stopTest : startTest}
+                disabled={!selectedDeviceId}
+                style={{
+                  padding: '0.75rem 2rem',
+                  background: testActive ? '#ef4444' : 'var(--dpgen-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                }}
+              >
+                {testActive ? 'Stop Test' : 'Start Test'}
+              </button>
+            </div>
+          )}
+
+          {/* Manual Mode */}
+          {mode === 'manual' && (
+            <div>
+              {/* Compact Settings Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>Sensitivity: {sensitivity}%</label>
+                  <input
+                    type="range"
+                    min={10}
+                    max={100}
+                    value={sensitivity}
+                    onChange={(e) => setSensitivity(parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>Threshold: {threshold.toFixed(2)}</label>
+                  <input
+                    type="range"
+                    min={0.01}
+                    max={0.5}
+                    step={0.01}
+                    value={threshold}
+                    onChange={(e) => setThreshold(parseFloat(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+              
+              <div style={{ marginBottom: '0.75rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>Latency: {latencyAdjustment}ms</label>
+                <input
+                  type="range"
+                  min={-200}
+                  max={200}
+                  value={latencyAdjustment}
+                  onChange={(e) => setLatencyAdjustment(parseInt(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              
+              {/* Live Level with Zones */}
+              <div style={{
+                height: '32px',
+                background: 'var(--dpgen-bg)',
+                borderRadius: '6px',
+                overflow: 'hidden',
+                position: 'relative',
+                marginBottom: '0.5rem',
+              }}>
+                {/* Zone markers */}
+                <div style={{ position: 'absolute', left: `${threshold * 100}%`, top: 0, bottom: 0, width: '2px', background: '#22c55e', zIndex: 2 }} />
+                <div style={{ position: 'absolute', left: '40%', top: 0, bottom: 0, width: '2px', background: '#ef4444', zIndex: 2 }} />
+                
+                {/* Level bar */}
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(100, audioLevel)}%`,
+                  background: audioLevel >= 40 ? '#ef4444' : audioLevel >= threshold * 100 ? '#22c55e' : '#6b7280',
+                  transition: 'width 0.03s',
+                }} />
+                
+                {/* Labels */}
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', fontSize: '0.65rem', color: 'var(--dpgen-muted)', pointerEvents: 'none' }}>
+                  <span>Ghost</span>
+                  <span style={{ color: '#22c55e' }}>Normal</span>
+                  <span style={{ color: '#ef4444' }}>Accent</span>
+                </div>
+              </div>
+              
+              <p style={{ fontSize: '0.7rem', color: 'var(--dpgen-muted)', margin: 0 }}>
+                Tap your drum to see the level. Green = normal hit, Red = accent.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--dpgen-border)' }}>
           <button
-            onClick={handleReset}
-            disabled={calibration.active}
+            onClick={() => (stopAll(), onClose())}
             style={{
-              padding: '0.75rem 1.5rem',
+              flex: 1,
+              padding: '0.625rem',
               background: 'var(--dpgen-bg)',
               color: 'var(--dpgen-text)',
               border: '1px solid var(--dpgen-border)',
-              borderRadius: '8px',
+              borderRadius: '6px',
               cursor: 'pointer',
               fontSize: '0.875rem',
-              fontWeight: 500,
             }}
           >
-            Reset
-          </button>
-          <button
-            onClick={calibration.active ? handleStop : handleStart}
-            disabled={!selectedDeviceId}
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: calibration.active ? '#ef4444' : 'var(--dpgen-primary)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-            }}
-          >
-            {calibration.active ? 'Stop' : 'Start'}
+            Cancel
           </button>
           <button
             onClick={handleApply}
-            disabled={calibration.active}
+            disabled={autoCalActive || testActive}
             style={{
-              padding: '0.75rem 1.5rem',
+              flex: 1,
+              padding: '0.625rem',
               background: 'var(--dpgen-primary)',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '6px',
               cursor: 'pointer',
               fontSize: '0.875rem',
               fontWeight: 500,
@@ -1074,4 +654,3 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     </div>
   );
 }
-

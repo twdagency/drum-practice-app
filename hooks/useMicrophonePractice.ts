@@ -69,6 +69,9 @@ export function useMicrophonePractice() {
       const drumPattern = pattern.drumPattern || 'S S K S';
       const repeat = pattern.repeat || 1;
       
+      // Get accent indices for this pattern
+      const accentIndices = pattern._presetAccents || [];
+      
       // Get actual notes per bar (handles both standard and advanced per-beat subdivisions)
       const notesPerBar = getNotesPerBarForPattern(pattern);
       
@@ -115,16 +118,38 @@ export function useMicrophonePractice() {
           const drumToken = drumTokens[i % drumTokens.length];
           const noteDuration = noteDurations[i % noteDurations.length];
           
-          // For microphone, we detect any hit (not specific to drum type)
-          // But we still track which note was expected for accuracy
-          if (drumToken !== 'R' && drumToken !== 'X') {
-            expectedNotes.push({
-              time: globalTimeOffset + repeatTimeOffset + noteTimeOffset,
-              note: drumToken, // Use drum token (K, S, etc.) instead of MIDI note
-              index: globalIndex,
-              matched: false,
-            });
+          // Skip rests
+          if (drumToken === 'R' || drumToken === 'X' || drumToken === '-') {
+            noteTimeOffset += noteDuration;
+            globalIndex++;
+            continue;
           }
+          
+          // Detect ghost notes (wrapped in parentheses)
+          const isGhost = drumToken.startsWith('(') && drumToken.endsWith(')');
+          const cleanToken = isGhost ? drumToken.slice(1, -1) : drumToken;
+          
+          // Detect accents from _presetAccents array
+          const localNoteIndex = i % notesPerBar;
+          const isAccent = accentIndices.includes(localNoteIndex);
+          
+          // Determine dynamic level
+          let dynamic: 'ghost' | 'normal' | 'accent' = 'normal';
+          if (isGhost) {
+            dynamic = 'ghost';
+          } else if (isAccent) {
+            dynamic = 'accent';
+          }
+          
+          expectedNotes.push({
+            time: globalTimeOffset + repeatTimeOffset + noteTimeOffset,
+            note: cleanToken.toUpperCase(), // Use clean token without parentheses
+            index: globalIndex,
+            matched: false,
+            dynamic, // Expected dynamic level
+            isGhost,
+            isAccent,
+          });
           
           // Accumulate time offset for next note
           noteTimeOffset += noteDuration;
@@ -171,7 +196,8 @@ export function useMicrophonePractice() {
   }, [expectedNotes, accuracyWindow]);
 
   // Handle hit from AudioWorklet or AnalyserNode
-  const handleDetectedHit = useCallback((hitTime: number) => {
+  // hitVolume is 0-1 representing the volume of the detected hit
+  const handleDetectedHit = useCallback((hitTime: number, hitVolume?: number) => {
     // Read all values from store directly to avoid stale closures
     const storeState = useStore.getState();
     const currentIsPlaying = storeState.isPlaying;
@@ -273,6 +299,27 @@ export function useMicrophonePractice() {
     if (isWithinWindow) {
       markMicrophoneNoteMatched(closestNote.index);
     }
+    
+    // Classify hit dynamic based on volume
+    const ghostThreshold = storeState.microphonePractice.ghostThreshold || 0.05;
+    const normalThreshold = storeState.microphonePractice.threshold || 0.15;
+    const accentThreshold = storeState.microphonePractice.accentThreshold || 0.4;
+    const dynamicDetection = storeState.microphonePractice.dynamicDetection ?? true;
+    
+    let detectedDynamic: 'ghost' | 'normal' | 'accent' = 'normal';
+    if (dynamicDetection && hitVolume !== undefined) {
+      if (hitVolume >= accentThreshold) {
+        detectedDynamic = 'accent';
+      } else if (hitVolume <= ghostThreshold * 2) {
+        // Ghost notes are quiet - use ghostThreshold * 2 as the upper bound
+        detectedDynamic = 'ghost';
+      }
+    }
+    
+    // Check if detected dynamic matches expected dynamic
+    const expectedNote = currentExpectedNotes[closestNote.index];
+    const expectedDynamic = expectedNote?.dynamic || 'normal';
+    const dynamicMatch = detectedDynamic === expectedDynamic;
 
     const hit: PracticeHit = {
       time: adjustedElapsedTime,
@@ -283,15 +330,20 @@ export function useMicrophonePractice() {
       early: isEarly,
       perfect: isPerfect,
       matched: isWithinWindow,
+      velocity: hitVolume !== undefined ? Math.round(hitVolume * 100) : undefined, // 0-100
+      dynamic: detectedDynamic,
+      dynamicMatch: dynamicDetection ? dynamicMatch : undefined,
     };
 
     addMicrophoneHit(hit);
   }, [markMicrophoneNoteMatched, addMicrophoneHit]);
 
   // Setup AudioWorklet for low-latency hit detection
+  // useAdvanced: true uses spectral flux + HFC for better accuracy
   const setupAudioWorklet = useCallback(async (
     audioContext: AudioContext,
-    source: MediaStreamAudioSourceNode
+    source: MediaStreamAudioSourceNode,
+    useAdvanced: boolean = true
   ): Promise<AudioWorkletNode | null> => {
     // Check if AudioWorklet is supported
     if (!audioContext.audioWorklet) {
@@ -300,8 +352,13 @@ export function useMicrophonePractice() {
     }
 
     try {
-      // Load the worklet module
-      await audioContext.audioWorklet.addModule('/worklets/drum-onset-processor.js');
+      // Load the worklet module - use v2 (spectral flux) for better accuracy
+      const workletPath = useAdvanced 
+        ? '/worklets/drum-onset-processor-v2.js'
+        : '/worklets/drum-onset-processor.js';
+      const processorName = useAdvanced ? 'drum-onset-processor-v2' : 'drum-onset-processor';
+      
+      await audioContext.audioWorklet.addModule(workletPath);
       
       // Track AudioContext start time for timing synchronization
       audioContextStartTimeRef.current = performance.now() - (audioContext.currentTime * 1000);
@@ -309,7 +366,7 @@ export function useMicrophonePractice() {
       // Create worklet node with initial parameters
       // Convert sensitivity (0-100) to worklet range (0-2)
       const workletSensitivity = (sensitivity / 50) || 1.5;
-      const workletNode = new AudioWorkletNode(audioContext, 'drum-onset-processor', {
+      const workletNode = new AudioWorkletNode(audioContext, processorName, {
         processorOptions: {
           sensitivity: workletSensitivity,
           minIntervalMs: hitCooldown,
@@ -352,7 +409,9 @@ export function useMicrophonePractice() {
           // Use the performance time for hit detection
           // Note: handleDetectedHit will check if startTime is set and if playing
           // We can call it even if startTime isn't set yet - it will handle the check
-          handleDetectedHit(performanceTime);
+          // Pass the hit level for dynamic detection
+          const hitLevel = hitData.level || 0;
+          handleDetectedHit(performanceTime, hitLevel);
         }
       };
 
@@ -360,6 +419,8 @@ export function useMicrophonePractice() {
       source.connect(workletNode);
       
       console.log('[Microphone Practice] AudioWorklet initialized successfully', {
+        processor: processorName,
+        advanced: useAdvanced,
         sensitivity: workletSensitivity,
         minIntervalMs: hitCooldown,
       });
@@ -525,8 +586,8 @@ export function useMicrophonePractice() {
         expectedNotesCount: expectedNotes.length
       });
 
-      // Use shared hit handler
-      handleDetectedHit(now);
+      // Use shared hit handler with volume for dynamic detection
+      handleDetectedHit(now, normalizedVolume);
       
       // Update previous volume after processing (even if no hit registered)
       // This allows transient detection to work properly

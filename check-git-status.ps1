@@ -42,3 +42,5 @@ try {
 
 Write-Host "`n=== Summary ===" -ForegroundColor White
 git status --short
+
+

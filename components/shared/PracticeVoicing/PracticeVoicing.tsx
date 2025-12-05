@@ -7,8 +7,11 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Pattern } from '@/types/pattern';
+import { PolyrhythmPattern } from '@/types/polyrhythm';
 import { parseTokens, parseNumberList, getNotesPerBarForPattern } from '@/lib/utils/patternUtils';
 import { buildAccentIndices } from '@/lib/utils/patternUtils';
+import { polyrhythmToCombinedPattern } from '@/lib/utils/polyrhythmUtils';
+import { calculatePolyrhythmPositions } from '@/lib/utils/polyrhythmPositionCalculator';
 
 interface VoicingNote {
   index: number;
@@ -34,6 +37,7 @@ const drumIconMap: Record<string, { icon: string; label: string; color: string }
 export function PracticeVoicing() {
   const containerRef = useRef<HTMLDivElement>(null);
   const patterns = useStore((state) => state.patterns);
+  const polyrhythmPatterns = useStore((state) => state.polyrhythmPatterns);
   const playbackPosition = useStore((state) => state.playbackPosition);
   const isPlaying = useStore((state) => state.isPlaying);
   const highlightColors = useStore((state) => state.highlightColors);
@@ -204,9 +208,84 @@ export function PracticeVoicing() {
       }
     });
 
+    // Process polyrhythm patterns
+    // Voice to drum token mapping
+    const voiceToDrum: Record<string, string> = {
+      snare: 'S',
+      kick: 'K',
+      'hi-hat': 'H',
+      hihat: 'H',
+      tom: 'I',
+      floor: 'F',
+    };
+    
+    polyrhythmPatterns.forEach((polyrhythmPattern: PolyrhythmPattern) => {
+      const repeat = polyrhythmPattern.repeat || 1;
+      const { numerator, denominator } = polyrhythmPattern.ratio;
+      const positions = calculatePolyrhythmPositions(numerator, denominator, 4); // Assume 4/4
+      
+      // Get drum sounds for each hand
+      const rightDrum = voiceToDrum[polyrhythmPattern.rightRhythm.voice] || 'S';
+      const leftDrum = voiceToDrum[polyrhythmPattern.leftRhythm.voice] || 'K';
+      
+      for (let r = 0; r < repeat; r++) {
+        // Combine all events sorted by position
+        interface PolyEvent { position: number; voicing: string[]; isAccent: boolean }
+        const events: PolyEvent[] = [];
+        
+        // Add right hand notes
+        for (let i = 0; i < numerator; i++) {
+          const isAccent = polyrhythmPattern.rightRhythm.accents?.includes(i) || false;
+          events.push({
+            position: positions.rightPositions[i],
+            voicing: [rightDrum],
+            isAccent,
+          });
+        }
+        
+        // Add left hand notes (merge if aligned)
+        for (let j = 0; j < denominator; j++) {
+          const alignment = positions.alignments.find(a => a.leftIndex === j);
+          const isAccent = polyrhythmPattern.leftRhythm.accents?.includes(j) || false;
+          
+          if (alignment) {
+            // Merge with existing right hand event
+            const existingIdx = events.findIndex(e => 
+              Math.abs(e.position - positions.leftPositions[j]) < 0.001
+            );
+            if (existingIdx !== -1) {
+              events[existingIdx].voicing.push(leftDrum);
+              events[existingIdx].isAccent = events[existingIdx].isAccent || isAccent;
+            }
+          } else {
+            events.push({
+              position: positions.leftPositions[j],
+              voicing: [leftDrum],
+              isAccent,
+            });
+          }
+        }
+        
+        // Sort by position
+        events.sort((a, b) => a.position - b.position);
+        
+        // Add to allNotes
+        events.forEach((event, idx) => {
+          allNotes.push({
+            index: globalIndex + idx,
+            voicing: event.voicing,
+            isAccent: event.isAccent,
+            isRest: false,
+          });
+        });
+        
+        globalIndex += events.length;
+      }
+    });
+
     // Show all notes (no repetition detection)
     return allNotes;
-  }, [patterns]);
+  }, [patterns, polyrhythmPatterns]);
 
   // Scroll to current position
   useEffect(() => {

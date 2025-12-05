@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { SignUpModal } from '@/components/auth/SignUpModal';
 import { ProductPreview } from '@/components/landing/ProductPreview';
+import { AnimatedLogoInline } from '@/components/shared/AnimatedLogo';
 import { SocialProof } from '@/components/landing/SocialProof';
 import { InteractiveDemo } from '@/components/landing/InteractiveDemo';
 import { ExitIntentPopup, useExitIntent } from '@/components/landing/ExitIntentPopup';
@@ -884,9 +885,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 md:h-18">
             <div className="flex items-center">
-              <Link href="/" className="text-lg sm:text-xl md:text-2xl font-bold text-white hover:text-slate-200 transition-colors tracking-tight">
-                Drum Practice Generator
-              </Link>
+              <AnimatedLogoInline linkTo="/" variant="dark" speed={120} />
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               {!isClient || status === 'loading' ? (
@@ -1821,9 +1820,10 @@ export default function LandingPage() {
           <ExitIntentPopup
             onClose={handleClose}
             onClaimDiscount={() => {
+              // Store discount code in localStorage for checkout
+              localStorage.setItem('dpgen_promo_code', 'PRACTICE20');
               handleClose();
               setShowSignUp(true);
-              // Note: Discount code PRACTICE20 should be applied during signup/checkout
             }}
           />
         )}

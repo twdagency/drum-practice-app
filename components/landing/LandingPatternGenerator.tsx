@@ -186,3 +186,5 @@ export function LandingPatternGenerator({ onPatternChange }: LandingPatternGener
     </div>
   );
 }
+
+

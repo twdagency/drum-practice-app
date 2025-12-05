@@ -96,3 +96,5 @@ export function useExitIntent(hasSession: boolean = false) {
     handleClose,
   };
 }
+
+

@@ -6,12 +6,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface CollapsibleSectionProps {
   title: string;
   defaultExpanded?: boolean;
   children: React.ReactNode;
-  icon?: string;
+  icon?: React.ReactNode; // Now accepts React nodes (lucide-react icons)
+  badge?: string; // Optional badge text
   className?: string;
 }
 
@@ -20,6 +22,7 @@ export function CollapsibleSection({
   defaultExpanded = true, 
   children,
   icon,
+  badge,
   className = ''
 }: CollapsibleSectionProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -56,7 +59,11 @@ export function CollapsibleSection({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {icon && <i className={icon} style={{ color: 'var(--dpgen-primary)' }} />}
+          {icon && (
+            <span style={{ color: 'var(--dpgen-primary)', display: 'flex', alignItems: 'center' }}>
+              {icon}
+            </span>
+          )}
           <span style={{ 
             fontWeight: 600, 
             fontSize: '0.9375rem',
@@ -64,15 +71,24 @@ export function CollapsibleSection({
           }}>
             {title}
           </span>
+          {badge && (
+            <span style={{
+              fontSize: '0.65rem',
+              padding: '0.125rem 0.375rem',
+              borderRadius: '4px',
+              background: 'var(--dpgen-primary)',
+              color: 'white',
+              fontWeight: 500,
+            }}>
+              {badge}
+            </span>
+          )}
         </div>
-        <i 
-          className={`fas fa-chevron-${isExpanded ? 'up' : 'down'}`}
-          style={{ 
-            color: 'var(--dpgen-muted)',
-            fontSize: '0.75rem',
-            transition: 'transform var(--dpgen-transition)',
-          }}
-        />
+        {isExpanded ? (
+          <ChevronUp size={16} style={{ color: 'var(--dpgen-muted)' }} />
+        ) : (
+          <ChevronDown size={16} style={{ color: 'var(--dpgen-muted)' }} />
+        )}
       </button>
       {isExpanded && (
         <div className="collapsible-section-content" style={{
@@ -85,4 +101,3 @@ export function CollapsibleSection({
     </div>
   );
 }
-

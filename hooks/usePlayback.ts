@@ -11,13 +11,20 @@ import { parseTokens, parseNumberList, parseTimeSignature, calculateNotesPerBar,
 import { polyrhythmToCombinedPattern } from '@/lib/utils/polyrhythmUtils';
 import { calculatePolyrhythmPositions } from '@/lib/utils/polyrhythmPositionCalculator';
 
+interface SoundInfo {
+  sound: string; // e.g., 'S', 'K', 'click'
+  isGhost: boolean; // Ghost note (softer)
+  isAccent: boolean; // Accented note (louder)
+}
+
 interface ScheduledNote {
   time: number;
-  sounds: string[]; // e.g., ['S', 'K'] or ['click']
+  sounds: string[]; // Legacy: simple sound strings for backwards compatibility
+  soundInfos: SoundInfo[]; // New: detailed sound info with accent/ghost
   isBeat: boolean;
   noteIndex: number;
   patternIndex: number;
-  hasAccent?: boolean; // Whether this note has an accent
+  hasAccent?: boolean; // Whether this note position has an accent marking
   hand?: 'right' | 'left' | 'both'; // For polyrhythms: which hand(s) this note belongs to
 }
 
@@ -561,6 +568,7 @@ export function usePlayback() {
             scheduledNotes.push({
               time,
               sounds,
+              soundInfos: sounds.filter(s => s !== 'click').map(s => ({ sound: s, isGhost: false, isAccent: false })),
               isBeat,
               noteIndex: currentGlobalNoteIndex++,
               patternIndex,
@@ -619,6 +627,7 @@ export function usePlayback() {
             scheduledNotes.push({
               time,
               sounds,
+              soundInfos: sounds.filter(s => s !== 'click').map(s => ({ sound: s, isGhost: false, isAccent: false })),
               isBeat,
               noteIndex: currentGlobalNoteIndex++,
               patternIndex,
@@ -764,6 +773,7 @@ export function usePlayback() {
             scheduledNotes.push({
               time,
               sounds,
+              soundInfos: sounds.filter(s => s !== 'click').map(s => ({ sound: s, isGhost: false, isAccent: false })),
               isBeat: event.isBeat,
               noteIndex: currentGlobalNoteIndex++,
               patternIndex,
@@ -907,6 +917,7 @@ export function usePlayback() {
           scheduledNotes.push({
             time,
             sounds,
+            soundInfos: sounds.filter(s => s !== 'click').map(s => ({ sound: s, isGhost: false, isAccent: false })),
             isBeat: event.isBeat,
             noteIndex,
             patternIndex,
@@ -925,6 +936,7 @@ export function usePlayback() {
             scheduledNotes.push({
               time,
               sounds: ['click'],
+              soundInfos: [], // Clicks don't have drum sounds
               isBeat: true,
               noteIndex,
               patternIndex,
@@ -1046,6 +1058,7 @@ export function usePlayback() {
         const pattern = patternsToPlay[patternIndex];
         const phrase = parseNumberList(pattern.phrase);
         const drumPatternTokens = parseTokens(pattern.drumPattern).map(t => t.toUpperCase());
+        const stickingTokens = parseTokens(pattern.stickingPattern || '');
         const timeSignature = parseTimeSignature(pattern.timeSignature);
         const [numerator, denominator] = timeSignature;
         
@@ -1139,6 +1152,7 @@ export function usePlayback() {
             const hasAccent = accentIndices.includes(localNoteIndex);
             
             const sounds: string[] = [];
+            const soundInfos: SoundInfo[] = [];
 
             // Determine if click should play based on clickMode
             let shouldPlayClick = false;
@@ -1191,8 +1205,12 @@ export function usePlayback() {
               for (const token of voicingTokens) {
                 // Normalize token: convert Ht/Mt to I/M (internal codes) like in Stave.tsx
                 if (token !== '-' && token !== 'R') {
-                  const upperToken = token.toUpperCase();
-                  let normalizedToken = token;
+                  // Detect ghost notes - wrapped in parentheses like (S), (K)
+                  const isGhost = token.startsWith('(') && token.endsWith(')');
+                  const cleanToken = isGhost ? token.slice(1, -1) : token;
+                  
+                  const upperToken = cleanToken.toUpperCase();
+                  let normalizedToken = cleanToken;
                   
                   // Normalize two-letter codes to single letters (same as Stave.tsx)
                   if (upperToken === 'HT') normalizedToken = 'I'; // High Tom -> I
@@ -1204,6 +1222,11 @@ export function usePlayback() {
                   if (allowedTokens.includes(normalizedToken)) {
                     // Use normalized token (I, M) instead of original (Ht, Mt)
                     sounds.push(normalizedToken);
+                    soundInfos.push({
+                      sound: normalizedToken,
+                      isGhost,
+                      isAccent: hasAccent && !isGhost, // Ghost notes can't be accented
+                    });
                   }
                 }
               }
@@ -1228,11 +1251,54 @@ export function usePlayback() {
                 }
               }
             }
+            
+            // Detect ornaments (flam/drag/ruff) from sticking pattern
+            // Flam: lR or rL (1 grace note), Drag: llR or rrL (2 grace notes), Ruff: lllR or rrrL (3 grace notes)
+            const stickingIndex = noteInPhrase % (stickingTokens.length || 1);
+            const stickingToken = stickingTokens[stickingIndex] || '';
+            const ornamentMatch = stickingToken.match(/^([lr]+)([RLK])$/i);
+            
+            if (ornamentMatch && playDrumSounds && !metronomeOnlyMode && !silentPracticeMode && sounds.length > 0) {
+              const graceNotes = ornamentMatch[1]; // e.g., "l", "ll", "lll"
+              const graceNoteCount = graceNotes.length;
+              
+              // Get the primary drum sound for grace notes (use the first non-click sound)
+              const primaryDrumSound = sounds.find(s => s !== 'click') || 'S';
+              
+              // Calculate timing for grace notes
+              // Grace notes should be evenly spaced before the main note
+              // Flam: ~40ms before, Drag: 2 notes ~30ms apart, Ruff: 3 notes ~25ms apart
+              const graceNoteSpacing = graceNoteCount === 1 ? 0.04 : // Flam: 40ms
+                                       graceNoteCount === 2 ? 0.03 : // Drag: 30ms apart
+                                       0.025; // Ruff: 25ms apart
+              
+              // Schedule grace notes before the main note
+              for (let g = 0; g < graceNoteCount; g++) {
+                const graceTime = time - (graceNoteSpacing * (graceNoteCount - g));
+                // Only schedule if grace time is positive (not before the start)
+                if (graceTime > 0) {
+                  scheduledNotes.push({
+                    time: graceTime,
+                    sounds: [primaryDrumSound],
+                    soundInfos: [{
+                      sound: primaryDrumSound,
+                      isGhost: true, // Grace notes are softer
+                      isAccent: false,
+                    }],
+                    isBeat: false,
+                    noteIndex: globalNoteIndex, // Same note index as main note
+                    patternIndex,
+                    hasAccent: false,
+                  });
+                }
+              }
+            }
 
             // Schedule ALL notes (even if no sounds) so we can update playback position for visual feedback
             scheduledNotes.push({
               time,
               sounds,
+              soundInfos,
               isBeat,
               noteIndex: globalNoteIndex,
               patternIndex,
@@ -1582,8 +1648,18 @@ export function usePlayback() {
                 }
               } else {
                 // Play all drum sounds (they've already been filtered during scheduling)
-                console.log(`[Playback] Calling playDrumSound for sound: "${sound}"`);
-                playDrumSound(sound);
+                // Look up volume modifier from soundInfos
+                const soundInfo = note.soundInfos?.find(si => si.sound === sound);
+                let volume = 1.0;
+                if (soundInfo) {
+                  if (soundInfo.isGhost) {
+                    volume = 0.4; // Ghost notes: 60% quieter
+                  } else if (soundInfo.isAccent) {
+                    volume = 1.3; // Accented notes: 30% louder
+                  }
+                }
+                console.log(`[Playback] Calling playDrumSound for sound: "${sound}" (volume: ${volume}, ghost: ${soundInfo?.isGhost}, accent: ${soundInfo?.isAccent})`);
+                playDrumSound(sound, volume);
               }
             }
           }

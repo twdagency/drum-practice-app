@@ -53,8 +53,6 @@ export async function POST(request: NextRequest) {
       ],
       success_url: `${STRIPE_CONFIG.getBaseUrl()}/pricing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${STRIPE_CONFIG.getBaseUrl()}/pricing?canceled=true`,
-      // Allow users to sign up during checkout
-      allow_promotion_codes: true,
     };
 
     // If user is already logged in, use their email and add user ID to metadata
@@ -77,13 +75,46 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // Add promo code if provided
+    // Handle promo code
     if (promoCode) {
-      sessionParams.discounts = [
-        {
-          coupon: promoCode,
-        },
-      ];
+      try {
+        // Look up the promotion code in Stripe
+        const promoCodes = await stripe.promotionCodes.list({
+          code: promoCode,
+          active: true,
+          limit: 1,
+        });
+
+        if (promoCodes.data.length > 0) {
+          // Found a valid promotion code - apply it
+          sessionParams.discounts = [
+            {
+              promotion_code: promoCodes.data[0].id,
+            },
+          ];
+        } else {
+          // Try as a coupon ID directly (for backwards compatibility)
+          try {
+            await stripe.coupons.retrieve(promoCode);
+            sessionParams.discounts = [
+              {
+                coupon: promoCode,
+              },
+            ];
+          } catch {
+            // Invalid promo code - allow promotion codes to be entered during checkout
+            sessionParams.allow_promotion_codes = true;
+            console.log(`Promo code ${promoCode} not found, allowing manual entry`);
+          }
+        }
+      } catch (error) {
+        // If promo lookup fails, still allow checkout with manual promo entry
+        sessionParams.allow_promotion_codes = true;
+        console.error('Error looking up promo code:', error);
+      }
+    } else {
+      // No promo code provided - allow users to enter one during checkout
+      sessionParams.allow_promotion_codes = true;
     }
 
     // Create the checkout session

@@ -8,13 +8,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../shared/Toast';
 import { signIn } from 'next-auth/react';
+import { Modal, ModalButton } from '../shared/Modal';
+import { UserPlus } from 'lucide-react';
 
 interface SignUpModalProps {
   onClose: () => void;
   onSwitchToSignIn?: () => void;
+  promoCode?: string;
 }
 
-export function SignUpModal({ onClose, onSwitchToSignIn }: SignUpModalProps) {
+export function SignUpModal({ onClose, onSwitchToSignIn, promoCode }: SignUpModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,8 +52,6 @@ export function SignUpModal({ onClose, onSwitchToSignIn }: SignUpModalProps) {
 
       if (!response.ok) {
         const errorMsg = data.error || data.message || 'Failed to create account';
-        const details = data.details ? `\n${data.details}` : '';
-        console.error('Signup error:', errorMsg, details);
         showToast(errorMsg, 'error');
         return;
       }
@@ -68,148 +69,168 @@ export function SignUpModal({ onClose, onSwitchToSignIn }: SignUpModalProps) {
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.625rem 0.75rem',
+    border: '1px solid var(--dpgen-border)',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    background: 'var(--dpgen-bg)',
+    color: 'var(--dpgen-text)',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    marginBottom: '0.375rem',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    color: 'var(--dpgen-text)',
+  };
+
   return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
-      onClick={onClose}
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Sign Up"
+      icon={<UserPlus size={20} strokeWidth={1.5} />}
+      size="sm"
     >
-      <div
-        className="bg-slate-900/95 backdrop-blur-xl rounded-2xl p-8 max-w-md w-[90%] border border-slate-800/50 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-white">Sign Up</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl leading-none transition-colors"
-            aria-label="Close"
-          >
-            ×
-          </button>
+      {promoCode && (
+        <div style={{
+          padding: '0.625rem 0.75rem',
+          background: 'rgba(34, 197, 94, 0.1)',
+          border: '1px solid #22c55e',
+          borderRadius: '6px',
+          marginBottom: '1rem',
+          fontSize: '0.8rem',
+          color: '#22c55e',
+        }}>
+          🎉 Promo code <strong>{promoCode}</strong> will be applied at checkout!
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '0.875rem' }}>
+          <label htmlFor="signup-name" style={labelStyle}>Name (optional)</label>
+          <input
+            id="signup-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={inputStyle}
+            placeholder="Your name"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="signup-name"
-              className="block text-sm font-medium text-slate-300 mb-2"
-            >
-              Name (optional)
-            </label>
-            <input
-              id="signup-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent transition-all"
-              placeholder="Your name"
-            />
-          </div>
+        <div style={{ marginBottom: '0.875rem' }}>
+          <label htmlFor="signup-email" style={labelStyle}>Email</label>
+          <input
+            id="signup-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={inputStyle}
+            placeholder="your@email.com"
+          />
+        </div>
 
-          <div>
-            <label
-              htmlFor="signup-email"
-              className="block text-sm font-medium text-slate-300 mb-2"
-            >
-              Email
-            </label>
-            <input
-              id="signup-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent transition-all"
-              placeholder="your@email.com"
-            />
-          </div>
+        <div style={{ marginBottom: '0.875rem' }}>
+          <label htmlFor="signup-password" style={labelStyle}>Password (min 8 characters)</label>
+          <input
+            id="signup-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            style={inputStyle}
+            placeholder="••••••••"
+          />
+        </div>
 
-          <div>
-            <label
-              htmlFor="signup-password"
-              className="block text-sm font-medium text-slate-300 mb-2"
-            >
-              Password (min 8 characters)
-            </label>
-            <input
-              id="signup-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent transition-all"
-              placeholder="••••••••"
-            />
-          </div>
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label htmlFor="signup-confirm" style={labelStyle}>Confirm Password</label>
+          <input
+            id="signup-confirm"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            style={inputStyle}
+            placeholder="••••••••"
+          />
+        </div>
 
-          <div>
-            <label
-              htmlFor="signup-confirm"
-              className="block text-sm font-medium text-slate-300 mb-2"
-            >
-              Confirm Password
-            </label>
-            <input
-              id="signup-confirm"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent transition-all"
-              placeholder="••••••••"
-            />
-          </div>
+        <ModalButton variant="primary" fullWidth disabled={loading} type="submit">
+          {loading ? 'Creating account...' : 'Sign Up'}
+        </ModalButton>
+      </form>
 
+      {onSwitchToSignIn && (
+        <div style={{ textAlign: 'center', fontSize: '0.8rem', marginTop: '1rem', color: 'var(--dpgen-muted)' }}>
+          Already have an account?{' '}
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 px-6 bg-white text-slate-900 rounded-xl font-semibold hover:bg-slate-100 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-slate-900/20 mt-6"
+            onClick={onSwitchToSignIn}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--dpgen-primary)',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
           >
-            {loading ? 'Creating account...' : 'Sign Up'}
+            Sign in
           </button>
-        </form>
+        </div>
+      )}
 
-        {onSwitchToSignIn && (
-          <div className="text-center text-sm text-slate-400 mt-4">
-            Already have an account?{' '}
-            <button
-              onClick={onSwitchToSignIn}
-              className="text-white hover:text-slate-200 underline transition-colors"
-            >
-              Sign in
-            </button>
-          </div>
-        )}
-
-        {/* OAuth Providers */}
-        <div className="mt-6 pt-6 border-t border-slate-800/50">
-          <div className="text-center text-sm text-slate-400 mb-4">
+      {/* OAuth Providers */}
+      {(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID) && (
+        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--dpgen-border)' }}>
+          <div style={{ textAlign: 'center', fontSize: '0.75rem', marginBottom: '0.75rem', color: 'var(--dpgen-muted)' }}>
             Or sign up with
           </div>
-          <div className="flex gap-3 justify-center flex-wrap">
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
             {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
               <button
+                type="button"
                 onClick={() => signIn('google')}
-                className="px-4 py-2.5 bg-slate-800/50 border border-slate-700/50 text-slate-200 rounded-xl hover:bg-slate-800/70 hover:border-slate-600/50 transition-all text-sm font-medium flex items-center gap-2"
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'var(--dpgen-bg)',
+                  color: 'var(--dpgen-text)',
+                  border: '1px solid var(--dpgen-border)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                }}
               >
-                <i className="fab fa-google" />
                 Google
               </button>
             )}
             {process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID && (
               <button
+                type="button"
                 onClick={() => signIn('github')}
-                className="px-4 py-2.5 bg-slate-800/50 border border-slate-700/50 text-slate-200 rounded-xl hover:bg-slate-800/70 hover:border-slate-600/50 transition-all text-sm font-medium flex items-center gap-2"
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'var(--dpgen-bg)',
+                  color: 'var(--dpgen-text)',
+                  border: '1px solid var(--dpgen-border)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                }}
               >
-                <i className="fab fa-github" />
                 GitHub
               </button>
             )}
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 }
-

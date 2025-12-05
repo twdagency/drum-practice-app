@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { useToast } from './Toast';
 import { generateRandomPattern, createDefaultPattern } from '@/lib/utils/patternUtils';
@@ -28,37 +28,17 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const filteredCommandsRef = useRef<Command[]>([]);
-  const selectedIndexRef = useRef(0);
   const { showToast } = useToast();
 
-  // Store actions - Zustand selectors for functions are stable
+  // Get store actions once - these are stable references from Zustand
   const addPattern = useStore((state) => state.addPattern);
   const saveToHistory = useStore((state) => state.saveToHistory);
   const practicePadMode = useStore((state) => state.practicePadMode);
   const setBPM = useStore((state) => state.setBPM);
   const bpm = useStore((state) => state.bpm);
 
-  // Use refs to avoid dependency issues - initialize once and update synchronously
-  const onCloseRef = useRef(onClose);
-  const showToastRef = useRef(showToast);
-  const bpmRef = useRef(bpm);
-  const setBPMRef = useRef(setBPM);
-  const addPatternRef = useRef(addPattern);
-  const saveToHistoryRef = useRef(saveToHistory);
-  const practicePadModeRef = useRef(practicePadMode);
-
-  // Update refs synchronously (not in useEffect to avoid loops)
-  onCloseRef.current = onClose;
-  showToastRef.current = showToast;
-  bpmRef.current = bpm;
-  setBPMRef.current = setBPM;
-  addPatternRef.current = addPattern;
-  saveToHistoryRef.current = saveToHistory;
-  practicePadModeRef.current = practicePadMode;
-
-  // Define available commands - use refs to avoid dependency issues
-  const allCommands: Command[] = useMemo(() => [
+  // Build commands with current values (not in useMemo to avoid stale closures)
+  const allCommands: Command[] = [
     {
       id: 'add-pattern',
       label: 'Add Pattern',
@@ -67,10 +47,10 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       category: 'Patterns',
       action: () => {
         const pattern = createDefaultPattern();
-        addPatternRef.current(pattern);
-        saveToHistoryRef.current();
-        onCloseRef.current();
-        showToastRef.current('Pattern added', 'success');
+        addPattern(pattern);
+        saveToHistory();
+        onClose();
+        showToast('Pattern added', 'success');
       },
     },
     {
@@ -80,31 +60,31 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       shortcut: 'Ctrl+Shift+N',
       category: 'Patterns',
       action: () => {
-        const newPattern = generateRandomPattern(practicePadModeRef.current, false);
-        addPatternRef.current(newPattern);
-        saveToHistoryRef.current();
-        onCloseRef.current();
-        showToastRef.current('Random pattern generated', 'success');
+        const newPattern = generateRandomPattern(practicePadMode, false);
+        addPattern(newPattern);
+        saveToHistory();
+        onClose();
+        showToast('Random pattern generated', 'success');
       },
     },
     {
       id: 'increase-bpm',
-      label: 'Increase BPM',
+      label: 'Increase BPM (+5)',
       icon: 'fas fa-plus',
       category: 'Playback',
       action: () => {
-        setBPMRef.current(Math.min(260, bpmRef.current + 5));
-        onCloseRef.current();
+        setBPM(Math.min(260, bpm + 5));
+        onClose();
       },
     },
     {
       id: 'decrease-bpm',
-      label: 'Decrease BPM',
+      label: 'Decrease BPM (-5)',
       icon: 'fas fa-minus',
       category: 'Playback',
       action: () => {
-        setBPMRef.current(Math.max(40, bpmRef.current - 5));
-        onCloseRef.current();
+        setBPM(Math.max(40, bpm - 5));
+        onClose();
       },
     },
     {
@@ -113,28 +93,24 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       icon: 'fas fa-download',
       category: 'Export',
       action: () => {
-        showToastRef.current('MIDI export coming soon', 'info');
-        onCloseRef.current();
+        showToast('MIDI export - use toolbar export menu', 'info');
+        onClose();
       },
     },
-  ], []); // Empty dependency array - refs are always current
+  ];
 
   // Filter commands based on search query
   const filteredCommands = useMemo(() => {
     if (!searchQuery.trim()) {
-      filteredCommandsRef.current = allCommands;
       return allCommands;
     }
-
     const query = searchQuery.toLowerCase();
-    const result = allCommands.filter(cmd => 
+    return allCommands.filter(cmd => 
       cmd.label.toLowerCase().includes(query) ||
       cmd.category.toLowerCase().includes(query) ||
       cmd.shortcut?.toLowerCase().includes(query)
     );
-    filteredCommandsRef.current = result;
-    return result;
-  }, [allCommands, searchQuery]);
+  }, [searchQuery, allCommands]);
 
   // Group commands by category
   const groupedCommands = useMemo(() => {
@@ -148,29 +124,32 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     return groups;
   }, [filteredCommands]);
 
-  // Update ref synchronously
-  selectedIndexRef.current = selectedIndex;
+  // Reset state when opened
+  useEffect(() => {
+    if (isOpen) {
+      setSearchQuery('');
+      setSelectedIndex(0);
+      // Focus input after a brief delay to ensure DOM is ready
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+    }
+  }, [isOpen]);
 
   // Handle keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const currentCommands = filteredCommandsRef.current;
-      const currentIndex = selectedIndexRef.current;
-
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedIndex(prev => {
-          const maxIndex = currentCommands.length > 0 ? currentCommands.length - 1 : 0;
-          return Math.min(prev + 1, maxIndex);
-        });
+        setSelectedIndex(prev => Math.min(prev + 1, filteredCommands.length - 1));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setSelectedIndex(prev => Math.max(prev - 1, 0));
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        const command = currentCommands[currentIndex];
+        const command = filteredCommands[selectedIndex];
         if (command) {
           command.action();
         }
@@ -182,21 +161,17 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, filteredCommands, selectedIndex, onClose]);
 
-  // Focus input when opened
+  // Keep selectedIndex in bounds when search results change
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-      setSearchQuery('');
-      setSelectedIndex(0);
+    if (selectedIndex >= filteredCommands.length) {
+      setSelectedIndex(Math.max(0, filteredCommands.length - 1));
     }
-  }, [isOpen]);
+  }, [filteredCommands.length, selectedIndex]);
 
-  // Reset selected index when filtered commands change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [filteredCommands.length]);
+  // Don't render if not open
+  if (!isOpen) return null;
 
   return (
     <div
@@ -246,7 +221,10 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               type="text"
               placeholder="Type a command or search..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSelectedIndex(0); // Reset selection when typing
+              }}
               style={{
                 width: '100%',
                 padding: '0.75rem 0.75rem 0.75rem 2.5rem',
@@ -262,12 +240,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         </div>
 
         {/* Commands List */}
-        <div
-          style={{
-            overflowY: 'auto',
-            maxHeight: '50vh',
-          }}
-        >
+        <div style={{ overflowY: 'auto', maxHeight: '50vh' }}>
           {Object.keys(groupedCommands).length === 0 ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--dpgen-muted)' }}>
               <i className="fas fa-search" style={{ fontSize: '2rem', marginBottom: '0.5rem', opacity: 0.5 }} />
@@ -289,16 +262,14 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 >
                   {category}
                 </div>
-                {commands.map((cmd, index) => {
+                {commands.map((cmd) => {
                   const globalIndex = filteredCommands.indexOf(cmd);
                   const isSelected = globalIndex === selectedIndex;
                   
                   return (
                     <button
                       key={cmd.id}
-                      onClick={() => {
-                        cmd.action();
-                      }}
+                      onClick={() => cmd.action()}
                       onMouseEnter={() => setSelectedIndex(globalIndex)}
                       style={{
                         width: '100%',
@@ -317,14 +288,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       <i className={cmd.icon} style={{ width: '20px', textAlign: 'center' }} />
                       <span style={{ flex: 1 }}>{cmd.label}</span>
                       {cmd.shortcut && (
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            opacity: 0.7,
-                            display: 'flex',
-                            gap: '0.25rem',
-                          }}
-                        >
+                        <span style={{ fontSize: '0.75rem', opacity: 0.7, display: 'flex', gap: '0.25rem' }}>
                           {cmd.shortcut.split('+').map((key, i) => (
                             <kbd
                               key={i}
@@ -383,4 +347,3 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     </div>
   );
 }
-

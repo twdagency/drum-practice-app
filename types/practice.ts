@@ -2,11 +2,16 @@
  * Practice mode type definitions
  */
 
+export type NoteDynamic = 'ghost' | 'normal' | 'accent';
+
 export interface ExpectedNote {
   time: number; // ms
   note: number | string; // MIDI note number or drum token (K, S, H, etc.)
   index: number; // Pattern index
   matched: boolean;
+  dynamic?: NoteDynamic; // Expected volume level (ghost = soft, accent = loud)
+  isGhost?: boolean; // Legacy: true if ghost note
+  isAccent?: boolean; // Legacy: true if accented
 }
 
 export interface PracticeHit {
@@ -18,6 +23,9 @@ export interface PracticeHit {
   early: boolean;
   perfect: boolean;
   matched: boolean;
+  velocity?: number; // 0-127 for MIDI, 0-100 for microphone (volume of hit)
+  dynamic?: NoteDynamic; // Detected volume level
+  dynamicMatch?: boolean; // Whether hit dynamic matched expected dynamic
 }
 
 export interface MIDINoteMap {
@@ -67,10 +75,13 @@ export interface MicrophonePracticeState {
   showAccuracyHeatmap: boolean;
   showMissedNotes: boolean;
   sensitivity: number; // 10-100
-  threshold: number; // Volume threshold
+  threshold: number; // Volume threshold for normal hits
+  ghostThreshold: number; // Volume threshold for ghost notes (lower)
+  accentThreshold: number; // Volume threshold for accents (higher)
   lastHitTime: number;
   hitCooldown: number; // ms
   levelCheckInterval: NodeJS.Timeout | null;
+  dynamicDetection: boolean; // Whether to detect ghost/accent dynamics
 }
 
 export interface MIDIRecordingState {
@@ -102,17 +113,45 @@ export interface PracticeStats {
   }>;
   currentStreak: number; // Days in a row
   lastPracticeDate: string | null; // ISO date string
+  
+  // NEW: Best results per preset pattern
+  presetBestScores: Record<string, PresetBestScore>; // Preset ID -> best scores
+  
+  // NEW: Weekly/monthly aggregates for trends
+  weeklyAccuracy: number[]; // Last 7 days average accuracy
+  weeklyPracticeTime: number[]; // Last 7 days practice time (seconds)
+}
+
+export interface PresetBestScore {
+  presetId: string;
+  presetName: string;
+  bestAccuracy: number; // 0-100
+  bestTiming: number; // ms (lower is better)
+  bestBpm: number; // Highest BPM achieved with >80% accuracy
+  attempts: number;
+  totalTime: number; // seconds
+  lastPracticed: number; // timestamp
+  accuracyHistory: Array<{ timestamp: number; accuracy: number; bpm: number }>;
+  mastery: 'beginner' | 'learning' | 'intermediate' | 'proficient' | 'master';
 }
 
 export interface PracticeSession {
   id: string;
   patternId: number | null;
+  presetId?: string; // NEW: Link to preset if applicable
+  presetName?: string; // NEW: Human-readable preset name
   startTime: number;
   endTime: number;
   duration: number; // seconds
   accuracy?: number; // percentage
   hits?: number;
   timingAvg?: number; // ms
+  bpm?: number; // NEW: BPM during practice
+  practiceMode?: 'midi' | 'microphone'; // NEW: Which mode was used
+  dynamicAccuracy?: number; // NEW: Ghost/accent accuracy
+  earlyHits?: number; // NEW: How many hits were early
+  lateHits?: number; // NEW: How many hits were late
+  perfectHits?: number; // NEW: How many hits were perfect
 }
 
 export interface PracticeGoals {

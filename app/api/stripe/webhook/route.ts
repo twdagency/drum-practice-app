@@ -12,6 +12,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, STRIPE_CONFIG } from '@/lib/stripe/config';
+import {
+  upsertSubscription,
+  updateSubscriptionStatus,
+  cancelSubscription,
+  extendSubscriptionPeriod,
+  getTierFromPriceId,
+} from '@/lib/db/subscriptions';
 import Stripe from 'stripe';
 
 // Disable body parsing, we need the raw body for webhook signature verification
@@ -60,85 +67,123 @@ export async function POST(request: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         
-        // Subscription was successfully created
-        // TODO: Update your database with the subscription
         console.log('Checkout session completed:', session.id);
-        console.log('Customer:', session.customer);
-        console.log('Subscription:', session.subscription);
         
-        // You should:
-        // 1. Get the user ID from session.metadata.userId
-        // 2. Store the customer ID and subscription ID in your database
-        // 3. Update user's subscription tier
+        // Get user ID from session metadata
+        const userId = session.metadata?.userId;
+        if (!userId) {
+          console.error('No userId in session metadata');
+          break;
+        }
         
+        // Get subscription details
+        if (session.subscription && session.customer) {
+          const subscriptionId = typeof session.subscription === 'string' 
+            ? session.subscription 
+            : session.subscription.id;
+          const customerId = typeof session.customer === 'string'
+            ? session.customer
+            : session.customer.id;
+          
+          // Fetch full subscription details from Stripe
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const priceId = subscription.items.data[0]?.price.id || '';
+          
+          await upsertSubscription({
+            userId,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
+            stripePriceId: priceId,
+            status: subscription.status,
+            tier: getTierFromPriceId(priceId),
+            currentPeriodStart: new Date(subscription.current_period_start * 1000),
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : undefined,
+          });
+          
+          console.log('Subscription created for user:', userId);
+        }
         break;
       }
 
       case 'customer.subscription.created': {
         const subscription = event.data.object as Stripe.Subscription;
-        
-        // New subscription created
         console.log('Subscription created:', subscription.id);
-        console.log('Customer:', subscription.customer);
-        console.log('Status:', subscription.status);
-        
-        // TODO: Update database with new subscription
+        // Usually handled by checkout.session.completed
+        // This event is useful for subscriptions created outside checkout
         break;
       }
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         
-        // Subscription updated (plan changed, status changed, etc.)
-        console.log('Subscription updated:', subscription.id);
-        console.log('Status:', subscription.status);
-        console.log('Cancel at period end:', subscription.cancel_at_period_end);
+        console.log('Subscription updated:', subscription.id, 'Status:', subscription.status);
         
-        // TODO: Update database with subscription changes
+        await updateSubscriptionStatus(
+          subscription.id,
+          subscription.status,
+          subscription.cancel_at_period_end
+        );
         break;
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         
-        // Subscription canceled
         console.log('Subscription deleted:', subscription.id);
         
-        // TODO: Update database - set user to free tier
+        await cancelSubscription(subscription.id);
         break;
       }
 
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         
-        // Payment succeeded (renewal or initial payment)
         console.log('Invoice payment succeeded:', invoice.id);
-        console.log('Subscription:', invoice.subscription);
         
-        // TODO: Update database - extend subscription period
+        if (invoice.subscription) {
+          const subscriptionId = typeof invoice.subscription === 'string'
+            ? invoice.subscription
+            : invoice.subscription.id;
+          
+          // Get updated subscription from Stripe
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          
+          await extendSubscriptionPeriod(
+            subscriptionId,
+            new Date(subscription.current_period_end * 1000)
+          );
+        }
         break;
       }
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         
-        // Payment failed
         console.log('Invoice payment failed:', invoice.id);
-        console.log('Subscription:', invoice.subscription);
         
-        // TODO: Update database - mark subscription as past_due
-        // TODO: Send email notification to user
+        if (invoice.subscription) {
+          const subscriptionId = typeof invoice.subscription === 'string'
+            ? invoice.subscription
+            : invoice.subscription.id;
+          
+          await updateSubscriptionStatus(subscriptionId, 'past_due');
+          
+          // TODO: Send email notification to user about failed payment
+          // Could use lib/email/config.ts sendEmail function
+        }
         break;
       }
 
       case 'customer.subscription.trial_will_end': {
         const subscription = event.data.object as Stripe.Subscription;
         
-        // Trial ending soon
         console.log('Trial will end:', subscription.id);
-        console.log('Trial end:', new Date(subscription.trial_end! * 1000));
+        console.log('Trial end date:', new Date(subscription.trial_end! * 1000));
         
-        // TODO: Send email notification to user
+        // TODO: Send email notification to user about trial ending
+        // Could use lib/email/config.ts sendEmail function
         break;
       }
 

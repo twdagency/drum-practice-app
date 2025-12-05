@@ -1,12 +1,14 @@
 /**
  * Playback Settings Modal
- * Configure playback behavior settings
+ * Configure playback behavior settings - compact design
  */
 
 'use client';
 
 import React from 'react';
 import { useStore } from '@/store/useStore';
+import { Modal, ModalSection, ModalRow, ModalToggle, ModalSlider, ModalButton } from '../shared/Modal';
+import { Play, Repeat, Clock, Gauge } from 'lucide-react';
 
 interface PlaybackSettingsModalProps {
   onClose: () => void;
@@ -51,330 +53,196 @@ export function PlaybackSettingsModal({ onClose }: PlaybackSettingsModalProps) {
     );
   };
 
-  const handleClearLoopMeasures = () => {
-    setLoopMeasures(null);
-  };
+  const footer = (
+    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <ModalButton variant="primary" onClick={onClose}>Done</ModalButton>
+    </div>
+  );
 
   return (
-    <div
-      className="dpgen-modal-overlay"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10000,
-      }}
-      onClick={onClose}
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Playback Settings"
+      icon={<Play size={20} strokeWidth={1.5} />}
+      size="md"
+      footer={footer}
     >
-      <div
-        className="dpgen-modal"
-        style={{
-          background: 'var(--dpgen-card)',
-          borderRadius: 'var(--dpgen-radius)',
-          padding: '0',
-          maxWidth: '500px',
-          width: '90%',
-          maxHeight: '90vh',
-          overflow: 'auto',
-          boxShadow: 'var(--dpgen-shadow)',
-          border: '1px solid var(--dpgen-border)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="dpgen-modal__header" style={{ padding: '1.5rem', borderBottom: '1px solid var(--dpgen-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 className="dpgen-modal__title" style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>Playback Settings</h2>
-          <button
-            type="button"
-            className="dpgen-modal__close"
-            onClick={onClose}
-            aria-label="Close"
-            style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--dpgen-text)' }}
-          >
-            <i className="fas fa-times" />
-          </button>
-        </div>
+      {/* Basic Settings */}
+      <ModalSection title="Basic">
+        <ModalRow label="Count-In (4 beats)" description="Play 4 clicks before starting">
+          <ModalToggle checked={countInEnabled} onChange={setCountInEnabled} />
+        </ModalRow>
+        <ModalRow label="Metronome Only" description="Only metronome, no drums">
+          <ModalToggle checked={metronomeOnlyMode} onChange={setMetronomeOnlyMode} />
+        </ModalRow>
+        <ModalRow label="Silent Practice" description="Mute all audio">
+          <ModalToggle checked={silentPracticeMode} onChange={setSilentPracticeMode} />
+        </ModalRow>
+        <ModalRow label="Play Backwards" description="Reverse pattern order">
+          <ModalToggle checked={playBackwards} onChange={setPlayBackwards} />
+        </ModalRow>
+      </ModalSection>
 
-        <div className="dpgen-modal__body" style={{ padding: '1.5rem' }}>
-          {/* Count-In */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <span style={{ flex: 1 }}>Count-In</span>
-              <input
-                type="checkbox"
-                checked={countInEnabled}
-                onChange={(e) => setCountInEnabled(e.target.checked)}
-              />
-              <span className="dpgen-toggle-slider" />
-            </label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-              Play 4 beats before starting playback
-            </p>
-          </div>
+      {/* Loop Settings */}
+      <ModalSection title="Looping">
+        <ModalRow label="Infinite Loop" description="Loop until stopped">
+          <ModalToggle checked={infiniteLoop} onChange={setInfiniteLoop} />
+        </ModalRow>
+        
+        {!infiniteLoop && (
+          <ModalRow label="Loop Count">
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={loopCount}
+              onChange={(e) => setLoopCount(parseInt(e.target.value, 10) || 1)}
+              style={{
+                width: '70px',
+                padding: '0.375rem 0.5rem',
+                borderRadius: '6px',
+                border: '1px solid var(--dpgen-border)',
+                background: 'var(--dpgen-bg)',
+                color: 'var(--dpgen-text)',
+                fontSize: '0.875rem',
+                textAlign: 'center',
+              }}
+            />
+          </ModalRow>
+        )}
 
-          {/* Metronome Only Mode */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <span style={{ flex: 1 }}>Metronome Only Mode</span>
-              <input
-                type="checkbox"
-                checked={metronomeOnlyMode}
-                onChange={(e) => setMetronomeOnlyMode(e.target.checked)}
-              />
-              <span className="dpgen-toggle-slider" />
-            </label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-              Play only metronome clicks, no drum sounds
-            </p>
-          </div>
-
-          {/* Silent Practice Mode */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <span style={{ flex: 1 }}>Silent Practice Mode</span>
-              <input
-                type="checkbox"
-                checked={silentPracticeMode}
-                onChange={(e) => setSilentPracticeMode(e.target.checked)}
-              />
-              <span className="dpgen-toggle-slider" />
-            </label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-              Mute all audio for silent practice
-            </p>
-          </div>
-
-          {/* Slow Motion */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-              <span style={{ flex: 1 }}>Slow Motion</span>
-              <input
-                type="checkbox"
-                checked={slowMotionEnabled}
-                onChange={(e) => setSlowMotionEnabled(e.target.checked)}
-              />
-              <span className="dpgen-toggle-slider" />
-            </label>
-            {slowMotionEnabled && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.875rem' }}>Speed</span>
-                  <span style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)' }}>
-                    {Math.round(slowMotionSpeed * 100)}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="10"
-                  max="100"
-                  value={slowMotionSpeed * 100}
-                  onChange={(e) => setSlowMotionSpeed(parseInt(e.target.value, 10) / 100)}
-                  style={{ width: '100%' }}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Play Backwards */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <span style={{ flex: 1 }}>Play Backwards</span>
-              <input
-                type="checkbox"
-                checked={playBackwards}
-                onChange={(e) => setPlayBackwards(e.target.checked)}
-              />
-              <span className="dpgen-toggle-slider" />
-            </label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-              Play patterns in reverse order
-            </p>
-          </div>
-
-          {/* Infinite Loop */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <span style={{ flex: 1 }}>Infinite Loop</span>
-              <input
-                type="checkbox"
-                checked={infiniteLoop}
-                onChange={(e) => setInfiniteLoop(e.target.checked)}
-              />
-              <span className="dpgen-toggle-slider" />
-            </label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-              Continuously loop the pattern until stopped manually
-            </p>
-          </div>
-
-          {/* Loop Count */}
-          {!infiniteLoop && (
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label className="dpgen-label" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block', fontWeight: 600 }}>
-                Loop Count
-              </label>
+        <ModalRow label="Loop Measures" description="Loop specific measures only">
+          {loopMeasures ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
               <input
                 type="number"
                 min="1"
-                max="100"
-                value={loopCount}
-                onChange={(e) => setLoopCount(parseInt(e.target.value, 10) || 1)}
-                className="dpgen-input"
-                style={{ width: '100%' }}
+                value={loopMeasures.start}
+                onChange={(e) => handleLoopMeasuresChange('start', parseInt(e.target.value, 10) || 1)}
+                style={{
+                  width: '50px',
+                  padding: '0.375rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--dpgen-border)',
+                  background: 'var(--dpgen-bg)',
+                  color: 'var(--dpgen-text)',
+                  fontSize: '0.8rem',
+                  textAlign: 'center',
+                }}
               />
-              <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-                Number of times to repeat the pattern
-              </p>
-            </div>
-          )}
-
-          {/* Loop Measures */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-label" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block', fontWeight: 600 }}>
-              Loop Specific Measures
-            </label>
-            {loopMeasures ? (
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <input
-                  type="number"
-                  min="1"
-                  value={loopMeasures.start}
-                  onChange={(e) => handleLoopMeasuresChange('start', parseInt(e.target.value, 10) || 1)}
-                  className="dpgen-input"
-                  style={{ width: '80px' }}
-                />
-                <span>to</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={loopMeasures.end}
-                  onChange={(e) => handleLoopMeasuresChange('end', parseInt(e.target.value, 10) || 1)}
-                  className="dpgen-input"
-                  style={{ width: '80px' }}
-                />
-                <button
-                  type="button"
-                  className="dpgen-button dpgen-button--small"
-                  onClick={handleClearLoopMeasures}
-                >
-                  Clear
-                </button>
-              </div>
-            ) : (
+              <span style={{ fontSize: '0.8rem', color: 'var(--dpgen-muted)' }}>to</span>
+              <input
+                type="number"
+                min="1"
+                value={loopMeasures.end}
+                onChange={(e) => handleLoopMeasuresChange('end', parseInt(e.target.value, 10) || 1)}
+                style={{
+                  width: '50px',
+                  padding: '0.375rem',
+                  borderRadius: '6px',
+                  border: '1px solid var(--dpgen-border)',
+                  background: 'var(--dpgen-bg)',
+                  color: 'var(--dpgen-text)',
+                  fontSize: '0.8rem',
+                  textAlign: 'center',
+                }}
+              />
               <button
-                type="button"
-                className="dpgen-button dpgen-button--small"
-                onClick={() => setLoopMeasures({ start: 1, end: 1 })}
+                onClick={() => setLoopMeasures(null)}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: 'transparent',
+                  border: '1px solid var(--dpgen-border)',
+                  borderRadius: '4px',
+                  color: 'var(--dpgen-muted)',
+                  cursor: 'pointer',
+                  fontSize: '0.7rem',
+                }}
               >
-                Set Loop Range
+                Clear
               </button>
-            )}
-            <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-              Loop only specific measures (leave unset to loop entire pattern)
-            </p>
-          </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setLoopMeasures({ start: 1, end: 1 })}
+              style={{
+                padding: '0.375rem 0.75rem',
+                background: 'var(--dpgen-bg)',
+                border: '1px solid var(--dpgen-border)',
+                borderRadius: '6px',
+                color: 'var(--dpgen-text)',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+              }}
+            >
+              Set Range
+            </button>
+          )}
+        </ModalRow>
+      </ModalSection>
 
-          {/* Tempo Ramping */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-              <span style={{ flex: 1 }}>Tempo Ramping</span>
-              <input
-                type="checkbox"
-                checked={tempoRamping}
-                onChange={(e) => setTempoRamping(e.target.checked)}
+      {/* Speed Settings */}
+      <ModalSection title="Speed">
+        <ModalRow label="Slow Motion">
+          <ModalToggle checked={slowMotionEnabled} onChange={setSlowMotionEnabled} />
+        </ModalRow>
+        
+        {slowMotionEnabled && (
+          <ModalRow label={`Speed: ${Math.round(slowMotionSpeed * 100)}%`}>
+            <ModalSlider
+              value={slowMotionSpeed * 100}
+              onChange={(v) => setSlowMotionSpeed(v / 100)}
+              min={10}
+              max={100}
+              showValue={false}
+            />
+          </ModalRow>
+        )}
+
+        <ModalRow label="Tempo Ramping" description="Gradually increase tempo">
+          <ModalToggle checked={tempoRamping} onChange={setTempoRamping} />
+        </ModalRow>
+
+        {tempoRamping && (
+          <>
+            <ModalRow label={`Start: ${tempoRampStart} BPM`}>
+              <ModalSlider
+                value={tempoRampStart}
+                onChange={setTempoRampStart}
+                min={40}
+                max={260}
+                showValue={false}
               />
-              <span className="dpgen-toggle-slider" />
-            </label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginBottom: '0.75rem' }}>
-              Gradually increase tempo over time
-            </p>
-            {tempoRamping && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem' }}>Start BPM</span>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)' }}>
-                      {tempoRampStart} BPM
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="40"
-                    max="260"
-                    value={tempoRampStart}
-                    onChange={(e) => setTempoRampStart(parseInt(e.target.value, 10))}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem' }}>End BPM</span>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)' }}>
-                      {tempoRampEnd} BPM
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="40"
-                    max="260"
-                    value={tempoRampEnd}
-                    onChange={(e) => setTempoRampEnd(parseInt(e.target.value, 10))}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem' }}>Steps</span>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)' }}>
-                      {tempoRampSteps} steps
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="2"
-                    max="20"
-                    value={tempoRampSteps}
-                    onChange={(e) => setTempoRampSteps(parseInt(e.target.value, 10))}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Progressive Mode */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="dpgen-toggle-switch" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <span style={{ flex: 1 }}>Progressive Mode</span>
-              <input
-                type="checkbox"
-                checked={progressiveMode}
-                onChange={(e) => setProgressiveMode(e.target.checked)}
+            </ModalRow>
+            <ModalRow label={`End: ${tempoRampEnd} BPM`}>
+              <ModalSlider
+                value={tempoRampEnd}
+                onChange={setTempoRampEnd}
+                min={40}
+                max={260}
+                showValue={false}
               />
-              <span className="dpgen-toggle-slider" />
-            </label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)', marginTop: '0.25rem' }}>
-              Gradually increase difficulty over time
-            </p>
-          </div>
-        </div>
+            </ModalRow>
+            <ModalRow label={`Steps: ${tempoRampSteps}`}>
+              <ModalSlider
+                value={tempoRampSteps}
+                onChange={setTempoRampSteps}
+                min={2}
+                max={20}
+                showValue={false}
+              />
+            </ModalRow>
+          </>
+        )}
+      </ModalSection>
 
-        <div className="dpgen-modal__footer" style={{ padding: '1.5rem', borderTop: '1px solid var(--dpgen-border)', display: 'flex', justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            className="dpgen-button dpgen-button--primary"
-            onClick={onClose}
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+      {/* Advanced */}
+      <ModalSection title="Advanced">
+        <ModalRow label="Progressive Mode" description="Increase difficulty over time">
+          <ModalToggle checked={progressiveMode} onChange={setProgressiveMode} />
+        </ModalRow>
+      </ModalSection>
+    </Modal>
   );
 }
-

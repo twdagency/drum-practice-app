@@ -7,8 +7,11 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { Pattern } from '@/types/pattern';
+import { PolyrhythmPattern } from '@/types/polyrhythm';
 import { parseTokens, parseNumberList, getNotesPerBarForPattern } from '@/lib/utils/patternUtils';
 import { buildAccentIndices } from '@/lib/utils/patternUtils';
+import { polyrhythmToCombinedPattern } from '@/lib/utils/polyrhythmUtils';
+import { calculatePolyrhythmPositions } from '@/lib/utils/polyrhythmPositionCalculator';
 
 interface StickingNote {
   index: number;
@@ -20,6 +23,7 @@ interface StickingNote {
 export function PracticeSticking() {
   const containerRef = useRef<HTMLDivElement>(null);
   const patterns = useStore((state) => state.patterns);
+  const polyrhythmPatterns = useStore((state) => state.polyrhythmPatterns);
   const playbackPosition = useStore((state) => state.playbackPosition);
   const isPlaying = useStore((state) => state.isPlaying);
   const highlightColors = useStore((state) => state.highlightColors);
@@ -179,9 +183,74 @@ export function PracticeSticking() {
       }
     });
 
+    // Process polyrhythm patterns
+    polyrhythmPatterns.forEach((polyrhythmPattern: PolyrhythmPattern) => {
+      const repeat = polyrhythmPattern.repeat || 1;
+      const { numerator, denominator } = polyrhythmPattern.ratio;
+      const positions = calculatePolyrhythmPositions(numerator, denominator, 4); // Assume 4/4
+      
+      // Get sticking for each hand
+      const rightSticking = polyrhythmPattern.rightRhythm.limb === 'rightHand' ? 'R' : 'L';
+      const leftSticking = polyrhythmPattern.leftRhythm.limb === 'leftHand' ? 'L' : 'R';
+      
+      for (let r = 0; r < repeat; r++) {
+        // Combine all events sorted by position
+        interface PolyEvent { position: number; sticking: string; isAccent: boolean }
+        const events: PolyEvent[] = [];
+        
+        // Add right hand notes
+        for (let i = 0; i < numerator; i++) {
+          const isAccent = polyrhythmPattern.rightRhythm.accents?.includes(i) || false;
+          events.push({
+            position: positions.rightPositions[i],
+            sticking: rightSticking,
+            isAccent,
+          });
+        }
+        
+        // Add left hand notes (merge if aligned)
+        for (let j = 0; j < denominator; j++) {
+          const alignment = positions.alignments.find(a => a.leftIndex === j);
+          const isAccent = polyrhythmPattern.leftRhythm.accents?.includes(j) || false;
+          
+          if (alignment) {
+            // Merge with existing right hand event
+            const existingIdx = events.findIndex(e => 
+              Math.abs(e.position - positions.leftPositions[j]) < 0.001
+            );
+            if (existingIdx !== -1) {
+              events[existingIdx].sticking = 'R/L'; // Combined
+              events[existingIdx].isAccent = events[existingIdx].isAccent || isAccent;
+            }
+          } else {
+            events.push({
+              position: positions.leftPositions[j],
+              sticking: leftSticking,
+              isAccent,
+            });
+          }
+        }
+        
+        // Sort by position
+        events.sort((a, b) => a.position - b.position);
+        
+        // Add to allNotes
+        events.forEach((event, idx) => {
+          allNotes.push({
+            index: globalIndex + idx,
+            sticking: event.sticking,
+            isAccent: event.isAccent,
+            isRest: false,
+          });
+        });
+        
+        globalIndex += events.length;
+      }
+    });
+
     // Show all notes (no repetition detection)
     return allNotes;
-  }, [patterns]);
+  }, [patterns, polyrhythmPatterns]);
 
   // Scroll to current position
   useEffect(() => {
@@ -424,3 +493,5 @@ export function PracticeSticking() {
     </div>
   );
 }
+
+
