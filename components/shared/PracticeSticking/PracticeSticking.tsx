@@ -1,5 +1,6 @@
 /**
  * Practice Sticking Component - Displays sticking letters/words highlighted in time with the pattern
+ * Enhanced UI with beat markers, progress bar, and smoother animations
  */
 
 'use client';
@@ -18,6 +19,8 @@ interface StickingNote {
   sticking: string;
   isAccent: boolean;
   isRest: boolean;
+  beatIndex: number; // Which beat this note falls on (for beat markers)
+  isFirstInBeat: boolean; // Is this the first note of a beat?
 }
 
 export function PracticeSticking() {
@@ -97,17 +100,20 @@ export function PracticeSticking() {
   const stickingNotes = useMemo(() => {
     const allNotes: StickingNote[] = [];
     let globalIndex = 0;
+    let globalBeatIndex = 0;
 
     patterns.forEach((pattern) => {
       const repeat = pattern.repeat || 1;
+      const timeSig = pattern.timeSignature || '4/4';
+      const [beatsPerBar] = timeSig.split('/').map(Number);
       
       for (let r = 0; r < repeat; r++) {
         let notesInThisPattern: StickingNote[] = [];
+        let patternBeatIndex = 0;
 
         if (pattern._advancedMode && pattern._perBeatSticking && pattern._perBeatSubdivisions) {
           // Advanced mode: use per-beat sticking and subdivisions
-          const timeSig = pattern.timeSignature || '4/4';
-          const [beatsPerBar, beatValue] = timeSig.split('/').map(Number);
+          const [, beatValue] = timeSig.split('/').map(Number);
           const denominator = beatValue || 4;
 
           let noteIndex = 0;
@@ -116,8 +122,8 @@ export function PracticeSticking() {
             const stickingTokens = parseTokens(stickingPattern);
             const voicingPattern = pattern._perBeatVoicing?.[beat] || '';
             const voicingTokens = parseTokens(voicingPattern);
-            const subdivision = pattern._perBeatSubdivisions[beat] || 16;
-            const notesPerBeat = subdivision / denominator;
+            const beatSubdivision = pattern._perBeatSubdivisions[beat] || 16;
+            const notesPerBeat = beatSubdivision / denominator;
 
             for (let i = 0; i < notesPerBeat; i++) {
               const tokenIndex = i % stickingTokens.length;
@@ -140,10 +146,13 @@ export function PracticeSticking() {
                 sticking: token,
                 isAccent,
                 isRest,
+                beatIndex: globalBeatIndex + beat,
+                isFirstInBeat: i === 0,
               });
               noteIndex++;
             }
           }
+          patternBeatIndex = beatsPerBar;
         } else {
           // Regular mode: use single sticking pattern
           const stickingPattern = pattern.stickingPattern || '';
@@ -151,6 +160,7 @@ export function PracticeSticking() {
           const voicingPattern = pattern.drumPattern || '';
           const voicingTokens = parseTokens(voicingPattern);
           const notesPerBar = getNotesPerBarForPattern(pattern);
+          const notesPerBeat = notesPerBar / beatsPerBar;
           
           // Build accent indices from phrase
           const phraseValues = parseNumberList(pattern.phrase || '');
@@ -168,18 +178,23 @@ export function PracticeSticking() {
             // If voicing has a rest, sticking should also be a rest
             const isRest = voicingIsRest || token === '-' || token === '';
             const isAccent = accentIndices.includes(i);
+            const beatForNote = Math.floor(i / notesPerBeat);
 
             notesInThisPattern.push({
               index: globalIndex + i,
               sticking: token,
               isAccent,
               isRest,
+              beatIndex: globalBeatIndex + beatForNote,
+              isFirstInBeat: i % notesPerBeat === 0,
             });
           }
+          patternBeatIndex = beatsPerBar;
         }
 
         allNotes.push(...notesInThisPattern);
         globalIndex += notesInThisPattern.length;
+        globalBeatIndex += patternBeatIndex;
       }
     });
 
@@ -234,17 +249,22 @@ export function PracticeSticking() {
         // Sort by position
         events.sort((a, b) => a.position - b.position);
         
-        // Add to allNotes
+        // Add to allNotes with beat tracking
         events.forEach((event, idx) => {
+          // Estimate beat based on position (0-4 maps to beats 0-3)
+          const beatForNote = Math.floor(event.position);
           allNotes.push({
             index: globalIndex + idx,
             sticking: event.sticking,
             isAccent: event.isAccent,
             isRest: false,
+            beatIndex: globalBeatIndex + beatForNote,
+            isFirstInBeat: idx === 0 || (idx > 0 && Math.floor(events[idx - 1].position) !== beatForNote),
           });
         });
         
         globalIndex += events.length;
+        globalBeatIndex += 4; // Polyrhythms assume 4 beats
       }
     });
 
@@ -293,16 +313,27 @@ export function PracticeSticking() {
     return groups;
   }, [stickingNotes, notesPerLine]);
 
+  // Calculate progress percentage
+  const progressPercent = useMemo(() => {
+    if (playbackPosition === null || stickingNotes.length === 0) return 0;
+    return ((playbackPosition + 1) / stickingNotes.length) * 100;
+  }, [playbackPosition, stickingNotes.length]);
+
   if (stickingNotes.length === 0) {
     return (
       <div
         style={{
-          padding: '2rem',
+          padding: '3rem',
           textAlign: 'center',
           color: darkMode ? '#94a3b8' : '#64748b',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem',
         }}
       >
-        <p>No patterns to display. Add a pattern to see sticking notation.</p>
+        <div style={{ fontSize: '3rem', opacity: 0.3 }}>🥁</div>
+        <p style={{ fontSize: '1rem' }}>No patterns to display. Add a pattern to see sticking notation.</p>
       </div>
     );
   }
@@ -314,15 +345,69 @@ export function PracticeSticking() {
         width: '100%',
         height: '100%',
         overflow: 'auto',
-        padding: '2rem',
+        padding: '1.5rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem',
-        backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+        gap: '1rem',
+        backgroundColor: darkMode ? '#0f172a' : '#f8fafc',
         minHeight: '400px',
         borderRadius: 'var(--dpgen-radius, 14px)',
+        position: 'relative',
       }}
     >
+      {/* Progress Bar - always present to prevent layout shift */}
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '4px',
+          backgroundColor: darkMode ? '#1e293b' : '#e2e8f0',
+          borderRadius: '2px',
+          overflow: 'hidden',
+          marginBottom: '0.5rem',
+          zIndex: 10,
+          opacity: isPlaying ? 1 : 0,
+          transition: 'opacity 0.2s ease',
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${progressPercent}%`,
+            backgroundColor: highlightColors.default,
+            transition: 'width 0.1s ease-out',
+            borderRadius: '2px',
+          }}
+        />
+      </div>
+
+      {/* Current Position Indicator - always present to prevent layout shift */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
+          padding: '0.5rem 1rem',
+          backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+          borderRadius: '20px',
+          alignSelf: 'center',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          marginBottom: '0.5rem',
+          opacity: isPlaying ? 1 : 0,
+          transition: 'opacity 0.2s ease',
+        }}
+      >
+        <span style={{ 
+          fontSize: '0.75rem', 
+          color: darkMode ? '#94a3b8' : '#64748b',
+          fontWeight: 500,
+        }}>
+          Note {(playbackPosition ?? 0) + 1} of {stickingNotes.length}
+        </span>
+      </div>
       {noteGroups.map((group, groupIndex) => (
         <div
           key={groupIndex}
@@ -331,15 +416,21 @@ export function PracticeSticking() {
             flexWrap: 'nowrap',
             gap: '0.5rem',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'stretch',
             width: '100%',
             overflow: 'hidden',
+            padding: '0.75rem 0',
           }}
         >
-          {group.map((note) => {
+          {group.map((note, noteIndexInGroup) => {
         // Check if this note is currently being played
         const isActive = playbackPosition === note.index && isPlaying;
         const isHighlighted = isActive;
+        const isUpcoming = isPlaying && playbackPosition !== null && 
+          note.index > playbackPosition && note.index <= playbackPosition + 3;
+        
+        // Show beat marker (subtle divider before first note of each beat, except the first note of the group)
+        const showBeatMarker = note.isFirstInBeat && noteIndexInGroup > 0;
         
         // Get practice mode hit for this note (if any)
         const activePractice = midiPractice.enabled ? midiPractice : microphonePractice.enabled ? microphonePractice : null;
@@ -405,29 +496,6 @@ export function PracticeSticking() {
           }
         }
 
-        if (note.isRest) {
-          return (
-            <div
-              key={note.index}
-              data-note-index={note.index}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '60px',
-                minHeight: '60px',
-                padding: '0.75rem',
-                borderRadius: 'var(--dpgen-radius, 14px)',
-                backgroundColor: 'transparent',
-                opacity: 0.3 * noteOpacity,
-                border: `2px solid ${darkMode ? '#475569' : '#e2e8f0'}`,
-              }}
-            >
-              <span style={{ fontSize: '0.875rem', opacity: 0.5 }}>—</span>
-            </div>
-          );
-        }
-
         const stickingText = formatSticking(note.sticking);
         const highlightColor = highlightColors.default;
         let displayColor = highlightColor;
@@ -437,61 +505,152 @@ export function PracticeSticking() {
           displayColor = timingColor;
         }
 
+        // Rest note - minimal styling
+        if (note.isRest) {
+          return (
+            <React.Fragment key={note.index}>
+              {showBeatMarker && (
+                <div
+                  style={{
+                    width: '2px',
+                    height: '40px',
+                    backgroundColor: darkMode ? '#334155' : '#cbd5e1',
+                    borderRadius: '1px',
+                    margin: '0 0.25rem',
+                  }}
+                />
+              )}
+              <div
+                data-note-index={note.index}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flex: '1 1 0',
+                  minWidth: '60px',
+                  maxWidth: '120px',
+                  height: '70px',
+                  borderRadius: '14px',
+                  backgroundColor: darkMode ? '#1e293b' : '#f1f5f9',
+                  opacity: 0.4 * noteOpacity,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span style={{ 
+                  fontSize: '1.5rem', 
+                  color: darkMode ? '#475569' : '#94a3b8',
+                  fontWeight: 300,
+                }}>·</span>
+              </div>
+            </React.Fragment>
+          );
+        }
+
         return (
-          <div
-            key={note.index}
-            data-note-index={note.index}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: '60px',
-              minHeight: '60px',
-              padding: '0.75rem',
-              borderRadius: 'var(--dpgen-radius, 14px)',
-              backgroundColor: isHighlighted
-                ? displayColor
-                : 'transparent',
-              transition: 'all 0.2s ease',
-              transform: isHighlighted ? 'scale(1.1)' : 'scale(1)',
-              boxShadow: isHighlighted
-                ? `0 0 20px ${displayColor}40`
-                : 'none',
-              border: note.isAccent
-                ? `3px solid ${displayColor}`
-                : isHighlighted
-                ? `2px solid ${displayColor}`
-                : `2px solid ${darkMode ? '#475569' : '#e2e8f0'}`,
-              opacity: noteOpacity,
-            }}
-          >
-            <span
+          <React.Fragment key={note.index}>
+            {showBeatMarker && (
+              <div
+                style={{
+                  width: '2px',
+                  height: '40px',
+                  backgroundColor: darkMode ? '#334155' : '#cbd5e1',
+                  borderRadius: '1px',
+                  margin: '0 0.25rem',
+                }}
+              />
+            )}
+            <div
+              data-note-index={note.index}
               style={{
-                fontSize: '1.5rem',
-                fontWeight: note.isAccent ? 'bold' : 'normal',
-                color: isHighlighted ? '#ffffff' : (darkMode ? '#cbd5e1' : '#1e293b'),
-                textAlign: 'center',
+                display: 'inline-flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: '1 1 0',
+                minWidth: '60px',
+                maxWidth: '120px',
+                height: '70px',
+                borderRadius: '14px',
+                backgroundColor: isHighlighted
+                  ? displayColor
+                  : isUpcoming
+                  ? (darkMode ? '#1e293b' : '#ffffff')
+                  : (darkMode ? '#1e293b' : '#ffffff'),
+                transition: 'all 0.15s ease',
+                transform: isHighlighted ? 'scale(1.08)' : isUpcoming ? 'scale(1.03)' : 'scale(1)',
+                boxShadow: isHighlighted
+                  ? `0 4px 20px ${displayColor}50, 0 0 0 3px ${displayColor}30`
+                  : isUpcoming
+                  ? `0 2px 8px rgba(0,0,0,0.1)`
+                  : '0 1px 3px rgba(0,0,0,0.05)',
+                border: note.isAccent
+                  ? `3px solid ${displayColor}`
+                  : isHighlighted
+                  ? 'none'
+                  : isUpcoming
+                  ? `2px solid ${displayColor}40`
+                  : `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+                opacity: noteOpacity,
+                cursor: 'default',
+                position: 'relative',
               }}
             >
-              {stickingText}
-            </span>
-            {timingText && (
-              <span style={{ 
-                fontSize: '0.625rem', 
-                marginTop: '0.25rem',
-                color: timingColor || (darkMode ? '#cbd5e1' : '#64748b'),
-                fontWeight: '500',
-              }}>
-                {timingText}
+              {/* Pulse animation ring for active note */}
+              {isHighlighted && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: '-4px',
+                    borderRadius: '16px',
+                    border: `2px solid ${displayColor}`,
+                    animation: 'pulse-ring 0.6s ease-out infinite',
+                    opacity: 0.6,
+                  }}
+                />
+              )}
+              <span
+                style={{
+                  fontSize: note.sticking.length > 2 ? '1.25rem' : '2rem',
+                  fontWeight: note.isAccent ? 700 : 600,
+                  color: isHighlighted ? '#ffffff' : (darkMode ? '#e2e8f0' : '#1e293b'),
+                  textAlign: 'center',
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1,
+                }}
+              >
+                {stickingText}
               </span>
-            )}
-          </div>
+              {timingText && (
+                <span style={{ 
+                  fontSize: '0.5rem', 
+                  marginTop: '2px',
+                  color: isHighlighted ? 'rgba(255,255,255,0.9)' : timingColor || (darkMode ? '#94a3b8' : '#64748b'),
+                  fontWeight: 600,
+                  letterSpacing: '-0.02em',
+                }}>
+                  {timingText}
+                </span>
+              )}
+            </div>
+          </React.Fragment>
         );
           })}
         </div>
       ))}
+
+      {/* Keyframes for animations */}
+      <style jsx global>{`
+        @keyframes pulse-ring {
+          0% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          100% {
+            transform: scale(1.2);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }
-
-

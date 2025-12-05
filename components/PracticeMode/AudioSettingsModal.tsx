@@ -8,8 +8,9 @@
 import React from 'react';
 import { useStore } from '@/store/useStore';
 import { ClickSoundType } from '@/types/audio';
+import { DRUM_KITS, DrumKitId } from '@/types/drumKit';
 import { Modal, ModalSection, ModalRow, ModalToggle, ModalSlider, ModalButton } from '../shared/Modal';
-import { Volume2 } from 'lucide-react';
+import { Volume2, Disc, Check } from 'lucide-react';
 
 interface AudioSettingsModalProps {
   onClose: () => void;
@@ -20,11 +21,14 @@ export function AudioSettingsModal({ onClose }: AudioSettingsModalProps) {
   const volumes = useStore((state) => state.volumes);
   const clickSoundType = useStore((state) => state.clickSoundType);
   const clickMode = useStore((state) => state.clickMode);
+  const drumKit = useStore((state) => state.drumKit);
 
   const setPlayDrumSounds = useStore((state) => state.setPlayDrumSounds);
   const setVolume = useStore((state) => state.setVolume);
   const setClickSoundType = useStore((state) => state.setClickSoundType);
   const setClickMode = useStore((state) => state.setClickMode);
+  const setDrumKit = useStore((state) => state.setDrumKit);
+  const setAudioBuffersLoaded = useStore((state) => state.setAudioBuffersLoaded);
   
   // Polyrhythm settings
   const polyrhythmClickMode = useStore((state) => state.polyrhythmClickMode);
@@ -147,6 +151,91 @@ export function AudioSettingsModal({ onClose }: AudioSettingsModalProps) {
         <ModalRow label="Play Drum Sounds" description="Enable snare, kick, tom sounds">
           <ModalToggle checked={playDrumSounds} onChange={setPlayDrumSounds} />
         </ModalRow>
+      </ModalSection>
+
+      {/* Drum Kit Selector */}
+      <ModalSection title="Drum Kit">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
+          {DRUM_KITS.map((kit) => {
+            const isSelected = drumKit === kit.id;
+            return (
+              <button
+                key={kit.id}
+                onClick={() => {
+                  if (kit.id !== drumKit) {
+                    setDrumKit(kit.id);
+                    // Force reload of audio buffers
+                    setAudioBuffersLoaded(false);
+                  }
+                }}
+                style={{
+                  padding: '0.625rem',
+                  borderRadius: '8px',
+                  border: isSelected ? '2px solid var(--dpgen-primary)' : '1px solid var(--dpgen-border)',
+                  background: isSelected ? 'var(--dpgen-primary)' : 'var(--dpgen-bg)',
+                  color: isSelected ? 'white' : 'var(--dpgen-text)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.25rem',
+                  transition: 'all 0.15s ease',
+                  position: 'relative',
+                }}
+              >
+                {isSelected && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '6px',
+                    right: '6px',
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <Check size={10} />
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                  <Disc size={14} style={{ opacity: 0.7 }} />
+                  <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{kit.name}</span>
+                </div>
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  opacity: 0.8,
+                  lineHeight: 1.3,
+                }}>
+                  {kit.description}
+                </span>
+                {kit.isPremium && (
+                  <span style={{
+                    fontSize: '0.6rem',
+                    background: 'gold',
+                    color: '#000',
+                    padding: '1px 4px',
+                    borderRadius: '3px',
+                    fontWeight: 600,
+                    alignSelf: 'flex-start',
+                    marginTop: '0.25rem',
+                  }}>
+                    PRO
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ 
+          fontSize: '0.7rem', 
+          color: 'var(--dpgen-muted)', 
+          marginTop: '0.5rem',
+          fontStyle: 'italic',
+        }}>
+          💡 New kits coming soon! Currently using acoustic samples for all kits.
+        </p>
       </ModalSection>
 
       {/* Highlight Colors - Compact */}

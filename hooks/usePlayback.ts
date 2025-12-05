@@ -7,6 +7,7 @@ import { useStore } from '@/store/useStore';
 import { Pattern } from '@/types';
 import { PolyrhythmPattern } from '@/types/polyrhythm';
 import { getAudioContext, resumeAudioContext } from '@/lib/audio/audioLoader';
+import { notifyPlaybackSound, resetMuteWindow } from '@/lib/audio/playbackMuteWindow';
 import { parseTokens, parseNumberList, parseTimeSignature, calculateNotesPerBar, buildAccentIndices, getNotesPerBarForPattern, calculateNotePositionsFromPerBeatSubdivisions, calculateNotesPerBarFromPerBeatSubdivisions } from '@/lib/utils/patternUtils';
 import { polyrhythmToCombinedPattern } from '@/lib/utils/polyrhythmUtils';
 import { calculatePolyrhythmPositions } from '@/lib/utils/polyrhythmPositionCalculator';
@@ -349,6 +350,8 @@ export function usePlayback() {
       };
       
       source.start(startTime);
+      // Notify microphone practice that a sound was played (for mute window)
+      notifyPlaybackSound();
       console.log(`[playDrumSound] Successfully called source.start() for "${sound}" at time ${startTime.toFixed(3)}`);
     } catch (error) {
       console.error(`[playDrumSound] Error playing drum sound ${sound}:`, error);
@@ -460,6 +463,8 @@ export function usePlayback() {
       
       osc.start(now);
       osc.stop(now + 0.1);
+      // Notify microphone practice that a sound was played (for mute window)
+      notifyPlaybackSound();
     } catch (error) {
       console.error('[Playback] Error playing click:', error);
     }

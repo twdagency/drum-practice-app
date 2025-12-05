@@ -497,10 +497,13 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
           Math.min(CONSTANTS.AUDIO.SENSITIVITY_MAX, sensitivity)
         ),
       };
-      // Persist to localStorage
+      // Persist to localStorage (merge to preserve deviceId/deviceLabel)
       if (typeof window !== 'undefined') {
         try {
+          const existing = window.localStorage.getItem('dpgen_microphone_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
           window.localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify({
+            ...settings, // Preserve deviceId, deviceLabel, etc.
             accuracyWindow: updated.accuracyWindow,
             latencyAdjustment: updated.latencyAdjustment,
             sensitivity: updated.sensitivity,
@@ -524,10 +527,13 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
           Math.min(CONSTANTS.AUDIO.THRESHOLD_MAX, threshold)
         ),
       };
-      // Persist to localStorage
+      // Persist to localStorage (merge to preserve deviceId/deviceLabel)
       if (typeof window !== 'undefined') {
         try {
+          const existing = window.localStorage.getItem('dpgen_microphone_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
           window.localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify({
+            ...settings, // Preserve deviceId, deviceLabel, etc.
             accuracyWindow: updated.accuracyWindow,
             latencyAdjustment: updated.latencyAdjustment,
             sensitivity: updated.sensitivity,
@@ -608,10 +614,13 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
           Math.min(CONSTANTS.TIMING.LATENCY_ADJUSTMENT_MAX, adjustment)
         ),
       };
-      // Persist to localStorage
+      // Persist to localStorage (merge to preserve deviceId/deviceLabel)
       if (typeof window !== 'undefined') {
         try {
+          const existing = window.localStorage.getItem('dpgen_microphone_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
           window.localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify({
+            ...settings, // Preserve deviceId, deviceLabel, etc.
             accuracyWindow: updated.accuracyWindow,
             latencyAdjustment: updated.latencyAdjustment,
             sensitivity: updated.sensitivity,
@@ -632,10 +641,13 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
         ...state.microphonePractice,
         accuracyWindow: Math.max(1, Math.min(500, accuracyWindow)),
       };
-      // Persist to localStorage
+      // Persist to localStorage (merge to preserve deviceId/deviceLabel)
       if (typeof window !== 'undefined') {
         try {
+          const existing = window.localStorage.getItem('dpgen_microphone_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
           window.localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify({
+            ...settings, // Preserve deviceId, deviceLabel, etc.
             accuracyWindow: updated.accuracyWindow,
             latencyAdjustment: updated.latencyAdjustment,
             sensitivity: updated.sensitivity,
@@ -700,10 +712,13 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
   setMicrophoneVisualFeedback: (enabled) =>
     set((state) => {
       const updated = { ...state.microphonePractice, visualFeedback: enabled };
-      // Persist to localStorage
+      // Persist to localStorage (merge to preserve deviceId/deviceLabel)
       if (typeof window !== 'undefined') {
         try {
+          const existing = window.localStorage.getItem('dpgen_microphone_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
           window.localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify({
+            ...settings, // Preserve deviceId, deviceLabel, etc.
             accuracyWindow: updated.accuracyWindow,
             latencyAdjustment: updated.latencyAdjustment,
             sensitivity: updated.sensitivity,
@@ -721,10 +736,13 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
   setMicrophoneShowTimingErrors: (enabled) =>
     set((state) => {
       const updated = { ...state.microphonePractice, showTimingErrors: enabled };
-      // Persist to localStorage
+      // Persist to localStorage (merge to preserve deviceId/deviceLabel)
       if (typeof window !== 'undefined') {
         try {
+          const existing = window.localStorage.getItem('dpgen_microphone_practice_settings');
+          const settings = existing ? JSON.parse(existing) : {};
           window.localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify({
+            ...settings, // Preserve deviceId, deviceLabel, etc.
             accuracyWindow: updated.accuracyWindow,
             latencyAdjustment: updated.latencyAdjustment,
             sensitivity: updated.sensitivity,

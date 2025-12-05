@@ -1,5 +1,6 @@
 /**
  * Practice Voicing Component - Displays drum icons that highlight in time with the pattern
+ * Enhanced UI with custom SVG icons, beat markers, and progress bar
  */
 
 'use client';
@@ -12,26 +13,95 @@ import { parseTokens, parseNumberList, getNotesPerBarForPattern } from '@/lib/ut
 import { buildAccentIndices } from '@/lib/utils/patternUtils';
 import { polyrhythmToCombinedPattern } from '@/lib/utils/polyrhythmUtils';
 import { calculatePolyrhythmPositions } from '@/lib/utils/polyrhythmPositionCalculator';
+import { Circle, Square, Disc } from 'lucide-react';
 
 interface VoicingNote {
   index: number;
   voicing: string[]; // Array of drum tokens (can be multiple for simultaneous notes like S+K)
   isAccent: boolean;
   isRest: boolean;
+  beatIndex: number; // Which beat this note falls on
+  isFirstInBeat: boolean; // Is this the first note of a beat?
 }
 
-// Map drum codes to icon classes and labels
-const drumIconMap: Record<string, { icon: string; label: string; color: string }> = {
-  S: { icon: 'fas fa-drum', label: 'Snare', color: '#3b82f6' }, // Blue
-  K: { icon: 'fas fa-square', label: 'Kick', color: '#ef4444' }, // Red - using square for kick
-  H: { icon: 'fas fa-circle', label: 'Hi-Hat', color: '#10b981' }, // Green
-  O: { icon: 'fas fa-circle', label: 'Hi-Hat Open', color: '#10b981' }, // Green
-  F: { icon: 'fas fa-drum', label: 'Floor Tom', color: '#f59e0b' }, // Amber - using drum icon
-  I: { icon: 'fas fa-drum', label: 'High Tom', color: '#8b5cf6' }, // Purple - using drum icon
-  M: { icon: 'fas fa-drum', label: 'Mid Tom', color: '#ec4899' }, // Pink - using drum icon
-  T: { icon: 'fas fa-drum', label: 'Tom', color: '#8b5cf6' }, // Purple (legacy) - using drum icon
-  C: { icon: 'fas fa-circle', label: 'Crash', color: '#06b6d4' }, // Cyan
-  Y: { icon: 'fas fa-circle', label: 'Ride', color: '#14b8a6' }, // Teal
+// Custom drum icon component
+function DrumIcon({ type, size = 20, color = 'currentColor' }: { type: string; size?: number; color?: string }) {
+  switch (type) {
+    case 'S': // Snare - drum with lines
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="12" cy="12" rx="10" ry="6" />
+          <path d="M2 12v4c0 3.3 4.5 6 10 6s10-2.7 10-6v-4" />
+          <line x1="4" y1="14" x2="4" y2="18" />
+          <line x1="20" y1="14" x2="20" y2="18" />
+        </svg>
+      );
+    case 'K': // Kick - bass drum
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="4" />
+        </svg>
+      );
+    case 'H': // Hi-Hat closed
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="12" cy="10" rx="9" ry="3" />
+          <ellipse cx="12" cy="14" rx="9" ry="3" />
+          <line x1="12" y1="14" x2="12" y2="22" />
+        </svg>
+      );
+    case 'O': // Hi-Hat open
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="12" cy="8" rx="9" ry="3" />
+          <ellipse cx="12" cy="16" rx="9" ry="3" />
+          <line x1="12" y1="16" x2="12" y2="22" />
+        </svg>
+      );
+    case 'C': // Crash
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="12" cy="8" rx="10" ry="4" />
+          <line x1="12" y1="12" x2="12" y2="22" />
+          <path d="M8 6l2-4M16 6l-2-4" />
+        </svg>
+      );
+    case 'Y': // Ride
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="12" cy="10" rx="10" ry="5" />
+          <circle cx="12" cy="10" r="2" fill={color} />
+          <line x1="12" y1="15" x2="12" y2="22" />
+        </svg>
+      );
+    case 'I': // High Tom
+    case 'M': // Mid Tom
+    case 'T': // Tom (legacy)
+    case 'F': // Floor Tom
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="12" cy="8" rx="8" ry="4" />
+          <path d="M4 8v8c0 2.2 3.6 4 8 4s8-1.8 8-4V8" />
+        </svg>
+      );
+    default:
+      return <Circle size={size} color={color} />;
+  }
+}
+
+// Map drum codes to labels and colors
+const drumInfoMap: Record<string, { label: string; color: string; shortLabel: string }> = {
+  S: { label: 'Snare', shortLabel: 'SN', color: '#3b82f6' },
+  K: { label: 'Kick', shortLabel: 'KK', color: '#ef4444' },
+  H: { label: 'Hi-Hat', shortLabel: 'HH', color: '#10b981' },
+  O: { label: 'HH Open', shortLabel: 'HO', color: '#22c55e' },
+  F: { label: 'Floor', shortLabel: 'FT', color: '#f59e0b' },
+  I: { label: 'High Tom', shortLabel: 'HT', color: '#8b5cf6' },
+  M: { label: 'Mid Tom', shortLabel: 'MT', color: '#ec4899' },
+  T: { label: 'Tom', shortLabel: 'TM', color: '#8b5cf6' },
+  C: { label: 'Crash', shortLabel: 'CR', color: '#06b6d4' },
+  Y: { label: 'Ride', shortLabel: 'RD', color: '#14b8a6' },
 };
 
 export function PracticeVoicing() {
@@ -111,25 +181,28 @@ export function PracticeVoicing() {
   const voicingNotes = useMemo(() => {
     const allNotes: VoicingNote[] = [];
     let globalIndex = 0;
+    let globalBeatIndex = 0;
 
     patterns.forEach((pattern) => {
       const repeat = pattern.repeat || 1;
+      const timeSig = pattern.timeSignature || '4/4';
+      const [beatsPerBar] = timeSig.split('/').map(Number);
       
       for (let r = 0; r < repeat; r++) {
         let notesInThisPattern: VoicingNote[] = [];
+        let patternBeatIndex = 0;
 
         if (pattern._advancedMode && pattern._perBeatVoicing && pattern._perBeatSubdivisions) {
           // Advanced mode: use per-beat voicing and subdivisions
-          const timeSig = pattern.timeSignature || '4/4';
-          const [beatsPerBar, beatValue] = timeSig.split('/').map(Number);
+          const [, beatValue] = timeSig.split('/').map(Number);
           const denominator = beatValue || 4;
 
           let noteIndex = 0;
           for (let beat = 0; beat < beatsPerBar; beat++) {
             const voicingPattern = pattern._perBeatVoicing[beat] || '';
             const voicingTokens = parseTokens(voicingPattern);
-            const subdivision = pattern._perBeatSubdivisions[beat] || 16;
-            const notesPerBeat = subdivision / denominator;
+            const beatSubdivision = pattern._perBeatSubdivisions[beat] || 16;
+            const notesPerBeat = beatSubdivision / denominator;
 
             for (let i = 0; i < notesPerBeat; i++) {
               const tokenIndex = i % voicingTokens.length;
@@ -159,15 +232,19 @@ export function PracticeVoicing() {
                 voicing: voicingArray,
                 isAccent,
                 isRest,
+                beatIndex: globalBeatIndex + beat,
+                isFirstInBeat: i === 0,
               });
               noteIndex++;
             }
           }
+          patternBeatIndex = beatsPerBar;
         } else {
           // Regular mode: use single voicing pattern
           const voicingPattern = pattern.drumPattern || '';
           const voicingTokens = parseTokens(voicingPattern);
           const notesPerBar = getNotesPerBarForPattern(pattern);
+          const notesPerBeat = notesPerBar / beatsPerBar;
           
           // Build accent indices from phrase
           const phraseValues = parseNumberList(pattern.phrase || '');
@@ -193,18 +270,23 @@ export function PracticeVoicing() {
             }
             
             const isAccent = accentIndices.includes(i);
+            const beatForNote = Math.floor(i / notesPerBeat);
 
             notesInThisPattern.push({
               index: globalIndex + i,
               voicing: voicingArray,
               isAccent,
               isRest,
+              beatIndex: globalBeatIndex + beatForNote,
+              isFirstInBeat: i % notesPerBeat === 0,
             });
           }
+          patternBeatIndex = beatsPerBar;
         }
 
         allNotes.push(...notesInThisPattern);
         globalIndex += notesInThisPattern.length;
+        globalBeatIndex += patternBeatIndex;
       }
     });
 
@@ -269,17 +351,21 @@ export function PracticeVoicing() {
         // Sort by position
         events.sort((a, b) => a.position - b.position);
         
-        // Add to allNotes
+        // Add to allNotes with beat tracking
         events.forEach((event, idx) => {
+          const beatForNote = Math.floor(event.position);
           allNotes.push({
             index: globalIndex + idx,
             voicing: event.voicing,
             isAccent: event.isAccent,
             isRest: false,
+            beatIndex: globalBeatIndex + beatForNote,
+            isFirstInBeat: idx === 0 || (idx > 0 && Math.floor(events[idx - 1].position) !== beatForNote),
           });
         });
         
         globalIndex += events.length;
+        globalBeatIndex += 4; // Polyrhythms assume 4 beats
       }
     });
 
@@ -317,16 +403,27 @@ export function PracticeVoicing() {
     return groups;
   }, [voicingNotes, notesPerLine]);
 
+  // Calculate progress percentage
+  const progressPercent = useMemo(() => {
+    if (playbackPosition === null || voicingNotes.length === 0) return 0;
+    return ((playbackPosition + 1) / voicingNotes.length) * 100;
+  }, [playbackPosition, voicingNotes.length]);
+
   if (voicingNotes.length === 0) {
     return (
       <div
         style={{
-          padding: '2rem',
+          padding: '3rem',
           textAlign: 'center',
           color: darkMode ? '#94a3b8' : '#64748b',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem',
         }}
       >
-        <p>No patterns to display. Add a pattern to see voicing notation.</p>
+        <div style={{ fontSize: '3rem', opacity: 0.3 }}>🥁</div>
+        <p style={{ fontSize: '1rem' }}>No patterns to display. Add a pattern to see voicing notation.</p>
       </div>
     );
   }
@@ -338,15 +435,69 @@ export function PracticeVoicing() {
         width: '100%',
         height: '100%',
         overflow: 'auto',
-        padding: '2rem',
+        padding: '1.5rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem',
-        backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+        gap: '1rem',
+        backgroundColor: darkMode ? '#0f172a' : '#f8fafc',
         minHeight: '400px',
         borderRadius: 'var(--dpgen-radius, 14px)',
+        position: 'relative',
       }}
     >
+      {/* Progress Bar - always present to prevent layout shift */}
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '4px',
+          backgroundColor: darkMode ? '#1e293b' : '#e2e8f0',
+          borderRadius: '2px',
+          overflow: 'hidden',
+          marginBottom: '0.5rem',
+          zIndex: 10,
+          opacity: isPlaying ? 1 : 0,
+          transition: 'opacity 0.2s ease',
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${progressPercent}%`,
+            backgroundColor: highlightColors.default,
+            transition: 'width 0.1s ease-out',
+            borderRadius: '2px',
+          }}
+        />
+      </div>
+
+      {/* Current Position Indicator - always present to prevent layout shift */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
+          padding: '0.5rem 1rem',
+          backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+          borderRadius: '20px',
+          alignSelf: 'center',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          marginBottom: '0.5rem',
+          opacity: isPlaying ? 1 : 0,
+          transition: 'opacity 0.2s ease',
+        }}
+      >
+        <span style={{ 
+          fontSize: '0.75rem', 
+          color: darkMode ? '#94a3b8' : '#64748b',
+          fontWeight: 500,
+        }}>
+          Note {(playbackPosition ?? 0) + 1} of {voicingNotes.length}
+        </span>
+      </div>
       {noteGroups.map((group, groupIndex) => (
         <div
           key={groupIndex}
@@ -355,15 +506,21 @@ export function PracticeVoicing() {
             flexWrap: 'nowrap',
             gap: '0.5rem',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'stretch',
             width: '100%',
             overflow: 'hidden',
+            padding: '0.75rem 0',
           }}
         >
-          {group.map((note) => {
+          {group.map((note, noteIndexInGroup) => {
         // Check if this note is currently being played
         const isActive = playbackPosition === note.index && isPlaying;
         const isHighlighted = isActive;
+        const isUpcoming = isPlaying && playbackPosition !== null && 
+          note.index > playbackPosition && note.index <= playbackPosition + 3;
+        
+        // Show beat marker
+        const showBeatMarker = note.isFirstInBeat && noteIndexInGroup > 0;
         
         // Get practice mode hit for this note (if any)
         const activePractice = midiPractice.enabled ? midiPractice : microphonePractice.enabled ? microphonePractice : null;
@@ -429,37 +586,11 @@ export function PracticeVoicing() {
           }
         }
 
-        if (note.isRest) {
-          return (
-            <div
-              key={note.index}
-              data-note-index={note.index}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '80px',
-                minHeight: '80px',
-                padding: '0.75rem',
-                borderRadius: 'var(--dpgen-radius, 14px)',
-                backgroundColor: 'transparent',
-                opacity: 0.3 * noteOpacity,
-                border: `2px solid ${darkMode ? '#475569' : '#e2e8f0'}`,
-              }}
-            >
-              <span style={{ fontSize: '0.875rem', opacity: 0.5 }}>—</span>
-            </div>
-          );
-        }
-
-        // If multiple drums, show them stacked/grouped
-        const hasMultipleDrums = note.voicing.length > 1;
-
-        // Get the primary drum color (first drum in the voicing)
-        const primaryDrumCode = note.voicing[0];
-        const primaryDrumInfo = drumIconMap[primaryDrumCode] || {
-          icon: 'fas fa-circle',
+        // Get drum info for styling
+        const primaryDrumCode = note.voicing[0] || 'S';
+        const primaryDrumInfo = drumInfoMap[primaryDrumCode] || {
           label: primaryDrumCode,
+          shortLabel: primaryDrumCode,
           color: highlightColors.default,
         };
         let drumColor = primaryDrumInfo.color;
@@ -469,103 +600,207 @@ export function PracticeVoicing() {
           drumColor = timingColor;
         }
 
+        // Rest note - minimal styling
+        if (note.isRest) {
+          return (
+            <React.Fragment key={note.index}>
+              {showBeatMarker && (
+                <div
+                  style={{
+                    width: '2px',
+                    height: '50px',
+                    backgroundColor: darkMode ? '#334155' : '#cbd5e1',
+                    borderRadius: '1px',
+                    margin: '0 0.25rem',
+                  }}
+                />
+              )}
+              <div
+                data-note-index={note.index}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flex: '1 1 0',
+                  minWidth: '60px',
+                  maxWidth: '120px',
+                  height: '80px',
+                  borderRadius: '14px',
+                  backgroundColor: darkMode ? '#1e293b' : '#f1f5f9',
+                  opacity: 0.4 * noteOpacity,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span style={{ 
+                  fontSize: '1.5rem', 
+                  color: darkMode ? '#475569' : '#94a3b8',
+                  fontWeight: 300,
+                }}>·</span>
+              </div>
+            </React.Fragment>
+          );
+        }
+
+        // Multiple drums stacked
+        const hasMultipleDrums = note.voicing.length > 1;
+
         return (
-          <div
-            key={note.index}
-            data-note-index={note.index}
-            style={{
-              position: 'relative',
-              display: 'inline-flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: hasMultipleDrums ? '100px' : '80px',
-              minHeight: hasMultipleDrums ? '100px' : '80px',
-              padding: '0.75rem',
-              borderRadius: 'var(--dpgen-radius, 14px)',
-              backgroundColor: isHighlighted
-                ? drumColor
-                : 'transparent',
-              transition: 'all 0.2s ease',
-              transform: isHighlighted ? 'scale(1.1)' : 'scale(1)',
-              boxShadow: isHighlighted
-                ? `0 0 20px ${drumColor}40`
-                : 'none',
-              border: note.isAccent
-                ? `3px solid ${drumColor}`
-                : isHighlighted
-                ? `2px solid ${drumColor}`
-                : `2px solid ${darkMode ? '#475569' : '#e2e8f0'}`,
-              opacity: noteOpacity,
-            }}
-          >
+          <React.Fragment key={note.index}>
+            {showBeatMarker && (
+              <div
+                style={{
+                  width: '2px',
+                  height: '50px',
+                  backgroundColor: darkMode ? '#334155' : '#cbd5e1',
+                  borderRadius: '1px',
+                  margin: '0 0.25rem',
+                }}
+              />
+            )}
             <div
+              data-note-index={note.index}
               style={{
-                display: 'flex',
-                flexDirection: hasMultipleDrums ? 'column' : 'row',
-                gap: '0.5rem',
+                position: 'relative',
+                display: 'inline-flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                flexWrap: 'wrap',
+                flex: '1 1 0',
+                minWidth: '60px',
+                maxWidth: '120px',
+                height: hasMultipleDrums ? '90px' : '80px',
+                padding: '0.5rem',
+                borderRadius: '14px',
+                backgroundColor: isHighlighted
+                  ? drumColor
+                  : isUpcoming
+                  ? (darkMode ? '#1e293b' : '#ffffff')
+                  : (darkMode ? '#1e293b' : '#ffffff'),
+                transition: 'all 0.15s ease',
+                transform: isHighlighted ? 'scale(1.08)' : isUpcoming ? 'scale(1.03)' : 'scale(1)',
+                boxShadow: isHighlighted
+                  ? `0 4px 20px ${drumColor}50, 0 0 0 3px ${drumColor}30`
+                  : isUpcoming
+                  ? `0 2px 8px rgba(0,0,0,0.1)`
+                  : '0 1px 3px rgba(0,0,0,0.05)',
+                border: note.isAccent
+                  ? `3px solid ${drumColor}`
+                  : isHighlighted
+                  ? 'none'
+                  : isUpcoming
+                  ? `2px solid ${drumColor}40`
+                  : `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+                opacity: noteOpacity,
+                cursor: 'default',
               }}
             >
-              {note.voicing.map((drumCode, idx) => {
-                const drumInfo = drumIconMap[drumCode] || {
-                  icon: 'fas fa-circle',
-                  label: drumCode,
-                  color: highlightColors.default,
-                };
-                // Use the drum's color, or white if highlighted
-                const iconColor = isHighlighted ? '#ffffff' : drumInfo.color;
-                const textColor = isHighlighted ? '#ffffff' : (darkMode ? '#cbd5e1' : '#1e293b');
+              {/* Pulse animation ring for active note */}
+              {isHighlighted && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: '-4px',
+                    borderRadius: '16px',
+                    border: `2px solid ${drumColor}`,
+                    animation: 'pulse-ring 0.6s ease-out infinite',
+                    opacity: 0.6,
+                  }}
+                />
+              )}
+              
+              {/* Drum icons */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: hasMultipleDrums ? 'row' : 'column',
+                  gap: hasMultipleDrums ? '0.25rem' : '0.125rem',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {note.voicing.slice(0, 2).map((drumCode, idx) => {
+                  const drumInfo = drumInfoMap[drumCode] || {
+                    label: drumCode,
+                    shortLabel: drumCode,
+                    color: highlightColors.default,
+                  };
+                  const iconColor = isHighlighted ? '#ffffff' : drumInfo.color;
 
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                    }}
-                  >
-                    <i
-                      className={drumInfo.icon}
+                  return (
+                    <div
+                      key={idx}
                       style={{
-                        fontSize: hasMultipleDrums ? '1.25rem' : '1.75rem',
-                        color: iconColor,
-                        filter: isHighlighted ? 'none' : 'none',
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: textColor,
-                        fontWeight: note.isAccent ? 'bold' : 'normal',
-                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '2px',
                       }}
                     >
-                      {drumInfo.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            {timingText && (
-              <span style={{ 
-                fontSize: '0.625rem', 
-                marginTop: '0.25rem',
-                color: timingColor || (darkMode ? '#cbd5e1' : '#64748b'),
-                fontWeight: '500',
-              }}>
-                {timingText}
+                      <DrumIcon 
+                        type={drumCode} 
+                        size={hasMultipleDrums ? 24 : 32} 
+                        color={iconColor}
+                      />
+                    </div>
+                  );
+                })}
+                {note.voicing.length > 2 && (
+                  <span style={{
+                    fontSize: '0.6rem',
+                    color: isHighlighted ? 'rgba(255,255,255,0.8)' : (darkMode ? '#64748b' : '#94a3b8'),
+                  }}>
+                    +{note.voicing.length - 2}
+                  </span>
+                )}
+              </div>
+              
+              {/* Drum label(s) */}
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: note.isAccent ? 700 : 600,
+                  color: isHighlighted ? 'rgba(255,255,255,0.9)' : (darkMode ? '#94a3b8' : '#64748b'),
+                  textAlign: 'center',
+                  marginTop: '4px',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {hasMultipleDrums 
+                  ? note.voicing.slice(0, 2).map(d => drumInfoMap[d]?.shortLabel || d).join('+')
+                  : drumInfoMap[primaryDrumCode]?.shortLabel || primaryDrumCode
+                }
               </span>
-            )}
-          </div>
+              
+              {timingText && (
+                <span style={{ 
+                  fontSize: '0.5rem', 
+                  marginTop: '1px',
+                  color: isHighlighted ? 'rgba(255,255,255,0.9)' : timingColor || (darkMode ? '#94a3b8' : '#64748b'),
+                  fontWeight: 600,
+                }}>
+                  {timingText}
+                </span>
+              )}
+            </div>
+          </React.Fragment>
         );
           })}
         </div>
       ))}
+
+      {/* Keyframes for animations */}
+      <style jsx global>{`
+        @keyframes pulse-ring {
+          0% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          100% {
+            transform: scale(1.2);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }

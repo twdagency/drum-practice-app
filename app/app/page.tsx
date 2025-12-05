@@ -392,15 +392,16 @@ export default function App() {
           {/* Stave Component */}
           <div className="lg:col-span-2 dpgen-stave-column" style={{ minWidth: 0, overflow: 'hidden', width: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
             <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, borderRadius: 'var(--dpgen-radius, 14px)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }} suppressHydrationWarning>
                 <h2 className="text-2xl font-semibold">Music Notation</h2>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginRight: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }} suppressHydrationWarning>
+                  <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginRight: '0.5rem' }} suppressHydrationWarning>
                     View:
                   </label>
                   <select
                     value={notationViewMode}
                     onChange={(e) => setNotationViewMode(e.target.value as 'notation' | 'sticking' | 'voicing')}
+                    suppressHydrationWarning
                     style={{
                       padding: '0.5rem 0.75rem',
                       borderRadius: '6px',
@@ -417,12 +418,13 @@ export default function App() {
                   </select>
                   {(notationViewMode === 'sticking' || notationViewMode === 'voicing') && (
                     <>
-                      <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginLeft: '0.5rem', marginRight: '0.5rem' }}>
+                      <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginLeft: '0.5rem', marginRight: '0.5rem' }} suppressHydrationWarning>
                         Notes Ahead:
                       </label>
                       <select
                         value={practiceViewNotesAhead}
                         onChange={(e) => setPracticeViewNotesAhead(Number(e.target.value))}
+                        suppressHydrationWarning
                         style={{
                           padding: '0.5rem 0.75rem',
                           borderRadius: '6px',
@@ -440,7 +442,7 @@ export default function App() {
                         <option value="24">24 notes</option>
                         <option value="32">32 notes</option>
                       </select>
-                      <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginLeft: '1rem', marginRight: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginLeft: '1rem', marginRight: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} suppressHydrationWarning>
                         <input
                           type="checkbox"
                           checked={practiceViewVisualFeedback}
@@ -449,7 +451,7 @@ export default function App() {
                         />
                         Accuracy Colors
                       </label>
-                      <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginLeft: '0.5rem', marginRight: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.875rem', color: darkMode ? '#cbd5e1' : '#64748b', marginLeft: '0.5rem', marginRight: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} suppressHydrationWarning>
                         <input
                           type="checkbox"
                           checked={practiceViewShowTimingErrors}
@@ -518,3 +520,7 @@ export default function App() {
     </>
   )
 }
+
+
+
+

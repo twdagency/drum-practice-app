@@ -45,3 +45,7 @@ export function useMagneticButton(strength: number = 0.3) {
 
   return buttonRef;
 }
+
+
+
+

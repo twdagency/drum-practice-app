@@ -1,11 +1,13 @@
 /**
  * Microphone Latency Calibration Component
  * Compact design with auto-calibration feature
+ * Uses React Portal to render above other modals
  */
 
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
 import { useMicrophoneDevices } from '@/hooks/useMicrophoneDevices';
 import { CONSTANTS } from '@/lib/utils/constants';
@@ -51,6 +53,14 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
   const [testHits, setTestHits] = useState<CalibrationHit[]>([]);
   const [testBeatIndex, setTestBeatIndex] = useState(0);
   
+  // Manual mode state
+  const [manualActive, setManualActive] = useState(false);
+  const [manualHits, setManualHits] = useState<CalibrationHit[]>([]);
+  const [manualBeatIndex, setManualBeatIndex] = useState(0);
+  const manualIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const manualStartTimeRef = useRef<number>(0);
+  const manualActiveRef = useRef<boolean>(false);
+  
   // Refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -60,22 +70,69 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
   const lastHitTimeRef = useRef<number>(0);
   const testIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const testStartTimeRef = useRef<number>(0);
+  
+  // Refs to track active state (needed for interval callbacks to access current state)
+  const autoCalActiveRef = useRef<boolean>(false);
+  const testActiveRef = useRef<boolean>(false);
+  const sensitivityRef = useRef<number>(sensitivity);
+  const thresholdRef = useRef<number>(threshold);
+  const latencyRef = useRef<number>(latencyAdjustment);
+  const previousVolumeRef = useRef<number>(0);
 
-  // Initialize device from localStorage
+  // Keep refs in sync with state (for interval callbacks)
   useEffect(() => {
-    if (devices.length > 0 && !selectedDeviceId) {
-      if (typeof window !== 'undefined') {
-        try {
-          const saved = localStorage.getItem('dpgen_microphone_practice_settings');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed.deviceId && devices.some(d => d.deviceId === parsed.deviceId)) {
-              setSelectedDeviceId(parsed.deviceId);
+    autoCalActiveRef.current = autoCalActive;
+  }, [autoCalActive]);
+  
+  useEffect(() => {
+    testActiveRef.current = testActive;
+  }, [testActive]);
+  
+  useEffect(() => {
+    manualActiveRef.current = manualActive;
+  }, [manualActive]);
+  
+  useEffect(() => {
+    sensitivityRef.current = sensitivity;
+    thresholdRef.current = threshold;
+    latencyRef.current = latencyAdjustment;
+  }, [sensitivity, threshold, latencyAdjustment]);
+
+  // Initialize device from localStorage (with fallback matching by label)
+  useEffect(() => {
+    if (devices.length === 0) return;
+    
+    // Already have a valid selection
+    if (selectedDeviceId && devices.some(d => d.deviceId === selectedDeviceId)) {
+      return;
+    }
+    
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('dpgen_microphone_practice_settings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          // Try to match by device ID
+          if (parsed.deviceId && devices.some(d => d.deviceId === parsed.deviceId)) {
+            setSelectedDeviceId(parsed.deviceId);
+            return;
+          }
+          // Fallback: try to match by label (device IDs can change between sessions)
+          if (parsed.deviceLabel) {
+            const matchByLabel = devices.find(d => d.label === parsed.deviceLabel);
+            if (matchByLabel) {
+              setSelectedDeviceId(matchByLabel.deviceId);
+              // Update saved settings with new deviceId
+              const settings = { ...parsed, deviceId: matchByLabel.deviceId };
+              localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
               return;
             }
           }
-        } catch (e) {}
-      }
+        }
+      } catch (e) {}
+    }
+    // No valid saved device, select first one
+    if (!selectedDeviceId && devices.length > 0) {
       setSelectedDeviceId(devices[0].deviceId);
     }
   }, [devices, selectedDeviceId]);
@@ -96,6 +153,10 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
       clearInterval(testIntervalRef.current);
       testIntervalRef.current = null;
     }
+    if (manualIntervalRef.current) {
+      clearInterval(manualIntervalRef.current);
+      manualIntervalRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
@@ -105,18 +166,44 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
       audioContextRef.current = null;
     }
     setAutoCalActive(false);
+    autoCalActiveRef.current = false;
     setTestActive(false);
+    testActiveRef.current = false;
+    setManualActive(false);
+    manualActiveRef.current = false;
     setAudioLevel(0);
   };
 
   const setupMicrophone = async () => {
     if (!selectedDeviceId) return false;
     
+    let newStream: MediaStream | null = null;
+    
+    // Try multiple approaches to get microphone access
     try {
-      const newStream = await navigator.mediaDevices.getUserMedia({
+      newStream = await navigator.mediaDevices.getUserMedia({
         audio: { deviceId: { exact: selectedDeviceId } },
       });
-      
+    } catch (exactErr) {
+      console.warn('[MIC Calibration] Exact deviceId failed, trying preferred:', exactErr);
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: selectedDeviceId },
+        });
+      } catch (preferredErr) {
+        console.warn('[MIC Calibration] Preferred deviceId failed, trying any:', preferredErr);
+        try {
+          newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (anyErr) {
+          console.error('[MIC Calibration] All attempts failed:', anyErr);
+          return false;
+        }
+      }
+    }
+    
+    if (!newStream) return false;
+    
+    try {
       streamRef.current = newStream;
       setStream(newStream);
       
@@ -148,34 +235,98 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
         
         setAudioLevel(maxAmp * 100);
         
-        // Detect hits for auto-calibration
-        if (autoCalActive) {
+        // Calculate transient (volume increase) for better hit detection
+        const volumeIncrease = maxAmp - previousVolumeRef.current;
+        const volumeRatio = previousVolumeRef.current > 0.01 ? maxAmp / previousVolumeRef.current : (maxAmp > 0.05 ? 5 : 1);
+        
+        // Detect hits for auto-calibration - use strict transient detection
+        if (autoCalActiveRef.current) {
           const now = performance.now();
-          const sensitivityMult = sensitivity / 100;
-          const adjustedThreshold = 0.1 / sensitivityMult; // Use a baseline threshold for detection
+          // For auto-cal, require a VERY sharp transient to avoid double-triggering on drum bounce
+          const autoCalThreshold = 0.05;
+          // Require significant increase AND high ratio (sharp attack)
+          const hasStrongTransient = volumeIncrease > 0.08 && volumeRatio > 2.0;
+          // Must have been quite quiet before (below 20% of threshold)
+          const wasQuiet = previousVolumeRef.current < autoCalThreshold * 0.2;
           
-          if (maxAmp > adjustedThreshold && now - lastHitTimeRef.current > 100) {
+          // Use longer cooldown (200ms) to prevent double-triggers from drum bounce/decay
+          if (maxAmp > autoCalThreshold && (hasStrongTransient || wasQuiet) && now - lastHitTimeRef.current > 200) {
             lastHitTimeRef.current = now;
+            previousVolumeRef.current = maxAmp;
             setAutoCalHits(prev => [...prev, maxAmp]);
+            console.log(`[Calibration] Hit detected: level=${(maxAmp * 100).toFixed(1)}%`);
           }
         }
         
-        // Detect hits for test mode
-        if (testActive) {
+        // Detect hits for test mode - use transient detection
+        if (testActiveRef.current) {
           const now = performance.now();
-          const sensitivityMult = sensitivity / 100;
-          const adjustedThreshold = threshold / sensitivityMult;
+          const sensitivityMult = sensitivityRef.current / 100;
+          const adjustedThreshold = thresholdRef.current / sensitivityMult;
           
-          if (maxAmp > adjustedThreshold && now - lastHitTimeRef.current > 50) {
+          // Require transient (sharp attack) - prevents continuous noise from triggering
+          const minIncrease = Math.max(adjustedThreshold * 0.15, previousVolumeRef.current * 0.5);
+          const hasSharpTransient = volumeIncrease > minIncrease && volumeRatio > 1.5;
+          const wasQuiet = previousVolumeRef.current < adjustedThreshold * 0.5;
+          const crossedFromSilence = maxAmp > adjustedThreshold && previousVolumeRef.current < adjustedThreshold * 0.3;
+          
+          const shouldHit = maxAmp > adjustedThreshold && 
+                           (hasSharpTransient || crossedFromSilence || (wasQuiet && volumeIncrease > adjustedThreshold * 0.2));
+          
+          if (shouldHit && now - lastHitTimeRef.current > 50) {
             lastHitTimeRef.current = now;
+            previousVolumeRef.current = maxAmp;
             const elapsed = now - testStartTimeRef.current;
             const msPerBeat = 60000 / bpm;
             const closestBeat = Math.round(elapsed / msPerBeat);
             const expectedTime = closestBeat * msPerBeat;
-            const timingError = elapsed - expectedTime - latencyAdjustment;
+            const timingError = elapsed - expectedTime - latencyRef.current;
             
             setTestHits(prev => [...prev, { time: elapsed, level: maxAmp, timingError }]);
           }
+        }
+        
+        // Detect hits for manual mode - use transient detection
+        if (manualActiveRef.current) {
+          const now = performance.now();
+          const sensitivityMult = sensitivityRef.current / 100;
+          const adjustedThreshold = thresholdRef.current / sensitivityMult;
+          
+          // Require transient (sharp attack)
+          const minIncrease = Math.max(adjustedThreshold * 0.15, previousVolumeRef.current * 0.5);
+          const hasSharpTransient = volumeIncrease > minIncrease && volumeRatio > 1.5;
+          const wasQuiet = previousVolumeRef.current < adjustedThreshold * 0.5;
+          const crossedFromSilence = maxAmp > adjustedThreshold && previousVolumeRef.current < adjustedThreshold * 0.3;
+          
+          const shouldHit = maxAmp > adjustedThreshold && 
+                           (hasSharpTransient || crossedFromSilence || (wasQuiet && volumeIncrease > adjustedThreshold * 0.2));
+          
+          if (shouldHit && now - lastHitTimeRef.current > 50) {
+            lastHitTimeRef.current = now;
+            previousVolumeRef.current = maxAmp;
+            const elapsed = now - manualStartTimeRef.current;
+            const msPerBeat = 60000 / bpm;
+            const closestBeat = Math.round(elapsed / msPerBeat);
+            const expectedTime = closestBeat * msPerBeat;
+            const timingError = elapsed - expectedTime - latencyRef.current;
+            
+            setManualHits(prev => {
+              const updated = [...prev, { time: elapsed, level: maxAmp, timingError }];
+              // Keep only last 8 hits
+              return updated.slice(-8);
+            });
+          }
+        }
+        
+        // Update previous volume for transient detection
+        // Track volume drops so we can detect the next rise
+        if (maxAmp < previousVolumeRef.current) {
+          previousVolumeRef.current = maxAmp * 0.9 + previousVolumeRef.current * 0.1;
+        } else if (maxAmp < 0.03) {
+          previousVolumeRef.current = maxAmp;
+        } else if (!autoCalActiveRef.current && !testActiveRef.current && !manualActiveRef.current) {
+          // When not actively detecting, let volume track naturally
+          previousVolumeRef.current = maxAmp;
         }
       }, 20);
       
@@ -193,11 +344,14 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     
     setAutoCalHits([]);
     setAutoCalActive(true);
+    autoCalActiveRef.current = true; // Set ref immediately for interval callback
     setAutoCalStatus('Hit your drum/pad 5-10 times at normal volume...');
+    console.log('[Calibration] Auto-calibration started');
   };
 
   const finishAutoCalibration = () => {
     setAutoCalActive(false);
+    autoCalActiveRef.current = false;
     
     if (autoCalHits.length < 3) {
       setAutoCalStatus('Not enough hits detected. Try again.');
@@ -230,6 +384,7 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     setTestHits([]);
     setTestBeatIndex(0);
     setTestActive(true);
+    testActiveRef.current = true; // Set ref immediately for interval callback
     testStartTimeRef.current = performance.now();
     
     // Play click sounds
@@ -270,14 +425,63 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
       testIntervalRef.current = null;
     }
     setTestActive(false);
+    testActiveRef.current = false;
     
-    // Calculate average timing error
+    // Calculate average timing error and auto-suggest latency adjustment
+    // The timing error formula is: elapsed - expectedTime - latencyAdjustment
+    // If hits are early (negative error): latencyAdjustment is too high, need to reduce it
+    // If hits are late (positive error): latencyAdjustment is too low, need to increase it
+    // So: newLatency = currentLatency + avgError (add error to compensate)
     if (testHits.length > 0) {
       const avgError = testHits.reduce((sum, h) => sum + h.timingError, 0) / testHits.length;
-      // Suggest latency adjustment
-      const suggestedLatency = Math.round(latencyAdjustment - avgError);
-      setLatencyAdjustment(Math.max(-200, Math.min(200, suggestedLatency)));
+      const suggestedLatency = Math.round(latencyAdjustment + avgError);
+      setLatencyAdjustment(Math.max(-500, Math.min(500, suggestedLatency)));
     }
+  };
+
+  // Manual mode - play clicks and show timing
+  const startManual = async () => {
+    const success = await setupMicrophone();
+    if (!success) return;
+    
+    setManualHits([]);
+    setManualBeatIndex(0);
+    setManualActive(true);
+    manualActiveRef.current = true;
+    manualStartTimeRef.current = performance.now();
+    
+    const msPerBeat = 60000 / bpm;
+    let beatCount = 0;
+    
+    const playClick = async () => {
+      const ctx = audioContextRef.current;
+      if (ctx) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = beatCount % 4 === 0 ? 800 : 600;
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+      }
+      
+      setManualBeatIndex(beatCount % 4);
+      beatCount++;
+    };
+    
+    playClick();
+    manualIntervalRef.current = setInterval(playClick, msPerBeat);
+  };
+
+  const stopManual = () => {
+    if (manualIntervalRef.current) {
+      clearInterval(manualIntervalRef.current);
+      manualIntervalRef.current = null;
+    }
+    setManualActive(false);
+    manualActiveRef.current = false;
   };
 
   const handleApply = () => {
@@ -290,6 +494,11 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
         const existing = localStorage.getItem('dpgen_microphone_practice_settings');
         const settings = existing ? JSON.parse(existing) : {};
         settings.deviceId = selectedDeviceId;
+        // Save device label for fallback matching (device IDs can change between sessions)
+        const device = devices.find(d => d.deviceId === selectedDeviceId);
+        if (device) {
+          settings.deviceLabel = device.label;
+        }
         settings.latencyAdjustment = latencyAdjustment;
         settings.sensitivity = sensitivity;
         settings.threshold = threshold;
@@ -309,13 +518,22 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
     avgError: Math.round(testHits.reduce((sum, h) => sum + h.timingError, 0) / testHits.length),
   } : null;
 
-  return (
+  // Use portal to render at document body level, above other modals
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  const modalContent = (
     <div
       onClick={(e) => e.target === e.currentTarget && (stopAll(), onClose())}
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(2px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -415,27 +633,63 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
                 Hit your drum/pad at normal volume. We'll detect the optimal settings automatically.
               </p>
               
-              {/* Level Meter */}
+              {/* Level Meter with threshold indicator */}
               <div style={{
-                height: '20px',
+                height: '24px',
                 background: 'var(--dpgen-bg)',
-                borderRadius: '10px',
+                borderRadius: '12px',
                 overflow: 'hidden',
                 marginBottom: '0.75rem',
+                position: 'relative',
               }}>
+                {/* Threshold line at 5% */}
+                <div style={{
+                  position: 'absolute',
+                  left: '5%',
+                  top: 0,
+                  bottom: 0,
+                  width: '2px',
+                  background: '#22c55e',
+                  zIndex: 2,
+                }} />
+                {/* Level bar */}
                 <div style={{
                   height: '100%',
                   width: `${Math.min(100, audioLevel)}%`,
-                  background: audioLevel > 40 ? '#ef4444' : audioLevel > 15 ? '#22c55e' : '#6b7280',
+                  background: audioLevel > 40 ? '#ef4444' : audioLevel > 5 ? '#22c55e' : '#6b7280',
                   transition: 'width 0.05s',
                 }} />
+                {/* Level text */}
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  color: audioLevel > 30 ? 'white' : 'var(--dpgen-text)',
+                  pointerEvents: 'none',
+                }}>
+                  {audioLevel.toFixed(0)}%
+                </div>
               </div>
               
-              {/* Hit Counter */}
+              {/* Hit Counter with animation */}
               {autoCalActive && (
                 <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ fontSize: '2rem', fontWeight: 700 }}>{autoCalHits.length}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>hits detected</div>
+                  <div style={{ 
+                    fontSize: '2.5rem', 
+                    fontWeight: 700,
+                    color: autoCalHits.length > 0 ? '#22c55e' : 'var(--dpgen-text)',
+                    transition: 'transform 0.1s',
+                    transform: autoCalHits.length > 0 ? 'scale(1)' : 'scale(0.9)',
+                  }}>
+                    {autoCalHits.length}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>
+                    hits detected {autoCalHits.length > 0 && `(last: ${(autoCalHits[autoCalHits.length - 1] * 100).toFixed(0)}%)`}
+                  </div>
                 </div>
               )}
               
@@ -488,6 +742,40 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
                 Play along with the clicks. We'll measure your timing and suggest latency adjustment.
               </p>
               
+              {/* Latency Adjustment */}
+              <div style={{ marginBottom: '1rem', textAlign: 'left' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>Latency: {latencyAdjustment}ms</label>
+                  <input
+                    type="number"
+                    min={-500}
+                    max={500}
+                    value={latencyAdjustment}
+                    onChange={(e) => setLatencyAdjustment(Math.max(-500, Math.min(500, parseInt(e.target.value) || 0)))}
+                    disabled={testActive}
+                    style={{
+                      width: '70px',
+                      padding: '2px 6px',
+                      fontSize: '0.75rem',
+                      border: '1px solid var(--dpgen-border)',
+                      borderRadius: '4px',
+                      background: 'var(--dpgen-bg)',
+                      color: 'var(--dpgen-text)',
+                      textAlign: 'right',
+                    }}
+                  />
+                </div>
+                <input
+                  type="range"
+                  min={-500}
+                  max={500}
+                  value={latencyAdjustment}
+                  onChange={(e) => setLatencyAdjustment(parseInt(e.target.value))}
+                  disabled={testActive}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              
               {/* Beat Indicator */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                 {[0, 1, 2, 3].map((i) => (
@@ -511,12 +799,49 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
               
               {/* Test Results */}
               {testStats && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
-                  <span style={{ color: '#22c55e' }}>✓ {testStats.perfect}</span>
-                  <span style={{ color: '#f59e0b' }}>● {testStats.good}</span>
-                  <span style={{ color: '#ef4444' }}>✗ {testStats.off}</span>
-                  <span>Avg: {testStats.avgError > 0 ? '+' : ''}{testStats.avgError}ms</span>
-                </div>
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.8rem' }}>
+                    <span style={{ color: '#22c55e' }}>✓ {testStats.perfect}</span>
+                    <span style={{ color: '#f59e0b' }}>● {testStats.good}</span>
+                    <span style={{ color: '#ef4444' }}>✗ {testStats.off}</span>
+                    <span>Avg: {testStats.avgError > 0 ? '+' : ''}{testStats.avgError}ms</span>
+                  </div>
+                  
+                  {/* Auto-adjust suggestion */}
+                  {!testActive && Math.abs(testStats.avgError) > 10 && (
+                    <div style={{
+                      padding: '0.5rem',
+                      background: 'var(--dpgen-bg)',
+                      borderRadius: '6px',
+                      marginBottom: '0.75rem',
+                      fontSize: '0.8rem',
+                    }}>
+                      <span style={{ color: 'var(--dpgen-muted)' }}>
+                        {testStats.avgError < 0 ? 'Hits are early' : 'Hits are late'} - 
+                      </span>
+                      <button
+                        onClick={() => {
+                          // Add error to compensate: if early (negative), reduce latency; if late (positive), increase
+                          const suggested = Math.round(latencyAdjustment + testStats.avgError);
+                          setLatencyAdjustment(Math.max(-500, Math.min(500, suggested)));
+                        }}
+                        style={{
+                          marginLeft: '0.5rem',
+                          padding: '2px 8px',
+                          background: 'var(--dpgen-primary)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        Set to {Math.round(latencyAdjustment + testStats.avgError)}ms
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
               
               <button
@@ -568,16 +893,88 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
               </div>
               
               <div style={{ marginBottom: '0.75rem' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>Latency: {latencyAdjustment}ms</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--dpgen-muted)' }}>Latency: {latencyAdjustment}ms</label>
+                  <input
+                    type="number"
+                    min={-500}
+                    max={500}
+                    value={latencyAdjustment}
+                    onChange={(e) => setLatencyAdjustment(Math.max(-500, Math.min(500, parseInt(e.target.value) || 0)))}
+                    style={{
+                      width: '70px',
+                      padding: '2px 6px',
+                      fontSize: '0.75rem',
+                      border: '1px solid var(--dpgen-border)',
+                      borderRadius: '4px',
+                      background: 'var(--dpgen-bg)',
+                      color: 'var(--dpgen-text)',
+                      textAlign: 'right',
+                    }}
+                  />
+                </div>
                 <input
                   type="range"
-                  min={-200}
-                  max={200}
+                  min={-500}
+                  max={500}
                   value={latencyAdjustment}
                   onChange={(e) => setLatencyAdjustment(parseInt(e.target.value))}
                   style={{ width: '100%' }}
                 />
               </div>
+              
+              {/* Beat indicator for manual mode */}
+              {manualActive && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: manualBeatIndex === i ? 'var(--dpgen-primary)' : 'var(--dpgen-bg)',
+                      border: '2px solid var(--dpgen-border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: manualBeatIndex === i ? 'white' : 'var(--dpgen-text)',
+                      transition: 'all 0.1s',
+                    }}>
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Timing hits display */}
+              {manualHits.length > 0 && (
+                <div style={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '0.375rem', 
+                  marginBottom: '0.75rem',
+                  justifyContent: 'center',
+                }}>
+                  {manualHits.map((hit, idx) => {
+                    const absError = Math.abs(hit.timingError);
+                    const color = absError <= 25 ? '#22c55e' : absError <= 50 ? '#f59e0b' : '#ef4444';
+                    return (
+                      <div key={idx} style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        background: color + '20',
+                        border: `1px solid ${color}`,
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        color: color,
+                      }}>
+                        {hit.timingError >= 0 ? '+' : ''}{Math.round(hit.timingError)}ms
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               
               {/* Live Level with Zones */}
               <div style={{
@@ -586,7 +983,7 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
                 borderRadius: '6px',
                 overflow: 'hidden',
                 position: 'relative',
-                marginBottom: '0.5rem',
+                marginBottom: '0.75rem',
               }}>
                 {/* Zone markers */}
                 <div style={{ position: 'absolute', left: `${threshold * 100}%`, top: 0, bottom: 0, width: '2px', background: '#22c55e', zIndex: 2 }} />
@@ -608,8 +1005,28 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
                 </div>
               </div>
               
-              <p style={{ fontSize: '0.7rem', color: 'var(--dpgen-muted)', margin: 0 }}>
-                Tap your drum to see the level. Green = normal hit, Red = accent.
+              {/* Play clicks button */}
+              <button
+                onClick={manualActive ? stopManual : startManual}
+                disabled={!selectedDeviceId}
+                style={{
+                  width: '100%',
+                  padding: '0.625rem',
+                  background: manualActive ? '#ef4444' : 'var(--dpgen-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                  marginBottom: '0.5rem',
+                }}
+              >
+                {manualActive ? 'Stop Clicks' : 'Play Clicks to Test'}
+              </button>
+              
+              <p style={{ fontSize: '0.7rem', color: 'var(--dpgen-muted)', margin: 0, textAlign: 'center' }}>
+                Play along with clicks. Adjust latency until timing shows close to 0ms.
               </p>
             </div>
           )}
@@ -653,4 +1070,6 @@ export function MicrophoneCalibration({ onClose, onApply }: MicrophoneCalibratio
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

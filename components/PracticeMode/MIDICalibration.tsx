@@ -1,13 +1,14 @@
 /**
  * MIDI Latency Calibration Component
  * Helps users calibrate their MIDI device latency
+ * Uses React Portal to render above other modals
  */
 
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
-// Make sure useEffect is imported if not already
 import { useStore } from '@/store/useStore';
 import { useMIDIDevices } from '@/hooks/useMIDIDevices';
 import { CONSTANTS } from '@/lib/utils/constants';
@@ -707,7 +708,15 @@ export function MIDICalibration({ onClose, mode = 'practice' }: MIDICalibrationP
     onClose();
   };
 
-  return (
+  // Use portal to render at document body level, above other modals
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  const modalContent = (
     <div
       style={{
         position: 'fixed',
@@ -715,11 +724,12 @@ export function MIDICalibration({ onClose, mode = 'practice' }: MIDICalibrationP
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
+        background: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(2px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1001,
+        zIndex: 10000,
       }}
       onClick={() => {
         // Stop calibration before closing
@@ -1006,5 +1016,6 @@ export function MIDICalibration({ onClose, mode = 'practice' }: MIDICalibrationP
       </div>
     </div>
   );
-}
 
+  return createPortal(modalContent, document.body);
+}

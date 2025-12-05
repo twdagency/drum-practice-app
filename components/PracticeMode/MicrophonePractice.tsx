@@ -53,18 +53,7 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
   const { devices, error, isSupported, requestAccess, refreshDevices } = useMicrophoneDevices();
 
   const [showCalibration, setShowCalibration] = useState(false);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('dpgen_microphone_practice_settings');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          return parsed.deviceId || '';
-        }
-      } catch (e) {}
-    }
-    return '';
-  });
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [toleranceWindow, setToleranceWindow] = useState<string>('50');
   const [customTolerance, setCustomTolerance] = useState<number>(50);
   const [latencyAdjustment, setLatencyAdjustment] = useState<number>(0);
@@ -80,19 +69,6 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
     setThreshold(microphonePractice.threshold);
   }, [microphonePractice.accuracyWindow, microphonePractice.latencyAdjustment, microphonePractice.sensitivity, microphonePractice.threshold]);
 
-  // Reload device from localStorage when modal opens
-  useEffect(() => {
-    if (isOpen && typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('dpgen_microphone_practice_settings');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.deviceId) setSelectedDeviceId(parsed.deviceId);
-        }
-      } catch (e) {}
-    }
-  }, [isOpen]);
-
   // Request mic access on mount
   useEffect(() => {
     if (isSupported && devices.length === 0) {
@@ -100,47 +76,158 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
     }
   }, [isSupported, devices.length, requestAccess]);
 
-  // Auto-select persisted device
+  // Load saved device when devices become available
+  // This runs after requestAccess() gets real device IDs (not placeholders)
   useEffect(() => {
-    if (selectedDeviceId && devices.length > 0 && !microphonePractice.analyser) {
-      const deviceExists = devices.some(d => d.deviceId === selectedDeviceId);
-      if (deviceExists) {
-        handleDeviceSelect(selectedDeviceId).catch(() => {});
-      }
-    }
-  }, [selectedDeviceId, devices.length, microphonePractice.analyser]);
-
-  // Sync device to localStorage
-  useEffect(() => {
-    if (selectedDeviceId && typeof window !== 'undefined') {
-      try {
-        const existing = localStorage.getItem('dpgen_microphone_practice_settings');
-        const settings = existing ? JSON.parse(existing) : {};
-        if (settings.deviceId !== selectedDeviceId) {
-          settings.deviceId = selectedDeviceId;
-          localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
+    if (devices.length === 0) return;
+    if (selectedDeviceId) return; // Already have a selection
+    
+    try {
+      const saved = localStorage.getItem('dpgen_microphone_practice_settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        console.log('[MIC] Trying to restore saved device:', parsed);
+        console.log('[MIC] Available devices:', devices.map(d => ({ id: d.deviceId, label: d.label })));
+        
+        // Try to match by deviceId first
+        if (parsed.deviceId) {
+          const matchById = devices.find(d => d.deviceId === parsed.deviceId);
+          if (matchById) {
+            console.log('[MIC] Matched by deviceId:', matchById.label);
+            setSelectedDeviceId(matchById.deviceId);
+            return;
+          }
         }
-      } catch (e) {}
+        
+        // Try to match by label (device IDs can change between sessions)
+        if (parsed.deviceLabel) {
+          const matchByLabel = devices.find(d => d.label === parsed.deviceLabel);
+          if (matchByLabel) {
+            console.log('[MIC] Matched by label:', matchByLabel.label);
+            setSelectedDeviceId(matchByLabel.deviceId);
+            // Update saved deviceId
+            const settings = { ...parsed, deviceId: matchByLabel.deviceId };
+            localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
+            return;
+          }
+          
+          // Try partial label match (sometimes labels have extra info)
+          const partialMatch = devices.find(d => 
+            d.label.includes(parsed.deviceLabel) || parsed.deviceLabel.includes(d.label)
+          );
+          if (partialMatch) {
+            console.log('[MIC] Matched by partial label:', partialMatch.label);
+            setSelectedDeviceId(partialMatch.deviceId);
+            const settings = { ...parsed, deviceId: partialMatch.deviceId, deviceLabel: partialMatch.label };
+            localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
+            return;
+          }
+        }
+        
+        console.log('[MIC] No match found for saved device');
+      }
+    } catch (e) {
+      console.error('[MIC] Error loading saved device:', e);
     }
-  }, [selectedDeviceId]);
+    
+    // No valid saved device found - if only one device, auto-select it
+    if (devices.length === 1) {
+      console.log('[MIC] Auto-selecting only available device:', devices[0].label);
+      setSelectedDeviceId(devices[0].deviceId);
+    }
+  }, [devices, selectedDeviceId]);
+
+  // Sync device to localStorage (with label for fallback matching)
+  useEffect(() => {
+    if (!selectedDeviceId || typeof window === 'undefined') return;
+    
+    const device = devices.find(d => d.deviceId === selectedDeviceId);
+    if (!device) return; // Wait until we have device info
+    
+    try {
+      const existing = localStorage.getItem('dpgen_microphone_practice_settings');
+      const settings = existing ? JSON.parse(existing) : {};
+      
+      // Only save if something changed
+      if (settings.deviceId !== selectedDeviceId || settings.deviceLabel !== device.label) {
+        settings.deviceId = selectedDeviceId;
+        settings.deviceLabel = device.label;
+        localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
+        console.log('[MIC] Saved device to localStorage:', { deviceId: selectedDeviceId, deviceLabel: device.label });
+      }
+    } catch (e) {
+      console.error('[MIC] Error saving device to localStorage:', e);
+    }
+  }, [selectedDeviceId, devices]);
 
   const handleDeviceSelect = async (deviceId: string) => {
     setSelectedDeviceId(deviceId);
+    
+    // Find device label for fallback matching (device IDs can change between sessions)
+    const device = devices.find(d => d.deviceId === deviceId);
+    const deviceLabel = device?.label || '';
     
     if (typeof window !== 'undefined') {
       try {
         const existing = localStorage.getItem('dpgen_microphone_practice_settings');
         const settings = existing ? JSON.parse(existing) : {};
         settings.deviceId = deviceId;
+        settings.deviceLabel = deviceLabel; // Save label for fallback matching
         localStorage.setItem('dpgen_microphone_practice_settings', JSON.stringify(settings));
       } catch (e) {}
     }
     
+    let stream: MediaStream | null = null;
+    
+    // Try multiple approaches to get microphone access
+    // 1. Try exact deviceId (best)
+    // 2. Try preferred deviceId (may fallback to another device)
+    // 3. Try any audio device
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      console.log('[MIC] Trying exact deviceId:', deviceId);
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: { deviceId: { exact: deviceId } },
       });
+      console.log('[MIC] Success with exact deviceId');
+    } catch (exactErr) {
+      console.warn('[MIC] Exact deviceId failed, trying preferred:', exactErr);
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: deviceId },
+        });
+        console.log('[MIC] Success with preferred deviceId');
+      } catch (preferredErr) {
+        console.warn('[MIC] Preferred deviceId failed, trying any device:', preferredErr);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          console.log('[MIC] Success with any audio device');
+          // Update the selected device to match what we actually got
+          if (stream.getAudioTracks().length > 0) {
+            const track = stream.getAudioTracks()[0];
+            const actualDeviceId = track.getSettings().deviceId;
+            if (actualDeviceId && actualDeviceId !== deviceId) {
+              console.log('[MIC] Using different device:', actualDeviceId);
+              // Find the actual device in our list
+              const actualDevice = devices.find(d => d.deviceId === actualDeviceId);
+              if (actualDevice) {
+                setSelectedDeviceId(actualDevice.deviceId);
+              }
+            }
+          }
+        } catch (anyErr) {
+          console.error('[MIC] All attempts failed:', anyErr);
+          alert('Failed to access microphone. Please check permissions and try again.');
+          return;
+        }
+      }
+    }
 
+    if (!stream) {
+      alert('Failed to access microphone. Please check permissions.');
+      return;
+    }
+
+    try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       if (audioContext.state === 'suspended') await audioContext.resume();
       
@@ -156,8 +243,9 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
       setMicrophoneAnalyser(analyser);
       setMicrophoneSource(source);
     } catch (err) {
-      console.error('Failed to access microphone:', err);
-      alert('Failed to access microphone. Please check permissions.');
+      console.error('[MIC] Failed to setup audio context:', err);
+      stream.getTracks().forEach(track => track.stop());
+      alert('Failed to setup microphone audio processing.');
     }
   };
 

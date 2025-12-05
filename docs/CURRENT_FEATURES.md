@@ -334,9 +334,9 @@
 
 ## ⚠️ Known Issues
 
-- **CommandPalette**: Infinite loop bug (currently disabled/conditional)
-- **Stripe Webhooks**: Database updates need implementation
-- **Discount Code**: PRACTICE20 code needs checkout integration
+- ~~**CommandPalette**: Infinite loop bug~~ ✅ FIXED
+- ~~**Stripe Webhooks**: Database updates need implementation~~ ✅ DONE
+- ~~**Discount Code**: PRACTICE20 code needs checkout integration~~ ✅ DONE
 - **Demo Video**: Video button exists but video not yet created
 
 ---

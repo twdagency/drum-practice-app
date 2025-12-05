@@ -286,27 +286,30 @@ export function Stave() {
         // This matches patterns like "lllR", "rrrL", "lllL", "rrrR"
         return /(lll|rrr)[RL]/i.test(stickingPattern);
       };
-      
-      // Helper function to get bars per line based on subdivision and pattern
-      const getBarsPerLine = (subdivision: number, stickingPattern?: string): number => {
-        // On mobile, always show 1 bar per line to ensure it fits
+
+      // Helper function to get bars per line - SIMPLE approach
+      // Fewer notes = more bars per line, more notes = fewer bars per line
+      const getBarsPerLine = (subdivision: number, stickingPattern?: string, timeSignature: string = '4/4'): number => {
+        // On mobile, always show 1 bar per line
         if (isMobile) {
           return 1;
         }
         
-        // If pattern has triple drags (lllR, rrrL) and subdivision is 8 or higher, force 1 bar per line
+        // If pattern has triple drags (lllR, rrrL), force 1 bar per line
         if (stickingPattern && hasTripleDrags(stickingPattern) && subdivision >= 8) {
           return 1;
         }
         
+        // Simple limits based on subdivision density
+        // These ensure patterns fit within the container without scrolling
         switch (subdivision) {
-          case 4: return 4;   // Quarter notes: 4 bars
-          case 8: return 3;   // Eighth notes: 3 bars
-          case 12: return 3;  // Triplets (eighth note triplets): 3 bars
-          case 16: return 2;  // Sixteenth notes: 2 bars
-          case 24: return 2;  // Sextuplets (sixteenth note sextuplets): 2 bars
-          case 32: return 1;  // Thirty-second notes: 1 bar
-          default: return 2;  // Default to 2 bars for unknown subdivisions
+          case 4: return 4;   // Quarter notes: 4 notes/bar → 4 bars fit
+          case 8: return 2;   // 8th notes: 8 notes/bar → 2 bars fit
+          case 12: return 1;  // Triplets: 12 notes/bar → 1 bar
+          case 16: return 1;  // 16th notes: 16 notes/bar → 1 bar
+          case 24: return 1;  // Sextuplets: 24 notes/bar → 1 bar
+          case 32: return 1;  // 32nd notes: 32 notes/bar → 1 bar
+          default: return 1;  // Default to 1 bar for safety
         }
       };
       
@@ -478,7 +481,8 @@ export function Stave() {
         allBarData.forEach((barData) => {
           const barSubdivision = barData.pattern.subdivision;
           const stickingPattern = barData.pattern.stickingPattern || '';
-          const barsPerLineForSubdivision = getBarsPerLine(barSubdivision, stickingPattern);
+          const timeSignature = barData.pattern.timeSignature || '4/4';
+          const barsPerLineForSubdivision = getBarsPerLine(barSubdivision, stickingPattern, timeSignature);
           
           // If this bar has a different subdivision, start a new line
           if (currentSubdivision !== null && currentSubdivision !== barSubdivision) {
@@ -588,14 +592,23 @@ export function Stave() {
         rendererRef.current.resize(rendererWidth, totalHeight);
         context = rendererRef.current.getContext();
         
-        // For horizontal modes, ensure the SVG element has the correct width attribute
-        if (renderHorizontally && context && context.svg) {
+        // Set SVG width based on mode
+        if (context && context.svg) {
           const svgElement = context.svg;
-          svgElement.setAttribute('width', String(rendererWidth));
-          svgElement.style.width = `${rendererWidth}px`;
-          svgElement.style.maxWidth = 'none';
-          svgElement.style.minWidth = `${rendererWidth}px`;
-          console.log('[Horizontal Scroll] SVG width set to:', rendererWidth, 'actual SVG width:', svgElement.getAttribute('width'));
+          if (renderHorizontally) {
+            // Horizontal mode: allow SVG to be wider than container
+            svgElement.setAttribute('width', String(rendererWidth));
+            svgElement.style.width = `${rendererWidth}px`;
+            svgElement.style.maxWidth = 'none';
+            svgElement.style.minWidth = `${rendererWidth}px`;
+            console.log('[Horizontal Scroll] SVG width set to:', rendererWidth);
+          } else {
+            // Vertical mode: constrain SVG to container width - NO horizontal scroll
+            svgElement.setAttribute('width', String(rendererWidth));
+            svgElement.style.width = '100%';
+            svgElement.style.maxWidth = '100%';
+            svgElement.style.minWidth = 'auto';
+          }
         }
         if (!context) {
           console.error('Failed to get context from renderer');
@@ -662,13 +675,14 @@ export function Stave() {
             console.log('[Horizontal Scroll] Fallback calculated width:', actualStaveWidth);
           }
         } else {
-          // Vertical mode: use container width
+          // Vertical mode: stave fills the available container width
+          // Notes will be evenly distributed within this width
           actualStaveWidth = staveWidth - leftMargin - rightMargin;
         }
         
         // Safety check: ensure stave width is positive and reasonable
         if (actualStaveWidth <= 0 || !isFinite(actualStaveWidth)) {
-          console.warn('[Horizontal Scroll] Invalid stave width:', actualStaveWidth, 'using fallback. renderHorizontally:', renderHorizontally, 'calculatedStaveWidth:', calculatedStaveWidth, 'lineBars.length:', lineBars.length, 'staveWidth:', staveWidth);
+          console.warn('[Stave] Invalid stave width:', actualStaveWidth, 'using fallback');
           actualStaveWidth = Math.max(200, staveWidth - leftMargin - rightMargin);
         }
         
@@ -831,16 +845,17 @@ export function Stave() {
                 leftStave.setContext(context).draw();
                 
                 // Format and draw right voice on its own stave
-              const formatter = new VF.Formatter();
+                const formatter = new VF.Formatter();
                 formatter.joinVoices([rightVoice]);
-              const formatWidth = Math.max(200, actualStaveWidth - 120);
-                formatter.format([rightVoice], formatWidth, { align_rests: false });
+                const rightFormatWidth = Math.max(150, rightStave.getNoteEndX() - rightStave.getNoteStartX() - 20);
+                formatter.format([rightVoice], rightFormatWidth, { align_rests: false });
                 rightVoice.draw(context, rightStave);
                 
                 // Format and draw left voice on its own stave
                 const leftFormatter = new VF.Formatter();
                 leftFormatter.joinVoices([leftVoice]);
-                leftFormatter.format([leftVoice], formatWidth, { align_rests: false });
+                const leftFormatWidth = Math.max(150, leftStave.getNoteEndX() - leftStave.getNoteStartX() - 20);
+                leftFormatter.format([leftVoice], leftFormatWidth, { align_rests: false });
                 leftVoice.draw(context, leftStave);
                 
                 // Draw tuplet bracket if needed
@@ -869,6 +884,16 @@ export function Stave() {
                 const rightStaveBottom = staveY + 80; // Well below the stave bottom line
                 // Left stave bottom: same calculation but starting from second stave position
                 const leftStaveBottom = staveY + staveSpacing + 80;
+                
+                // Derive sticking labels from polyrhythm limb assignments
+                const limbToStickingMap: Record<string, string> = {
+                  'right-hand': 'R',
+                  'left-hand': 'L',
+                  'right-foot': 'RF',
+                  'left-foot': 'LF',
+                };
+                const rightSticking = limbToStickingMap[polyrhythmPattern.rightRhythm.limb] || 'R';
+                const leftSticking = limbToStickingMap[polyrhythmPattern.leftRhythm.limb] || 'L';
                 
                 // Get note x positions from rendered notes (add small offset to center under note head)
                 if (rightVoiceNotes && rightVoiceNotes.length > 0) {
@@ -1009,17 +1034,17 @@ export function Stave() {
                 // For stacked mode, format voices SEPARATELY then draw on same stave
                 // VexFlow's joinVoices requires matching tick counts, which polyrhythms don't have
                 if (polyrhythmDisplayMode === 'stacked') {
-                  const formatWidth = Math.max(200, actualStaveWidth - 120);
+                  const stackedFormatWidth = Math.max(150, stave.getNoteEndX() - stave.getNoteStartX() - 20);
                   
                   // Format each voice independently - don't join them
                   // This allows different tick counts (e.g., 3 notes vs 2 notes)
                   const rightFormatter = new VF.Formatter();
                   rightFormatter.joinVoices([rightVoice]);
-                  rightFormatter.format([rightVoice], formatWidth);
+                  rightFormatter.format([rightVoice], stackedFormatWidth);
                   
                   const leftFormatter = new VF.Formatter();
                   leftFormatter.joinVoices([leftVoice]);
-                  leftFormatter.format([leftVoice], formatWidth);
+                  leftFormatter.format([leftVoice], stackedFormatWidth);
                   
                   // Draw both voices on the same stave
                   // Notes will overlap at different positions based on their timing
@@ -1124,8 +1149,8 @@ export function Stave() {
                 } else {
                   // Not stacked mode: use separate voices
                   formatter.joinVoices([rightVoice, leftVoice]);
-                  const formatWidth = Math.max(200, actualStaveWidth - 120);
-                  formatter.format([rightVoice, leftVoice], formatWidth, { align_rests: false });
+                  const polyFormatWidth = Math.max(150, stave.getNoteEndX() - stave.getNoteStartX() - 20);
+                  formatter.format([rightVoice, leftVoice], polyFormatWidth, { align_rests: false });
                   rightVoice.draw(context, stave);
                   leftVoice.draw(context, stave);
                   
@@ -1396,11 +1421,15 @@ export function Stave() {
           try {
             const formatter = new VF.Formatter();
             formatter.joinVoices([voice]);
-            // Format to fit within the stave width, leaving space for clef and time signature
-            // For horizontal mode, use the full width (minus margins for clef/time sig)
-            const formatWidth = Math.max(200, actualStaveWidth - 120); // Minimum 200px for formatting
+            
+            // Use VexFlow's getNoteStartX and getNoteEndX for accurate positioning
+            // This ensures notes are placed within the stave bounds
+            const noteStartX = stave.getNoteStartX();
+            const noteEndX = stave.getNoteEndX();
+            const formatWidth = Math.max(150, noteEndX - noteStartX - 20); // Leave small margin
+            
             if (renderHorizontally) {
-              console.log('[Horizontal Scroll] Formatting with width:', formatWidth, 'actualStaveWidth:', actualStaveWidth, 'tickables:', lineTickables.length);
+              console.log('[Horizontal Scroll] Formatting with width:', formatWidth, 'actualStaveWidth:', actualStaveWidth, 'noteStartX:', noteStartX, 'noteEndX:', noteEndX, 'tickables:', lineTickables.length);
             }
             formatter.format([voice], formatWidth, { align_rests: false });
             voice.draw(context, stave);
@@ -1420,15 +1449,15 @@ export function Stave() {
                 if (stave) {
                   try {
                     // Find the stave element we just drew by matching its position
-                    const allStaves = Array.from(svgElement.querySelectorAll('.vf-stave')) as SVGElement[];
-                    const currentStaveEl = allStaves[allStaves.length - 1] as SVGElement; // Get the last stave (most recently drawn)
+                    const allStaves = Array.from(svgElement.querySelectorAll('.vf-stave')) as SVGGraphicsElement[];
+                    const currentStaveEl = allStaves[allStaves.length - 1] as SVGGraphicsElement; // Get the last stave (most recently drawn)
                     
                     if (currentStaveEl) {
                       const staveBBox = currentStaveEl.getBBox();
                       const absoluteY = staveBBox.y + staveBBox.height + 30; // 30px below stave
                       
                       // Find all notes in THIS stave only - check if note center is within stave bounds
-                      const allNoteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+                      const allNoteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGGraphicsElement[];
                       allNoteGroups.forEach((noteGroup) => {
                         // Check if this note belongs to this stave
                         const noteBBox = noteGroup.getBBox();
@@ -1478,7 +1507,7 @@ export function Stave() {
                 // Mark ghost notes in the DOM after rendering and add parentheses as SVG text
                 if (svgElement) {
                 // Find all note groups and mark ghost notes, then add parentheses
-                const noteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGElement[];
+                const noteGroups = Array.from(svgElement.querySelectorAll('.vf-stavenote')) as SVGGraphicsElement[];
                 let noteIndexInLine = 0;
                 lineBars.forEach((barData) => {
                   const ghostIndices = (barData as any).ghostNoteIndices || [];
@@ -3506,7 +3535,8 @@ export function Stave() {
           height: 'auto',
           minHeight: '400px',
           maxHeight: '70vh', // Limit height to allow vertical scrolling
-          overflow: 'auto', 
+          overflowX: needsHorizontalScroll ? 'auto' : 'hidden', // Only horizontal scroll in horizontal mode
+          overflowY: 'auto', // Always allow vertical scrolling for multiple lines
           maxWidth: needsHorizontalScroll ? 'none' : '100%', // Allow overflow in horizontal modes
           minWidth: needsHorizontalScroll ? '100%' : 'auto', // Ensure minimum width
         }} 

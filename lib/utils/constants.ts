@@ -6,7 +6,7 @@ export const CONSTANTS = {
   TIMING: {
     PERFECT_HIT_THRESHOLD: 5, // ms - perfect hit window
     DEFAULT_TOLERANCE: 50, // ms - default accuracy window
-    HIT_COOLDOWN: 50, // ms - minimum time between hits
+    HIT_COOLDOWN: 100, // ms - mask time between hits (allows 16th notes at 120+ BPM while filtering resonance)
     CACHE_TTL: 100, // ms - note refs cache TTL
     LATENCY_TEST_SAMPLES: 5, // number of hits for latency test
     LATENCY_ADJUSTMENT_MIN: -300, // ms

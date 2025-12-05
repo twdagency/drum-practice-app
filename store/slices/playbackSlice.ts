@@ -3,7 +3,7 @@
  */
 
 import { StateCreator } from 'zustand';
-import { ClickSoundType, Volumes } from '@/types';
+import { ClickSoundType, Volumes, DrumKitId } from '@/types';
 
 // Load persisted audio/playback settings from localStorage (client-side only)
 const loadPersistedPlaybackSettings = () => {
@@ -60,6 +60,7 @@ export interface PlaybackSlice {
   tempoRampSteps: number;
   progressiveMode: boolean;
   infiniteLoop: boolean;
+  drumKit: DrumKitId;
 
   // Actions
   setBPM: (bpm: number) => void;
@@ -88,6 +89,7 @@ export interface PlaybackSlice {
   setTempoRampSteps: (steps: number) => void;
   setProgressiveMode: (enabled: boolean) => void;
   setInfiniteLoop: (enabled: boolean) => void;
+  setDrumKit: (kit: DrumKitId) => void;
 }
 
 export const createPlaybackSlice: StateCreator<PlaybackSlice> = (set, get) => ({
@@ -122,6 +124,7 @@ export const createPlaybackSlice: StateCreator<PlaybackSlice> = (set, get) => ({
   tempoRampSteps: 4,
   progressiveMode: false,
   infiniteLoop: false,
+  drumKit: 'acoustic', // Default drum kit
 
   // Actions
   setBPM: (bpm) => {
@@ -249,6 +252,12 @@ export const createPlaybackSlice: StateCreator<PlaybackSlice> = (set, get) => ({
   setInfiniteLoop: (enabled) => {
     set({ infiniteLoop: enabled });
     savePlaybackSettings({ infiniteLoop: enabled });
+  },
+  setDrumKit: (kit) => {
+    set({ drumKit: kit });
+    savePlaybackSettings({ drumKit: kit });
+    // Note: The audio loader will need to reload samples when kit changes
+    // This is handled by the useAudioLoader hook
   },
 });
 

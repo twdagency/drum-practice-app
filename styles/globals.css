@@ -869,13 +869,14 @@ textarea:focus-visible {
   
   /* Stave mobile */
   .dpgen-stave {
-    overflow-x: auto;
+    /* overflow controlled by inline styles based on scroll mode */
     -webkit-overflow-scrolling: touch;
     padding: 0.5rem !important;
   }
   
   .dpgen-stave__surface {
-    min-width: 100%;
+    min-width: auto;
+    max-width: 100%;
   }
   
   /* Visual metronome mobile */

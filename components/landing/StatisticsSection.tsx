@@ -118,3 +118,7 @@ export function StatisticsSection() {
     </section>
   );
 }
+
+
+
+

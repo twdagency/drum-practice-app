@@ -2,7 +2,7 @@
  * Audio loading utilities for drum sounds
  */
 
-import { AudioBuffers } from '@/types';
+import { AudioBuffers, DrumKitId, getDrumKit, getSamplePath, DRUM_KITS } from '@/types';
 
 /**
  * Load an audio file and return as AudioBuffer
@@ -26,51 +26,111 @@ export async function loadAudioBuffer(
 }
 
 /**
- * Load all drum sound audio buffers
+ * Get legacy (flat) sample path
+ */
+function getLegacySamplePath(sample: string): string {
+  const sampleMap: Record<string, string> = {
+    'snare': 'snare.wav',
+    'kick': 'kick.wav',
+    'hiHat': 'hihat.wav',
+    'highTom': 'high-tom.wav',
+    'midTom': 'mid-tom.wav',
+    'floor': 'floor.wav',
+    'crash': 'crash.wav',
+    'ride': 'ride.wav',
+  };
+  return `/sounds/${sampleMap[sample] || sample + '.wav'}`;
+}
+
+/**
+ * Load audio buffer with fallback to default kit and legacy paths
+ */
+async function loadSampleWithFallback(
+  audioContext: AudioContext,
+  kitId: DrumKitId,
+  sample: 'snare' | 'kick' | 'hiHat' | 'highTom' | 'midTom' | 'floor' | 'crash' | 'ride'
+): Promise<AudioBuffer | null> {
+  const kit = getDrumKit(kitId);
+  const primaryPath = getSamplePath(kit, sample);
+  const legacyPath = getLegacySamplePath(sample);
+  
+  // Try paths in order: kit folder → legacy flat folder
+  const pathsToTry = [primaryPath];
+  
+  // If not acoustic kit, also try acoustic folder
+  if (kitId !== 'acoustic') {
+    const acousticKit = getDrumKit('acoustic');
+    pathsToTry.push(getSamplePath(acousticKit, sample));
+  }
+  
+  // Always add legacy path as final fallback
+  pathsToTry.push(legacyPath);
+  
+  for (const path of pathsToTry) {
+    try {
+      return await loadAudioBuffer(audioContext, path);
+    } catch {
+      // Continue to next path
+    }
+  }
+  
+  console.warn(`[AudioLoader] Could not load ${sample} from any source`);
+  return null;
+}
+
+/**
+ * Load all drum sound audio buffers for a specific kit
  */
 export async function loadAllAudioBuffers(
-  audioContext: AudioContext
+  audioContext: AudioContext,
+  kitId: DrumKitId = 'acoustic'
 ): Promise<AudioBuffers> {
-  const [snare, kick, tom, highTom, midTom, floor, hiHat, crash, ride] = await Promise.all([
-    loadAudioBuffer(audioContext, '/sounds/snare.wav'),
-    loadAudioBuffer(audioContext, '/sounds/kick.wav'),
-    loadAudioBuffer(audioContext, '/sounds/tom.wav').catch(() => null), // Legacy - fallback if doesn't exist
-    loadAudioBuffer(audioContext, '/sounds/high-tom.wav'),
-    loadAudioBuffer(audioContext, '/sounds/mid-tom.wav'),
-    loadAudioBuffer(audioContext, '/sounds/floor.wav'),
-    loadAudioBuffer(audioContext, '/sounds/hihat.wav'),
-    loadAudioBuffer(audioContext, '/sounds/crash.wav').catch((err) => {
-      console.warn('Failed to load crash.wav, will use hiHat as fallback:', err);
-      return null;
-    }), // Crash cymbal - fallback to null if doesn't exist
-    loadAudioBuffer(audioContext, '/sounds/ride.wav').catch((err) => {
-      console.warn('Failed to load ride.wav, will use hiHat as fallback:', err);
-      return null;
-    }), // Ride cymbal - fallback to null if doesn't exist
+  console.log(`[AudioLoader] Loading drum kit: ${kitId}`);
+  
+  const kit = getDrumKit(kitId);
+  
+  // First try to load from the selected kit's folder
+  // If files don't exist, fall back to default/legacy sounds
+  const [snare, kick, highTom, midTom, floor, hiHat, crash, ride] = await Promise.all([
+    loadSampleWithFallback(audioContext, kitId, 'snare'),
+    loadSampleWithFallback(audioContext, kitId, 'kick'),
+    loadSampleWithFallback(audioContext, kitId, 'highTom'),
+    loadSampleWithFallback(audioContext, kitId, 'midTom'),
+    loadSampleWithFallback(audioContext, kitId, 'floor'),
+    loadSampleWithFallback(audioContext, kitId, 'hiHat'),
+    loadSampleWithFallback(audioContext, kitId, 'crash'),
+    loadSampleWithFallback(audioContext, kitId, 'ride'),
   ]);
 
-  console.log('Audio buffers loaded:', {
+  console.log(`[AudioLoader] Kit "${kit.name}" loaded:`, {
     snare: snare ? '✓' : '✗',
     kick: kick ? '✓' : '✗',
     highTom: highTom ? '✓' : '✗',
     midTom: midTom ? '✓' : '✗',
     floor: floor ? '✓' : '✗',
     hiHat: hiHat ? '✓' : '✗',
-    crash: crash ? '✓' : '✗ (will use hiHat)',
-    ride: ride ? '✓' : '✗ (will use hiHat)',
+    crash: crash ? '✓' : '✗',
+    ride: ride ? '✓' : '✗',
   });
 
   return {
-    snare,
-    kick,
-    tom: tom || highTom, // Use highTom as fallback for legacy tom
-    highTom,
-    midTom,
-    floor,
-    hiHat,
-    crash: crash || hiHat, // Fallback to hiHat if crash doesn't exist
-    ride: ride || hiHat, // Fallback to hiHat if ride doesn't exist
+    snare: snare!,
+    kick: kick!,
+    tom: highTom!, // Legacy tom uses highTom
+    highTom: highTom!,
+    midTom: midTom!,
+    floor: floor!,
+    hiHat: hiHat!,
+    crash: crash || hiHat!, // Fallback to hiHat if crash doesn't exist
+    ride: ride || hiHat!, // Fallback to hiHat if ride doesn't exist
   };
+}
+
+/**
+ * Get available drum kits
+ */
+export function getAvailableKits() {
+  return DRUM_KITS;
 }
 
 /**

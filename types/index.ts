@@ -5,6 +5,7 @@
 export * from './pattern';
 export * from './practice';
 export * from './audio';
+export * from './drumKit';
 
 /**
  * Main application state type
