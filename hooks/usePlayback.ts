@@ -498,8 +498,8 @@ export function usePlayback() {
     console.log(`[Polyrhythm Scheduling] Left positions:`, positions.leftPositions);
     console.log(`[Polyrhythm Scheduling] Alignments:`, positions.alignments);
     
-    // Calculate timing
-    const beatsPerMinute = bpm;
+    // Calculate timing - read BPM from store to get fresh value
+    const beatsPerMinute = useStore.getState().bpm;
     const secondsPerBeat = 60.0 / beatsPerMinute;
 
     // Voice to sound mapping
@@ -965,7 +965,9 @@ export function usePlayback() {
       nextGlobalNoteIndex: currentGlobalNoteIndex,
       nextCumulativeTime: currentCumulativeTime,
     };
-  }, [bpm, slowMotionEnabled, slowMotionSpeed, clickMode, metronomeOnlyMode, playDrumSounds, silentPracticeMode, polyrhythmClickMode]);
+  // Note: bpm is read from store dynamically to prevent playback restarts
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slowMotionEnabled, slowMotionSpeed, clickMode, metronomeOnlyMode, playDrumSounds, silentPracticeMode, polyrhythmClickMode]);
 
   /**
    * Calculate BPM for a given loop number (for tempo ramping)
@@ -1347,8 +1349,17 @@ export function usePlayback() {
       });
     }
 
+    // Store the total pattern duration on the last note for loop timing
+    // This ensures loops restart at the right time (after full measures, not just last note)
+    if (scheduledNotes.length > 0) {
+      (scheduledNotes[scheduledNotes.length - 1] as any).totalPatternDuration = cumulativeTime;
+    }
+
     return scheduledNotes;
-  }, [patterns, polyrhythmPatterns, bpm, slowMotionEnabled, slowMotionSpeed, playBackwards, loopMeasures, metronomeOnlyMode, playDrumSounds, silentPracticeMode, clickMode, getCurrentBPM, calculatePolyrhythmScheduledNotes, tempoRamping]);
+  // Note: bpm is intentionally NOT in deps - we read it dynamically via getCurrentBPM to prevent
+  // playback restarts when BPM changes (e.g., during routine tempo progression)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patterns, polyrhythmPatterns, slowMotionEnabled, slowMotionSpeed, playBackwards, loopMeasures, metronomeOnlyMode, playDrumSounds, silentPracticeMode, clickMode, getCurrentBPM, calculatePolyrhythmScheduledNotes, tempoRamping]);
 
   /**
    * Evaluate performance for progressive mode and adjust difficulty
@@ -1372,18 +1383,24 @@ export function usePlayback() {
     }
     
     // Calculate performance metrics
+    // Penalize extra hits to prevent "spam to win" strategy
     let accuracy = 0;
     let totalNotes = 0;
     let matchedNotes = 0;
+    let extraHits = 0;
     
     if (midiPractice.enabled) {
       totalNotes = midiPractice.expectedNotes.length;
       matchedNotes = midiPractice.expectedNotes.filter(n => n.matched).length;
-      accuracy = totalNotes > 0 ? matchedNotes / totalNotes : 0;
+      extraHits = midiPractice.actualHits.filter(h => h.isExtraHit).length;
+      const denominator = totalNotes + extraHits;
+      accuracy = denominator > 0 ? matchedNotes / denominator : 0;
     } else if (microphonePractice.enabled) {
       totalNotes = microphonePractice.expectedNotes.length;
       matchedNotes = microphonePractice.expectedNotes.filter(n => n.matched).length;
-      accuracy = totalNotes > 0 ? matchedNotes / totalNotes : 0;
+      extraHits = microphonePractice.actualHits.filter(h => h.isExtraHit).length;
+      const denominator = totalNotes + extraHits;
+      accuracy = denominator > 0 ? matchedNotes / denominator : 0;
     }
     
     // Progressive mode logic: Adjust difficulty based on performance
@@ -1521,26 +1538,21 @@ export function usePlayback() {
     // console.log('First note time:', scheduledNotes[0]?.time, 'Last note time:', scheduledNotes[scheduledNotes.length - 1]?.time);
 
     // Schedule all notes using setTimeout
-    // For loop restarts with presetStartTime, use presetStartTime as the reference point
-    // to ensure the first note plays at the exact time the previous loop ended
-    // For new playback, use currentTime as the reference
-    const schedulingTime = presetStartTime !== undefined 
-      ? presetStartTime  // Use preset time as reference for seamless looping
-      : currentTime;      // Use current time for new playback
-    
+    // Always calculate timeouts relative to currentTime (when we're scheduling)
+    // The presetStartTime is used to set startTimeRef.current for correct absolute timing
+    // but timeouts must be relative to now
     scheduledNotes.forEach((note, idx) => {
       const noteAbsoluteTime = startTimeRef.current! + note.time;
-      // Calculate timeout relative to schedulingTime
-      // For presetStartTime, this ensures notes play at the correct absolute times
-      // For new playback, this ensures notes play relative to when we started scheduling
-      const timeoutMs = (noteAbsoluteTime - schedulingTime) * 1000;
+      // Calculate timeout relative to current audio context time
+      // This ensures notes play at the correct absolute times
+      const timeoutMs = (noteAbsoluteTime - currentTime) * 1000;
       
       if (idx < 4) {
         // console.log(`Scheduling note ${idx} (globalNoteIndex=${note.noteIndex}): noteTime=${note.time.toFixed(3)}s, absoluteTime=${noteAbsoluteTime.toFixed(3)}s, timeoutMs=${timeoutMs.toFixed(1)}ms`);
       }
       
       // Allow small negative timeouts (up to -100ms) for seamless looping - these notes should play immediately
-      // This handles cases where presetStartTime is slightly in the past due to setTimeout delays
+      // This handles cases where the target time is slightly in the past due to scheduling delays
       // For notes beyond 50 seconds, use chunked scheduling to avoid browser timeout limits
       if (timeoutMs >= -100) {
         let timeoutId: NodeJS.Timeout;
@@ -1721,10 +1733,9 @@ export function usePlayback() {
                 // Reset count-in flag so count-in only happens on first loop
                 isCountInRef.current = false;
                 
-                // Calculate when the next loop should start: immediately after the last note
-                // The last note finishes at: startTimeRef.current + note.time
-                // Store the pattern duration to recalculate the exact start time when restarting
-                const patternDuration = note.time; // This is the time of the last note relative to loop start
+                // Calculate when the next loop should start: at the end of the full pattern
+                // Use totalPatternDuration if available (includes trailing silence), otherwise fall back to note.time
+                const patternDuration = (note as any).totalPatternDuration || note.time;
                 const loopStartTime = startTimeRef.current!; // Store the start time of the current loop
                 
                 // Store timeout ID in a ref to prevent it from being cleared
@@ -1895,7 +1906,8 @@ export function usePlayback() {
                           }
                           setCurrentLoop(nextLoop);
                           isCountInRef.current = false;
-                          const patternDuration = note.time;
+                          // Use totalPatternDuration for proper loop timing
+                          const patternDuration = (note as any).totalPatternDuration || note.time;
                           const loopStartTime = startTimeRef.current!;
                           const restartTimeoutId = setTimeout(() => {
                             if (isPlayingRef.current && audioContextRef.current) {
@@ -1945,7 +1957,9 @@ export function usePlayback() {
         console.warn(`Note ${idx} is in the past (timeoutMs=${timeoutMs.toFixed(1)}ms), skipping`);
       }
     });
-  }, [isPlaying, audioBuffersLoaded, calculateScheduledNotes, playDrumSound, playClick, countInEnabled, setIsPlaying, setCurrentLoop, setPlaybackPosition, clickMode, patterns, polyrhythmPatterns, bpm, playDrumSounds, tempoRamping, getCurrentBPM, setBPM, progressiveMode, evaluateProgressiveMode]);
+  // Note: bpm is intentionally NOT in deps - BPM is read dynamically to prevent playback restarts
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, audioBuffersLoaded, calculateScheduledNotes, playDrumSound, playClick, countInEnabled, setIsPlaying, setCurrentLoop, setPlaybackPosition, clickMode, patterns, polyrhythmPatterns, playDrumSounds, tempoRamping, getCurrentBPM, setBPM, progressiveMode, evaluateProgressiveMode]);
 
   /**
    * Update isPlayingRef when isPlaying changes

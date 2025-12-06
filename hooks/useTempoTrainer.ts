@@ -67,15 +67,20 @@ export function useTempoTrainer() {
   const sessionStartRef = useRef<number | null>(null);
   
   // Calculate accuracy from MIDI or microphone practice
+  // Penalize extra hits to prevent "spam to win" strategy
   const calculateAccuracy = useCallback((): number => {
     if (midiPractice.enabled && midiPractice.expectedNotes.length > 0) {
       const matched = midiPractice.expectedNotes.filter(n => n.matched).length;
-      return (matched / midiPractice.expectedNotes.length) * 100;
+      const extraHits = midiPractice.actualHits.filter(h => h.isExtraHit).length;
+      const denominator = midiPractice.expectedNotes.length + extraHits;
+      return denominator > 0 ? (matched / denominator) * 100 : 0;
     }
     
     if (microphonePractice.enabled && microphonePractice.expectedNotes.length > 0) {
       const matched = microphonePractice.expectedNotes.filter(n => n.matched).length;
-      return (matched / microphonePractice.expectedNotes.length) * 100;
+      const extraHits = microphonePractice.actualHits.filter(h => h.isExtraHit).length;
+      const denominator = microphonePractice.expectedNotes.length + extraHits;
+      return denominator > 0 ? (matched / denominator) * 100 : 0;
     }
     
     return 0;

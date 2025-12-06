@@ -72,9 +72,12 @@ export function usePracticeStats() {
           const actualHits = currentPracticeState.actualHits || [];
           
           // Calculate accuracy (percentage of expected notes that were matched)
+          // Penalize extra hits to prevent "spam to win" strategy
           const matchedNotes = expectedNotes.filter(note => note.matched).length;
-          const accuracy = expectedNotes.length > 0 
-            ? (matchedNotes / expectedNotes.length) * 100 
+          const extraHits = actualHits.filter(hit => hit.isExtraHit).length;
+          const denominator = expectedNotes.length + extraHits;
+          const accuracy = denominator > 0 
+            ? (matchedNotes / denominator) * 100 
             : undefined;
           
           // Calculate timing breakdown

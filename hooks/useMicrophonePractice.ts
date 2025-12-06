@@ -275,12 +275,42 @@ export function useMicrophonePractice() {
       }
     });
     
+    // Classify hit dynamic based on volume
+    const ghostThreshold = storeState.microphonePractice.ghostThreshold || 0.05;
+    const normalThreshold = storeState.microphonePractice.threshold || 0.15;
+    const accentThreshold = storeState.microphonePractice.accentThreshold || 0.4;
+    const dynamicDetection = storeState.microphonePractice.dynamicDetection ?? true;
+    
+    let detectedDynamic: 'ghost' | 'normal' | 'accent' = 'normal';
+    if (dynamicDetection && hitVolume !== undefined) {
+      if (hitVolume >= accentThreshold) {
+        detectedDynamic = 'accent';
+      } else if (hitVolume <= ghostThreshold * 2) {
+        // Ghost notes are quiet - use ghostThreshold * 2 as the upper bound
+        detectedDynamic = 'ghost';
+      }
+    }
+    
+    // Handle EXTRA HITS - hits that don't match any expected note
+    // These should be recorded and shown as errors to prevent "spam to win"
     if (!closest) {
-      // console.log('[Microphone Practice] No closest note found for elapsed time:', adjustedElapsedTime.toFixed(2));
-      // console.log('[Microphone Practice] Expected note times:', currentExpectedNotes.length > 0 
-      //   ? currentExpectedNotes.map(n => n.time.toFixed(2)).join(', ')
-      //   : 'NO NOTES IN STORE');
-      // console.log('[Microphone Practice] Search window:', searchWindow.toFixed(2), 'ms');
+      // console.log('[Microphone Practice] Extra hit detected (no matching note) at:', adjustedElapsedTime.toFixed(2));
+      
+      const extraHit: PracticeHit = {
+        time: adjustedElapsedTime,
+        note: 'EXTRA', // Mark as extra hit
+        expectedTime: -1, // No expected time
+        timingError: Infinity, // Maximum error
+        rawTimingError: 0,
+        early: false,
+        perfect: false,
+        matched: false,
+        velocity: hitVolume !== undefined ? Math.round(hitVolume * 100) : undefined,
+        dynamic: detectedDynamic,
+        isExtraHit: true, // Flag this as an extra hit
+      };
+      
+      addMicrophoneHit(extraHit);
       return;
     }
     
@@ -305,22 +335,6 @@ export function useMicrophonePractice() {
       markMicrophoneNoteMatched(closestNote.index);
     }
     
-    // Classify hit dynamic based on volume
-    const ghostThreshold = storeState.microphonePractice.ghostThreshold || 0.05;
-    const normalThreshold = storeState.microphonePractice.threshold || 0.15;
-    const accentThreshold = storeState.microphonePractice.accentThreshold || 0.4;
-    const dynamicDetection = storeState.microphonePractice.dynamicDetection ?? true;
-    
-    let detectedDynamic: 'ghost' | 'normal' | 'accent' = 'normal';
-    if (dynamicDetection && hitVolume !== undefined) {
-      if (hitVolume >= accentThreshold) {
-        detectedDynamic = 'accent';
-      } else if (hitVolume <= ghostThreshold * 2) {
-        // Ghost notes are quiet - use ghostThreshold * 2 as the upper bound
-        detectedDynamic = 'ghost';
-      }
-    }
-    
     // Check if detected dynamic matches expected dynamic
     const expectedNote = currentExpectedNotes[closestNote.index];
     const expectedDynamic = expectedNote?.dynamic || 'normal';
@@ -338,6 +352,7 @@ export function useMicrophonePractice() {
       velocity: hitVolume !== undefined ? Math.round(hitVolume * 100) : undefined, // 0-100
       dynamic: detectedDynamic,
       dynamicMatch: dynamicDetection ? dynamicMatch : undefined,
+      isExtraHit: false, // Not an extra hit
     };
 
     addMicrophoneHit(hit);
@@ -383,6 +398,12 @@ export function useMicrophonePractice() {
         // Handle debug messages
         if (event.data.type === 'debug') {
           console.log('[WORKLET DEBUG]', event.data.message);
+          return;
+        }
+        
+        // Handle error messages - worklet had an exception but recovered
+        if (event.data.type === 'error') {
+          console.error('[WORKLET ERROR]', event.data.message);
           return;
         }
         
@@ -514,15 +535,15 @@ export function useMicrophonePractice() {
     
     // Minimum volume to consider (noise floor) - raised to filter ambient noise
     const MIN_VOLUME = 0.015;
-    const QUIET_THRESHOLD = 0.03; // Signal must be below this to count as "quiet" (raised for noisy mics)
+    const QUIET_THRESHOLD = 0.05; // Signal must be below this to count as "quiet" (raised for noisy mics/environments)
     const QUIET_FRAMES_REQUIRED = 2; // Must be quiet for 2 frames before new hit
     
     // MASK TIME: 100ms allows 16th notes at 120+ BPM while filtering resonance
     const maskTime = 100;
     
-    // Track quiet state
+    // Track quiet state - cap to prevent overflow
     if (normalizedVolume < QUIET_THRESHOLD) {
-      quietFrameCountRef.current++;
+      quietFrameCountRef.current = Math.min(quietFrameCountRef.current + 1, 1000);
     } else {
       quietFrameCountRef.current = 0;
     }
@@ -542,13 +563,33 @@ export function useMicrophonePractice() {
     }
     
     // A REAL drum hit detection:
-    // - STRONG hits (volume > threshold * 1.5) bypass quiet requirement - these are unmistakable
+    // - STRONG hits (volume > threshold * 0.7) bypass quiet requirement - below calibrated
     //   (Real drum hits are significantly louder than resonance)
     // - Medium hits require quiet state to filter resonance
-    const isVeryStrongHit = normalizedVolume > adjustedThreshold * 1.5 && spikeRatio >= 3.0; // Unmistakable
-    const isStrongHit = normalizedVolume > adjustedThreshold * 0.8 && spikeRatio >= 4.0 && isQuietState;
-    const isModerateSpike = normalizedVolume > MIN_VOLUME && spikeRatio >= 6.0 && isQuietState;
-    const shouldRegisterHit = isVeryStrongHit || isStrongHit || isModerateSpike;
+    const isVeryStrongHit = normalizedVolume > adjustedThreshold * 0.7 && spikeRatio >= 2.5; // Below calibrated level
+    const isStrongHit = normalizedVolume > adjustedThreshold * 0.35 && spikeRatio >= 3.0 && isQuietState;
+    const isModerateSpike = normalizedVolume > MIN_VOLUME && spikeRatio >= 4.0 && isQuietState;
+    let shouldRegisterHit = isVeryStrongHit || isStrongHit || isModerateSpike;
+
+    // RESONANCE WINDOW FILTERING:
+    // After a hit, within 250ms, require new hits to have significant volume
+    // relative to the previous hit AND a high spike ratio. This prevents resonance/decay 
+    // from triggering false hits. Resonance can oscillate with high volume and 
+    // spike ratios of 2-3x, so we require 4x+ to confirm it's a new hit.
+    const RESONANCE_WINDOW_MS = 250;
+    const RESONANCE_VOLUME_RATIO = 0.35; // New hit must be at least 35% of last hit's volume
+    const RESONANCE_SPIKE_RATIO_REQUIRED = 4.0; // Require higher spike ratio in resonance window
+    const inResonanceWindow = timeSinceLastHit < RESONANCE_WINDOW_MS && timeSinceLastHit >= maskTime;
+    const minVolumeForResonanceWindow = peakVolumeAfterHitRef.current * RESONANCE_VOLUME_RATIO;
+
+    if (inResonanceWindow && shouldRegisterHit) {
+      // In resonance window: hits must meet BOTH criteria:
+      // 1. Volume >= 35% of last hit's volume (proportional threshold)
+      // 2. Spike ratio >= 4.0x (confirms sharp transient, not oscillation)
+      if (normalizedVolume < minVolumeForResonanceWindow || spikeRatio < RESONANCE_SPIKE_RATIO_REQUIRED) {
+        shouldRegisterHit = false; // Block this hit - likely resonance
+      }
+    }
 
     if (shouldRegisterHit) {
       lastHitTimeRef.current = now;
@@ -590,9 +631,19 @@ export function useMicrophonePractice() {
       previousVolumeRef.current = 0; // Reset previous volume
       quietFrameCountRef.current = 0; // Reset quiet frame counter
       peakVolumeAfterHitRef.current = 0; // Reset peak volume tracking
+      
+      // Reset AudioWorklet state if using it
+      if (workletNodeRef.current && useAudioWorkletRef.current) {
+        workletNodeRef.current.port.postMessage({ type: 'reset' });
+      }
       // console.log('[Microphone Practice] Reset matched notes, cleared hits, and reset start time - playback starting');
     } else if (!isPlaying) {
       hasResetRef.current = false;
+      
+      // Also reset worklet when playback stops to ensure clean state
+      if (workletNodeRef.current && useAudioWorkletRef.current) {
+        workletNodeRef.current.port.postMessage({ type: 'reset' });
+      }
     }
   }, [isPlaying, playbackPosition, expectedNotes, setMicrophoneExpectedNotes, clearMicrophoneHits, setMicrophoneStartTime]);
   

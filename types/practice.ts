@@ -26,6 +26,7 @@ export interface PracticeHit {
   velocity?: number; // 0-127 for MIDI, 0-100 for microphone (volume of hit)
   dynamic?: NoteDynamic; // Detected volume level
   dynamicMatch?: boolean; // Whether hit dynamic matched expected dynamic
+  isExtraHit?: boolean; // True if this hit didn't match any expected note (played at wrong time)
 }
 
 export interface MIDINoteMap {

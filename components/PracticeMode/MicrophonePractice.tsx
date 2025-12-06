@@ -160,7 +160,28 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
     }
   }, [selectedDeviceId, devices]);
 
-  const handleDeviceSelect = async (deviceId: string) => {
+  // Track if we've done initial auto-connect
+  const hasAutoConnectedRef = React.useRef(false);
+
+  // Auto-connect to microphone when device is selected (from restore or manual selection)
+  // This ensures the stream is set up even when restoring from localStorage
+  useEffect(() => {
+    // Only auto-connect once per session, and only if we don't already have a stream
+    if (!selectedDeviceId || hasAutoConnectedRef.current || microphonePractice.stream) return;
+    
+    // Make sure we have devices loaded
+    const device = devices.find(d => d.deviceId === selectedDeviceId);
+    if (!device) return;
+    
+    console.log('[MIC] Auto-connecting to restored device:', device.label);
+    hasAutoConnectedRef.current = true;
+    
+    // Call handleDeviceSelect to set up the stream
+    handleDeviceSelectInternal(selectedDeviceId);
+  }, [selectedDeviceId, devices, microphonePractice.stream]);
+
+  // Internal function to set up microphone (called by both auto-connect and manual selection)
+  const handleDeviceSelectInternal = async (deviceId: string) => {
     setSelectedDeviceId(deviceId);
     
     // Find device label for fallback matching (device IDs can change between sessions)
@@ -247,6 +268,11 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
       stream.getTracks().forEach(track => track.stop());
       alert('Failed to setup microphone audio processing.');
     }
+  };
+
+  // Public function for UI to call (wrapper around internal)
+  const handleDeviceSelect = async (deviceId: string) => {
+    await handleDeviceSelectInternal(deviceId);
   };
 
   const buildExpectedNotes = (): ExpectedNote[] => {
@@ -354,7 +380,10 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
     const hits = microphonePractice.actualHits;
     const expected = microphonePractice.expectedNotes.length;
     const matched = microphonePractice.expectedNotes.filter(n => n.matched).length;
-    const accuracy = expected > 0 ? Math.round((matched / expected) * 100) : 0;
+    const extraHits = hits.filter(h => h.isExtraHit).length;
+    // Penalize extra hits to prevent "spam to win" strategy
+    const denominator = expected + extraHits;
+    const accuracy = denominator > 0 ? Math.round((matched / denominator) * 100) : 0;
     
     const timingErrors = hits.filter(h => h.matched).map(h => Math.abs(h.timingError));
     const avgTiming = timingErrors.length > 0
@@ -371,7 +400,7 @@ export function MicrophonePractice({ onClose, isOpen = true }: MicrophonePractic
     const accentHits = hits.filter(h => h.dynamic === 'accent').length;
     const normalHits = hits.filter(h => h.dynamic === 'normal').length;
 
-    return { accuracy, hits: matched, expected, avgTiming, dynamicAccuracy, ghostHits, accentHits, normalHits };
+    return { accuracy, hits: matched, expected, avgTiming, dynamicAccuracy, ghostHits, accentHits, normalHits, extraHits };
   }, [microphonePractice.actualHits, microphonePractice.expectedNotes]);
 
   const toleranceOptions = [

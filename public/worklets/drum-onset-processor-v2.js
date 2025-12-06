@@ -45,11 +45,16 @@ class DrumOnsetProcessorV2 extends AudioWorkletProcessor {
     this.lastHitTime = 0;
     this.previousFlux = 0;
     this.lastHitLevel = 0;
+    this.lastHitFlux = 0; // Track last hit's flux for resonance filtering
     
     // Quiet state tracking - require signal to be quiet for multiple frames
     this.quietFrameCount = 0;
     this.QUIET_FRAMES_REQUIRED = 2; // Must be quiet for 2 frames (~5ms) before new hit allowed
-    this.QUIET_THRESHOLD = 0.006; // Signal must be below this to count as "quiet" (raised for noisy mics)
+    this.QUIET_THRESHOLD = 0.012; // Signal must be below this to count as "quiet" (raised for noisy mics/environments)
+    
+    // Resonance window - after a hit, require higher flux for subsequent hits
+    this.RESONANCE_WINDOW_MS = 250; // 250ms window after a hit where we're more strict
+    this.RESONANCE_FLUX_RATIO = 0.35; // New hit must be at least 35% of last hit's flux
     
     // Hann window for FFT (reduces spectral leakage)
     this.hannWindow = new Float32Array(this.fftSize);
@@ -62,6 +67,17 @@ class DrumOnsetProcessorV2 extends AudioWorkletProcessor {
       if (event.data.type === 'update-parameters') {
         this.sensitivity = event.data.sensitivity || this.sensitivity;
         this.minIntervalMs = event.data.minIntervalMs || this.minIntervalMs;
+      } else if (event.data.type === 'reset') {
+        // Reset all state - used when playback starts/stops
+        this.lastHitTime = 0;
+        this.previousFlux = 0;
+        this.lastHitLevel = 0;
+        this.lastHitFlux = 0;
+        this.quietFrameCount = 0;
+        this.fluxHistory = [];
+        this.hfcHistory = [];
+        this.rmsHistory = [];
+        this.previousSpectrum = null;
       }
     };
   }
@@ -140,6 +156,11 @@ class DrumOnsetProcessorV2 extends AudioWorkletProcessor {
    * Update running statistics for adaptive thresholding
    */
   updateStatistics(flux, hfc, rms) {
+    // Protect against NaN/Infinity values that could break calculations
+    if (!isFinite(flux)) flux = 0;
+    if (!isFinite(hfc)) hfc = 0;
+    if (!isFinite(rms)) rms = 0;
+    
     // Add to histories
     this.fluxHistory.push(flux);
     this.hfcHistory.push(hfc);
@@ -183,8 +204,9 @@ class DrumOnsetProcessorV2 extends AudioWorkletProcessor {
     const maskTime = 100;
     
     // Track quiet state - signal must be below QUIET_THRESHOLD for multiple frames
+    // Cap quietFrameCount to prevent overflow with long periods of silence
     if (flux < this.QUIET_THRESHOLD) {
-      this.quietFrameCount++;
+      this.quietFrameCount = Math.min(this.quietFrameCount + 1, 1000);
     } else {
       this.quietFrameCount = 0;
     }
@@ -200,19 +222,37 @@ class DrumOnsetProcessorV2 extends AudioWorkletProcessor {
     this.previousFlux = flux;
     
     // A REAL drum hit detection:
-    // - STRONG hits (flux > 0.06) bypass quiet requirement - these are unmistakable
-    //   (Real drum hits have flux 0.08-0.12+, resonance is typically 0.03-0.05)
+    // - STRONG hits (flux > 0.025) bypass quiet requirement - these are unmistakable
+    //   (Real drum hits typically have flux 0.025-0.12+, resonance is 0.01-0.025)
     // - Medium hits require quiet state to filter resonance
-    const isVeryStrongHit = flux > 0.06 && spikeRatio >= 3.0; // Unmistakable drum hit
-    const isStrongHit = flux > 0.02 && spikeRatio >= 4.0 && isQuietState; // Strong hit from quiet
-    const isModerateSpike = flux > MIN_FLUX && spikeRatio >= 6.0 && isQuietState; // Moderate spike from quiet
-    const isValidHit = isVeryStrongHit || isStrongHit || isModerateSpike;
+    const isVeryStrongHit = flux > 0.025 && spikeRatio >= 2.5; // Unmistakable drum hit
+    const isStrongHit = flux > 0.008 && spikeRatio >= 3.0 && isQuietState; // Strong hit from quiet
+    const isModerateSpike = flux > MIN_FLUX && spikeRatio >= 4.0 && isQuietState; // Moderate spike from quiet
+    let isValidHit = isVeryStrongHit || isStrongHit || isModerateSpike;
+    
+    // RESONANCE WINDOW FILTERING:
+    // After a hit, within the resonance window, require new hits to have significant flux
+    // relative to the previous hit AND a high spike ratio. This prevents resonance/decay 
+    // from triggering false hits. Resonance can oscillate with flux above 0.025 and 
+    // spike ratios of 2-3x, so we require 4x+ to confirm it's a new hit.
+    const inResonanceWindow = timeSinceLastHit < this.RESONANCE_WINDOW_MS && timeSinceLastHit >= maskTime;
+    const minFluxForResonanceWindow = this.lastHitFlux * this.RESONANCE_FLUX_RATIO;
+    const RESONANCE_SPIKE_RATIO_REQUIRED = 4.0; // Require higher spike ratio in resonance window
+    
+    if (inResonanceWindow && isValidHit) {
+      // In resonance window: hits must meet BOTH criteria:
+      // 1. Flux >= 35% of last hit's flux (proportional threshold)
+      // 2. Spike ratio >= 4.0x (confirms sharp transient, not oscillation)
+      if (flux < minFluxForResonanceWindow || spikeRatio < RESONANCE_SPIKE_RATIO_REQUIRED) {
+        isValidHit = false; // Block this hit - likely resonance
+      }
+    }
     
     // DEBUG: Log potential hits (only log significant activity to reduce noise)
     if (flux > 0.01 && spikeRatio > 2.5) {
       this.port.postMessage({
         type: 'debug',
-        message: `flux=${flux.toFixed(4)} prev=${prevFlux.toFixed(4)} ratio=${spikeRatio.toFixed(1)}x quiet=${isQuietState}(${this.quietFrameCount}) timeSince=${timeSinceLastHit.toFixed(0)}ms`
+        message: `flux=${flux.toFixed(4)} prev=${prevFlux.toFixed(4)} ratio=${spikeRatio.toFixed(1)}x quiet=${isQuietState}(${this.quietFrameCount}) timeSince=${timeSinceLastHit.toFixed(0)}ms resWin=${inResonanceWindow} minFlux=${minFluxForResonanceWindow.toFixed(4)} reqRatio=${inResonanceWindow ? RESONANCE_SPIKE_RATIO_REQUIRED : 2.5}`
       });
     }
     
@@ -225,6 +265,7 @@ class DrumOnsetProcessorV2 extends AudioWorkletProcessor {
     if (isValidHit) {
       this.lastHitTime = currentTime;
       this.lastHitLevel = rms;
+      this.lastHitFlux = flux; // Track this hit's flux for resonance filtering
       this.quietFrameCount = 0; // Reset quiet counter after hit
       
       const hitType = isVeryStrongHit ? 'STRONG' : (isStrongHit ? 'MEDIUM' : 'MODERATE');
@@ -247,12 +288,13 @@ class DrumOnsetProcessorV2 extends AudioWorkletProcessor {
   }
 
   process(inputs, outputs, parameters) {
-    if (!inputs || !inputs[0] || !inputs[0][0]) {
-      return true;
-    }
-    
-    const input = inputs[0][0];
-    const currentTime = currentFrame / sampleRate;
+    try {
+      if (!inputs || !inputs[0] || !inputs[0][0]) {
+        return true;
+      }
+      
+      const input = inputs[0][0];
+      const currentTime = currentFrame / sampleRate;
     
     // Accumulate samples into buffer
     for (let i = 0; i < input.length; i++) {
@@ -295,6 +337,15 @@ class DrumOnsetProcessorV2 extends AudioWorkletProcessor {
     }
     
     return true;
+    } catch (err) {
+      // Log error but keep processor alive
+      this.port.postMessage({ type: 'error', message: String(err) });
+      // Reset state to recover
+      this.lastHitTime = 0;
+      this.previousFlux = 0;
+      this.quietFrameCount = 0;
+      return true;
+    }
   }
 }
 

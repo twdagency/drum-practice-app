@@ -13,6 +13,7 @@ import {
   ExpectedNote,
   PracticeHit,
 } from '@/types';
+import { PracticeRoutine } from '@/types/routine';
 import { CONSTANTS } from '@/lib/utils/constants';
 
 export interface PracticeSlice {
@@ -23,6 +24,7 @@ export interface PracticeSlice {
   practiceStats: PracticeStats;
   practiceGoals: PracticeGoals;
   practiceStartTime: number | null;
+  activeRoutine: PracticeRoutine | null;
 
   // MIDI Practice Actions
   setMIDIPracticeEnabled: (enabled: boolean) => void;
@@ -31,6 +33,7 @@ export interface PracticeSlice {
   setMIDILatencyAdjustment: (adjustment: number) => void;
   setMIDIExpectedNotes: (notes: ExpectedNote[]) => void;
   addMIDIHit: (hit: PracticeHit) => void;
+  clearMIDIHits: () => void;
   markMIDINoteMatched: (index: number) => void;
   setMIDIStartTime: (time: number | null) => void;
   setMIDICountInActive: (active: boolean) => void;
@@ -83,6 +86,9 @@ export interface PracticeSlice {
   setPracticeStartTime: (time: number | null) => void;
   updatePracticeStats: (stats: Partial<PracticeStats>) => void;
   updatePracticeGoals: (goals: Partial<PracticeGoals>) => void;
+
+  // Routine Actions
+  setActiveRoutine: (routine: PracticeRoutine | null) => void;
 }
 
 // Load persisted settings from localStorage
@@ -255,6 +261,7 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
   practiceStats: loadedPracticeStats,
   practiceGoals: { ...initialPracticeGoals },
   practiceStartTime: null,
+  activeRoutine: null,
 
   // MIDI Practice Actions
   setMIDIPracticeEnabled: (enabled) =>
@@ -340,6 +347,14 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
       midiPractice: {
         ...state.midiPractice,
         actualHits: [...state.midiPractice.actualHits, hit],
+      },
+    })),
+
+  clearMIDIHits: () =>
+    set((state) => ({
+      midiPractice: {
+        ...state.midiPractice,
+        actualHits: [],
       },
     })),
 
@@ -851,6 +866,9 @@ export const createPracticeSlice: StateCreator<PracticeSlice> = (set) => {
     set((state) => ({
       practiceGoals: { ...state.practiceGoals, ...goals },
     })),
+
+  // Routine Actions
+  setActiveRoutine: (routine) => set({ activeRoutine: routine }),
   };
 };
 

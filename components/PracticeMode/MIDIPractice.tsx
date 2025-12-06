@@ -177,8 +177,8 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
     return expectedNotes;
   };
 
-  // Start practice
-  const handleStartPractice = () => {
+  // Connect/Activate MIDI - allows connection even without patterns
+  const handleConnect = () => {
     if (!selectedDeviceId) {
       showToast('Please select a MIDI device first.', 'error');
       return;
@@ -210,20 +210,18 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
     // Set latency adjustment
     setMIDILatencyAdjustment(latencyAdjustment);
 
-    // Build expected notes immediately (like WordPress plugin - line 12759)
+    // Build expected notes if patterns exist (don't require patterns to connect)
     const expectedNotes = buildExpectedNotes().map(note => ({
       ...note,
       matched: false
     }));
     setMIDIExpectedNotes(expectedNotes);
 
-    if (expectedNotes.length === 0) {
-      showToast('No notes found in pattern.', 'error');
-      return;
-    }
-
-    // Enable practice mode
+    // Enable practice mode (this activates the MIDI handler)
     setMIDIPracticeEnabled(true);
+    
+    // Show confirmation
+    showToast(`MIDI connected: ${input.name}`, 'success');
     
     // Close modal
     onClose();
@@ -252,26 +250,29 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
         early: 0,
         late: 0,
         timingAvg: 0,
+        extraHits: 0,
       };
     }
 
-    // Calculate stats matching WordPress plugin logic
+    // Calculate stats
     const matched = expected.filter((n) => n.matched).length;
     const missed = expected.length - matched;
+    const extraHits = hits.filter((h) => h.isExtraHit).length;
     
-    // Accuracy = hits within accuracy window (matching WordPress plugin)
-    // All hits should be within the window since we only add them if they match
-    const accurateHits = hits.filter((h) => h.matched && h.timingError <= midiPractice.accuracyWindow).length;
-    const accuracy = expected.length > 0 ? Math.round((accurateHits / expected.length) * 100) : 0;
+    // Penalize extra hits: accuracy = matched / (expected + extraHits)
+    // This prevents "spam to win" strategy
+    const denominator = expected.length + extraHits;
+    const accuracy = denominator > 0 ? Math.round((matched / denominator) * 100) : 0;
     
-    // Perfect, early, late counts
-    const perfect = hits.filter((h) => h.perfect).length;
-    const early = hits.filter((h) => h.early && !h.perfect).length;
-    const late = hits.filter((h) => !h.early && !h.perfect).length;
+    // Perfect, early, late counts (only for matched hits, not extra hits)
+    const matchedHits = hits.filter((h) => h.matched);
+    const perfect = matchedHits.filter((h) => h.perfect).length;
+    const early = matchedHits.filter((h) => h.early && !h.perfect).length;
+    const late = matchedHits.filter((h) => !h.early && !h.perfect).length;
     
-    // Average timing error (use absolute value like WordPress plugin)
-    const timingErrors = hits.length > 0
-      ? hits.map((h) => Math.abs(h.timingError))
+    // Average timing error (only for matched hits)
+    const timingErrors = matchedHits.length > 0
+      ? matchedHits.map((h) => Math.abs(h.timingError))
       : [];
     const timingAvg = timingErrors.length > 0
       ? timingErrors.reduce((sum, err) => sum + err, 0) / timingErrors.length
@@ -279,14 +280,15 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
 
     return {
       accuracy,
-      hits: matched, // Show matched count, not total hits
+      hits: matched,
       missed,
       perfect,
       early,
       late,
       timingAvg: Math.round(timingAvg),
+      extraHits,
     };
-  }, [midiPractice.actualHits, midiPractice.expectedNotes, midiPractice.accuracyWindow]);
+  }, [midiPractice.actualHits, midiPractice.expectedNotes]);
 
   return (
     <div
@@ -615,6 +617,12 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
                 <div style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', marginBottom: '0.25rem' }}>Late</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#ef4444' }}>{stats.late}</div>
               </div>
+              {stats.extraHits > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', marginBottom: '0.25rem' }}>Extra Hits</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#ef4444' }}>{stats.extraHits}</div>
+                </div>
+              )}
               <div style={{ gridColumn: '1 / -1' }}>
                 <div style={{ fontSize: '0.875rem', color: 'var(--dpgen-muted)', marginBottom: '0.25rem' }}>Avg Timing Error</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>{stats.timingAvg}ms</div>
@@ -662,7 +670,7 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                handleStartPractice();
+                handleConnect();
               }}
               disabled={!selectedDeviceId}
               style={{
@@ -678,10 +686,10 @@ export function MIDIPractice({ onClose }: MIDIPracticeProps) {
               title={
                 !selectedDeviceId 
                   ? 'Please select a MIDI device first' 
-                  : 'Start MIDI practice mode'
+                  : 'Connect MIDI device for practice'
               }
             >
-              Start Practice
+              Connect
             </button>
           )}
             <button

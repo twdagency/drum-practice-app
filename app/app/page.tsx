@@ -42,6 +42,8 @@ export default function App() {
   const router = useRouter();
   const darkMode = useStore((state) => state.darkMode);
   const polyrhythmPatterns = useStore((state) => state.polyrhythmPatterns);
+  const activeRoutine = useStore((state) => state.activeRoutine);
+  const setActiveRoutine = useStore((state) => state.setActiveRoutine);
   const setShowVisualMetronome = useStore((state) => state.setShowVisualMetronome);
   const setShowPolyrhythmShapes = useStore((state) => state.setShowPolyrhythmShapes);
   const setShowGridLines = useStore((state) => state.setShowGridLines);
@@ -219,7 +221,7 @@ export default function App() {
   const [showPresetsFromWelcome, setShowPresetsFromWelcome] = useState(false);
   const [showLearningFromWelcome, setShowLearningFromWelcome] = useState(false);
   const [showRoutinesFromWelcome, setShowRoutinesFromWelcome] = useState(false);
-  const [selectedRoutineFromWelcome, setSelectedRoutineFromWelcome] = useState<PracticeRoutine | null>(null);
+  // Routine is now managed via activeRoutine in the store
 
   // Handle welcome modal actions
   const handleWelcomeAction = (action: 'create' | 'presets' | 'learning' | 'routines') => {
@@ -367,26 +369,38 @@ export default function App() {
         <Toolbar />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4 dpgen-main-grid" style={{ width: '100%', boxSizing: 'border-box' }}>
-          {/* Pattern List Component */}
+          {/* Pattern List Component OR Routine Player */}
           <div className="lg:col-span-1 dpgen-patterns-column" style={{ minWidth: 0, overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-              <h2 className="text-2xl font-semibold mb-4">Patterns</h2>
-              <PatternList />
-            </div>
-            
-            {/* Polyrhythm List Component - Only show if there are polyrhythm patterns */}
-            {polyrhythmPatterns && polyrhythmPatterns.length > 0 && (
-              <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-                <h2 className="text-2xl font-semibold mb-4">Polyrhythms</h2>
-                <PolyrhythmList />
-              </div>
+            {activeRoutine ? (
+              /* Show Routine Player when a routine is active */
+              <RoutinePlayer
+                routine={activeRoutine}
+                onClose={() => setActiveRoutine(null)}
+                onComplete={() => setActiveRoutine(null)}
+              />
+            ) : (
+              /* Show normal pattern list when no routine is active */
+              <>
+                <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+                  <h2 className="text-2xl font-semibold mb-4">Patterns</h2>
+                  <PatternList />
+                </div>
+                
+                {/* Polyrhythm List Component - Only show if there are polyrhythm patterns */}
+                {polyrhythmPatterns && polyrhythmPatterns.length > 0 && (
+                  <div className="dpgen-card" style={{ padding: '1.5rem', width: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+                    <h2 className="text-2xl font-semibold mb-4">Polyrhythms</h2>
+                    <PolyrhythmList />
+                  </div>
+                )}
+                
+                {/* Practice Statistics */}
+                <PracticeStats />
+                
+                {/* Pattern Library */}
+                <PatternLibrary />
+              </>
             )}
-            
-            {/* Practice Statistics */}
-            <PracticeStats />
-            
-            {/* Pattern Library */}
-            <PatternLibrary />
           </div>
           
           {/* Stave Component */}
@@ -495,28 +509,16 @@ export default function App() {
       <LearningPathModal onClose={() => setShowLearningFromWelcome(false)} />
     )}
 
-    {showRoutinesFromWelcome && !selectedRoutineFromWelcome && (
+    {showRoutinesFromWelcome && !activeRoutine && (
       <RoutineSelector
         onClose={() => setShowRoutinesFromWelcome(false)}
         onStartRoutine={(routine) => {
-          setSelectedRoutineFromWelcome(routine);
-        }}
-      />
-    )}
-
-    {selectedRoutineFromWelcome && (
-      <RoutinePlayer
-        routine={selectedRoutineFromWelcome}
-        onClose={() => {
-          setSelectedRoutineFromWelcome(null);
-          setShowRoutinesFromWelcome(false);
-        }}
-        onComplete={() => {
-          setSelectedRoutineFromWelcome(null);
+          setActiveRoutine(routine);  // Use store instead of local state
           setShowRoutinesFromWelcome(false);
         }}
       />
     )}
+    {/* RoutinePlayer is rendered in the patterns column when activeRoutine is set */}
     </>
   )
 }

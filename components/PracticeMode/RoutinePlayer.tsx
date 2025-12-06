@@ -57,11 +57,18 @@ interface RoutinePlayerProps {
 export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, onComplete }) => {
   const { presets } = usePresets();
   const addPattern = useStore((state) => state.addPattern);
-  const clearAllPatterns = useStore((state) => state.clearAllPatterns);
+  const clearPatterns = useStore((state) => state.clearPatterns);
   const setBPM = useStore((state) => state.setBPM);
   const bpm = useStore((state) => state.bpm);
   const isPlaying = useStore((state) => state.isPlaying);
   const setIsPlaying = useStore((state) => state.setIsPlaying);
+  const setInfiniteLoop = useStore((state) => state.setInfiniteLoop);
+  const currentLoop = useStore((state) => state.currentLoop);
+  const setCurrentLoop = useStore((state) => state.setCurrentLoop);
+  const clearMIDIHits = useStore((state) => state.clearMIDIHits);
+  const clearMicrophoneHits = useStore((state) => state.clearMicrophoneHits);
+  const setMIDIExpectedNotes = useStore((state) => state.setMIDIExpectedNotes);
+  const setMicrophoneExpectedNotes = useStore((state) => state.setMicrophoneExpectedNotes);
   const { 
     state: achievementState,
     newBadge, 
@@ -81,9 +88,28 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
   const [isResting, setIsResting] = useState(false);
   const [restTimeRemaining, setRestTimeRemaining] = useState(0);
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
+  
+  // BPM offset - allows users to adjust all BPMs up or down
+  const [bpmOffset, setBpmOffset] = useState(0);
+  
+  // Helper to calculate adjusted BPM
+  const getAdjustedBPM = (baseBPM: number) => Math.max(30, Math.min(300, baseBPM + bpmOffset));
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isExerciseActiveRef = useRef(false);
+  const isRestingRef = useRef(false);
   const currentExercise = routine.exercises[currentExerciseIndex];
+
+  // Cleanup: stop playback and reset settings when routine is closed
+  useEffect(() => {
+    return () => {
+      setIsPlaying(false);
+      setInfiniteLoop(false); // Reset infinite loop when routine ends
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [setIsPlaying, setInfiniteLoop]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number): string => {
@@ -101,8 +127,10 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
     }
 
     const [beats, beatType] = parseTimeSignature(preset.timeSignature);
-    const accentIndices = preset.accents && Array.isArray(preset.accents)
-      ? preset.accents
+    // Type-safe access to accents property (may exist on some preset types)
+    const presetAccents = (preset as { accents?: number[] }).accents;
+    const accentIndices = presetAccents && Array.isArray(presetAccents)
+      ? presetAccents
       : buildAccentIndices(parseNumberList(preset.phrase));
 
     const pattern = {
@@ -124,114 +152,217 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
       _presetId: preset.id,
     };
 
-    clearAllPatterns();
+    clearPatterns();
     addPattern(pattern);
-    setBPM(exercise.startBPM);
-  }, [presets, clearAllPatterns, addPattern, setBPM]);
+    // Apply BPM offset if set
+    setBPM(getAdjustedBPM(exercise.startBPM));
 
-  // Start exercise
+    // Enable infinite loop so pattern repeats until exercise time is up
+    setInfiniteLoop(true);
+  }, [presets, clearPatterns, addPattern, setBPM, setInfiniteLoop, getAdjustedBPM]);
+
+  // Start exercise - this kicks off the routine
   const startExercise = useCallback(() => {
     if (!currentExercise) return;
     
+    console.log('[Routine] Starting exercise:', currentExercise.name);
+    
+    // Load the pattern first
     loadExercisePattern(currentExercise);
+    
+    // Clear any accumulated practice hits
+    clearMIDIHits();
+    clearMicrophoneHits();
+    setMIDIExpectedNotes([]);
+    setMicrophoneExpectedNotes([]);
+    setCurrentLoop(0);
+    
+    // Set up timer
     setExerciseTimeRemaining(currentExercise.duration * 60);
+    setTotalTimeElapsed(0);
     setIsExerciseActive(true);
+    isExerciseActiveRef.current = true;
     setIsPaused(false);
     setIsResting(false);
-  }, [currentExercise, loadExercisePattern]);
+    isRestingRef.current = false;
 
-  // Timer effect
+    // Start playback
+    setIsPlaying(true);
+  }, [currentExercise, loadExercisePattern, clearMIDIHits, clearMicrophoneHits, setMIDIExpectedNotes, setMicrophoneExpectedNotes, setCurrentLoop, setIsPlaying]);
+
+  // Keep refs in sync with state
   useEffect(() => {
-    if (isExerciseActive && !isPaused) {
-      timerRef.current = setInterval(() => {
-        if (isResting) {
-          setRestTimeRemaining(prev => {
-            if (prev <= 1) {
-              setIsResting(false);
-              // Move to next exercise
-              if (currentExerciseIndex < routine.exercises.length - 1) {
-                setCurrentExerciseIndex(prev => prev + 1);
-              } else {
-                // Routine complete
-                setIsExerciseActive(false);
-                trackRoutineCompleted();
-                trackPracticeTime(Math.floor(totalTimeElapsed / 60));
-                onComplete();
-              }
-              return 0;
-            }
-            return prev - 1;
-          });
-        } else {
-          setExerciseTimeRemaining(prev => {
-            if (prev <= 1) {
-              // Exercise complete
-              setCompletedExercises(completed => [...completed, currentExercise.id]);
-              
-              // Track achievement
-              trackExerciseCompleted();
-              if (achievementState.exercisesCompleted === 0) {
-                trackFirstAction('complete_exercise');
-              }
-              
-              // Check for rest period
-              if (currentExercise.restAfter && currentExercise.restAfter > 0) {
-                setIsResting(true);
-                setRestTimeRemaining(currentExercise.restAfter);
-              } else if (currentExerciseIndex < routine.exercises.length - 1) {
-                // Move to next exercise
-                setCurrentExerciseIndex(prev => prev + 1);
-              } else {
-                // Routine complete
-                setIsExerciseActive(false);
-                trackRoutineCompleted();
-                trackPracticeTime(Math.floor(totalTimeElapsed / 60));
-                onComplete();
-              }
-              return 0;
-            }
-            return prev - 1;
-          });
-          setTotalTimeElapsed(prev => prev + 1);
-        }
-      }, 1000);
-    }
+    isRestingRef.current = isResting;
+  }, [isResting]);
 
-    return () => {
+  // Timer effect - uses refs to be stable and not restart on every state change
+  useEffect(() => {
+    // Only run the timer when exercise is active and not paused
+    if (!isExerciseActive || isPaused) {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    console.log('[Routine] Starting timer interval');
+    
+    timerRef.current = setInterval(() => {
+      // Use refs to get fresh values inside interval
+      if (isRestingRef.current) {
+        setRestTimeRemaining(prev => {
+          if (prev <= 1) {
+            setIsResting(false);
+            isRestingRef.current = false;
+            // Move to next exercise or complete
+            setCurrentExerciseIndex(currentIdx => {
+              if (currentIdx < routine.exercises.length - 1) {
+                return currentIdx + 1;
+              } else {
+                // Routine complete
+                setIsExerciseActive(false);
+                isExerciseActiveRef.current = false;
+                trackRoutineCompleted();
+                setIsPlaying(false);
+                onComplete();
+                return currentIdx;
+              }
+            });
+            return 0;
+          }
+          return prev - 1;
+        });
+      } else {
+        setExerciseTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Exercise complete - get current exercise index via closure workaround
+            setCurrentExerciseIndex(currentIdx => {
+              const exercise = routine.exercises[currentIdx];
+              if (exercise) {
+                setCompletedExercises(completed => [...completed, exercise.id]);
+                trackExerciseCompleted();
+                
+                // Check for rest period
+                if (exercise.restAfter && exercise.restAfter > 0) {
+                  setIsResting(true);
+                  isRestingRef.current = true;
+                  setRestTimeRemaining(exercise.restAfter);
+                  setIsPlaying(false); // Stop during rest
+                } else {
+                  // Move to next exercise or complete
+                  if (currentIdx < routine.exercises.length - 1) {
+                    return currentIdx + 1;
+                  } else {
+                    // Routine complete
+                    setIsExerciseActive(false);
+                    isExerciseActiveRef.current = false;
+                    trackRoutineCompleted();
+                    setIsPlaying(false);
+                    onComplete();
+                    return currentIdx;
+                  }
+                }
+              }
+              return currentIdx;
+            });
+            return 0;
+          }
+          return prev - 1;
+        });
+        setTotalTimeElapsed(prev => prev + 1);
+      }
+    }, 1000);
+
+    return () => {
+      console.log('[Routine] Clearing timer interval');
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
-  }, [isExerciseActive, isPaused, isResting, currentExercise, currentExerciseIndex, routine.exercises.length, onComplete]);
+  // Minimal dependencies - only what controls timer on/off
+  }, [isExerciseActive, isPaused]);
 
-  // Load pattern when exercise changes
+  // Load pattern when exercise INDEX changes (moving to next exercise)
   useEffect(() => {
-    if (isExerciseActive && !isResting && currentExercise) {
-      loadExercisePattern(currentExercise);
-      setExerciseTimeRemaining(currentExercise.duration * 60);
-    }
-  }, [currentExerciseIndex, isExerciseActive, isResting, currentExercise, loadExercisePattern]);
-
-  // Tempo progression during exercise
-  useEffect(() => {
-    if (!isExerciseActive || isPaused || isResting || !currentExercise.targetBPM) return;
-
-    const totalSeconds = currentExercise.duration * 60;
-    const progress = 1 - (exerciseTimeRemaining / totalSeconds);
-    const targetBpm = currentExercise.startBPM + 
-      (currentExercise.targetBPM - currentExercise.startBPM) * progress;
+    // Only run when we're actively doing the routine and exercise index changes
+    // Skip on initial mount (isExerciseActiveRef will be false)
+    if (!isExerciseActiveRef.current || isResting) return;
     
-    // Update BPM every 10 seconds
-    if (exerciseTimeRemaining % 10 === 0) {
-      setBPM(Math.round(targetBpm));
+    console.log('[Routine] Exercise index changed to:', currentExerciseIndex, '- loading new pattern');
+    
+    // Stop current playback
+    setIsPlaying(false);
+    
+    // Reset loop counter
+    setCurrentLoop(0);
+    
+    // Clear practice hits
+    clearMIDIHits();
+    clearMicrophoneHits();
+    setMIDIExpectedNotes([]);
+    setMicrophoneExpectedNotes([]);
+    
+    // Load the new pattern
+    const exercise = routine.exercises[currentExerciseIndex];
+    if (exercise) {
+      loadExercisePattern(exercise);
+      setExerciseTimeRemaining(exercise.duration * 60);
+      
+      // Start playback after brief delay
+      setTimeout(() => {
+        if (isExerciseActiveRef.current) {
+          setIsPlaying(true);
+        }
+      }, 150);
     }
-  }, [exerciseTimeRemaining, isExerciseActive, isPaused, isResting, currentExercise, setBPM]);
+  // Only trigger on exercise index change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentExerciseIndex]);
+
+  // Clear practice hits when loop restarts (loop > 0 means we've started a new iteration)
+  useEffect(() => {
+    if (currentLoop > 0 && isExerciseActiveRef.current) {
+      console.log('[Routine] Loop', currentLoop, '- clearing hits for fresh start');
+      // Clear actual hits (the colored timing indicators)
+      clearMIDIHits();
+      clearMicrophoneHits();
+      // Clear expected notes so they get regenerated fresh
+      setMIDIExpectedNotes([]);
+      setMicrophoneExpectedNotes([]);
+    }
+  }, [currentLoop, clearMIDIHits, clearMicrophoneHits, setMIDIExpectedNotes, setMicrophoneExpectedNotes]);
+
+  // Tempo progression during exercise - update BPM only at the start of each loop
+  // This prevents the playback from restarting mid-pattern when BPM changes
+  useEffect(() => {
+    if (!isExerciseActiveRef.current || !currentExercise?.targetBPM) return;
+    if (currentLoop === 0) return; // Don't update on first loop (startBPM is already set)
+    
+    // Calculate progress based on time elapsed
+    const totalSeconds = currentExercise.duration * 60;
+    const elapsed = totalSeconds - exerciseTimeRemaining;
+    const progress = elapsed / totalSeconds;
+    
+    // Calculate target BPM for this point in the exercise (with offset applied)
+    const adjustedStartBPM = getAdjustedBPM(currentExercise.startBPM);
+    const adjustedTargetBPM = getAdjustedBPM(currentExercise.targetBPM);
+    const targetBpm = Math.round(
+      adjustedStartBPM + (adjustedTargetBPM - adjustedStartBPM) * progress
+    );
+    
+    console.log(`[Routine] Loop ${currentLoop} - updating BPM to ${targetBpm} (progress: ${(progress * 100).toFixed(1)}%)`);
+    setBPM(targetBpm);
+  // Only trigger on loop change, not on every second
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLoop]);
 
   const handlePauseResume = () => {
-    setIsPaused(prev => !prev);
-    if (isPlaying) {
-      setIsPlaying(false);
-    }
+    const newPaused = !isPaused;
+    setIsPaused(newPaused);
+    // Toggle playback with pause state
+    setIsPlaying(!newPaused);
   };
 
   const handleSkipExercise = () => {
@@ -240,11 +371,12 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
       trackExerciseCompleted();
       setCurrentExerciseIndex(prev => prev + 1);
       setIsResting(false);
+      isRestingRef.current = false;
     } else {
       setIsExerciseActive(false);
       trackRoutineCompleted();
       trackPracticeTime(Math.floor(totalTimeElapsed / 60));
-      onComplete();
+      handleComplete();
     }
   };
 
@@ -252,47 +384,82 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
     if (currentExerciseIndex > 0) {
       setCurrentExerciseIndex(prev => prev - 1);
       setIsResting(false);
+      isRestingRef.current = false;
     }
   };
 
   const handleRestartExercise = () => {
     if (currentExercise) {
+      console.log('[Routine] Restarting exercise:', currentExercise.name);
+      
+      // Stop current playback
+      setIsPlaying(false);
+      
+      // Reset loop counter
+      setCurrentLoop(0);
+      
+      // Clear practice hits
+      clearMIDIHits();
+      clearMicrophoneHits();
+      setMIDIExpectedNotes([]);
+      setMicrophoneExpectedNotes([]);
+      
+      // Load pattern and reset timer
       loadExercisePattern(currentExercise);
       setExerciseTimeRemaining(currentExercise.duration * 60);
       setIsResting(false);
+      isRestingRef.current = false;
+      
+      // Start playback after a brief delay
+      setTimeout(() => {
+        if (isExerciseActiveRef.current) {
+          setIsPlaying(true);
+        }
+      }, 150);
     }
   };
 
   const progress = ((currentExerciseIndex + (1 - exerciseTimeRemaining / (currentExercise?.duration * 60 || 1))) / routine.exercises.length) * 100;
 
+  // Handle close - stop playback, reset settings, and clear timer
+  const handleClose = () => {
+    console.log('[Routine] Closing routine');
+    isExerciseActiveRef.current = false;
+    setIsExerciseActive(false);
+    setIsPlaying(false);
+    setInfiniteLoop(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    onClose();
+  };
+
+  // Handle complete - stop playback, reset settings, and notify
+  const handleComplete = () => {
+    console.log('[Routine] Routine complete');
+    isExerciseActiveRef.current = false;
+    setIsExerciseActive(false);
+    setIsPlaying(false);
+    setInfiniteLoop(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    onComplete();
+  };
+
   return (
     <>
+    {/* Inline component that replaces the pattern list */}
     <div
-      className="dpgen-modal-overlay"
+      className="dpgen-card"
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
+        width: '100%',
+        overflow: 'auto',
+        borderRadius: 'var(--dpgen-radius, 14px)',
       }}
     >
-      <div
-        style={{
-          background: 'var(--dpgen-bg)',
-          borderRadius: '16px',
-          maxWidth: '600px',
-          width: '95%',
-          maxHeight: '90vh',
-          overflow: 'auto',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.4)',
-        }}
-      >
         {/* Header */}
         <div style={{
           padding: '1rem 1.5rem',
@@ -318,7 +485,7 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               background: 'transparent',
               border: 'none',
@@ -326,6 +493,7 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
               color: 'var(--dpgen-muted)',
               padding: '0.5rem',
             }}
+            title="End Routine"
           >
             <X size={20} />
           </button>
@@ -385,7 +553,7 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
               background: 'var(--dpgen-card)',
               borderRadius: '10px',
               padding: '1rem',
-              marginBottom: '1.5rem',
+              marginBottom: '1rem',
               textAlign: 'left',
             }}>
               <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -397,6 +565,82 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
                   <li key={i} style={{ marginBottom: '0.25rem' }}>{goal}</li>
                 ))}
               </ul>
+            </div>
+
+            {/* BPM Adjustment */}
+            <div style={{
+              background: 'var(--dpgen-card)',
+              borderRadius: '10px',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+            }}>
+              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Timer size={16} />
+                Tempo Adjustment
+              </h4>
+              <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.8rem', color: 'var(--dpgen-muted)' }}>
+                Adjust all tempos in this routine up or down
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                <button
+                  onClick={() => setBpmOffset(prev => Math.max(-50, prev - 10))}
+                  disabled={bpmOffset <= -50}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--dpgen-border)',
+                    background: 'var(--dpgen-bg)',
+                    cursor: bpmOffset <= -50 ? 'not-allowed' : 'pointer',
+                    opacity: bpmOffset <= -50 ? 0.5 : 1,
+                    fontSize: '1.25rem',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  −
+                </button>
+                <div style={{ 
+                  minWidth: '100px', 
+                  textAlign: 'center',
+                  padding: '0.5rem',
+                  background: bpmOffset !== 0 ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                  borderRadius: '8px',
+                }}>
+                  <div style={{ 
+                    fontSize: '1.25rem', 
+                    fontWeight: 700,
+                    color: bpmOffset > 0 ? '#10b981' : bpmOffset < 0 ? '#f59e0b' : 'var(--dpgen-text)',
+                  }}>
+                    {bpmOffset > 0 ? '+' : ''}{bpmOffset} BPM
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--dpgen-muted)' }}>
+                    {bpmOffset === 0 ? 'Default' : bpmOffset > 0 ? 'Harder' : 'Easier'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setBpmOffset(prev => Math.min(50, prev + 10))}
+                  disabled={bpmOffset >= 50}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--dpgen-border)',
+                    background: 'var(--dpgen-bg)',
+                    cursor: bpmOffset >= 50 ? 'not-allowed' : 'pointer',
+                    opacity: bpmOffset >= 50 ? 0.5 : 1,
+                    fontSize: '1.25rem',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  +
+                </button>
+              </div>
+              {bpmOffset !== 0 && (
+                <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--dpgen-muted)', textAlign: 'center' }}>
+                  First exercise: {getAdjustedBPM(routine.exercises[0].startBPM)} BPM
+                  {routine.exercises[0].targetBPM && ` → ${getAdjustedBPM(routine.exercises[0].targetBPM)} BPM`}
+                </div>
+              )}
             </div>
 
             <button
@@ -667,7 +911,6 @@ export const RoutinePlayer: React.FC<RoutinePlayerProps> = ({ routine, onClose, 
           </div>
         )}
       </div>
-    </div>
     <BadgeNotification badge={newBadge} onClose={clearNewBadge} />
     </>
   );

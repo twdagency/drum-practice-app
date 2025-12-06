@@ -33,7 +33,7 @@ import { MIDIRecording } from '../PracticeMode/MIDIRecording';
 import { MIDIMappingEditor } from '../PracticeMode/MIDIMappingEditor';
 import { TempoTrainer } from '../PracticeMode/TempoTrainer';
 import { RoutineSelector } from '../PracticeMode/RoutineSelector';
-import { RoutinePlayer } from '../PracticeMode/RoutinePlayer';
+// RoutinePlayer is rendered in the main page layout, not toolbar
 import { PracticeRoutine } from '@/types/routine';
 import { usePresets } from '@/hooks/usePresets';
 import { parseTimeSignature, buildAccentIndices, parseNumberList, parseTokens, formatList } from '@/lib/utils/patternUtils';
@@ -59,8 +59,7 @@ export function Toolbar() {
   const [showLearningPaths, setShowLearningPaths] = useState(false);
   const [showPolyrhythmBuilder, setShowPolyrhythmBuilder] = useState(false);
   const [showRoutineSelector, setShowRoutineSelector] = useState(false);
-  const [showRoutinePlayer, setShowRoutinePlayer] = useState(false);
-  const [currentRoutine, setCurrentRoutine] = useState<PracticeRoutine | null>(null);
+  // Routine player now uses store state (activeRoutine) instead of local state
   const [presetsDropdownOpen, setPresetsDropdownOpen] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showPlaybackSettings, setShowPlaybackSettings] = useState(false);
@@ -172,6 +171,8 @@ export function Toolbar() {
   const microphonePractice = useStore((state) => state.microphonePractice);
   const microphonePracticeEnabled = useStore((state) => state.microphonePractice.enabled);
   const midiRecording = useStore((state) => state.midiRecording);
+  const activeRoutine = useStore((state) => state.activeRoutine);
+  const setActiveRoutine = useStore((state) => state.setActiveRoutine);
   
   const setBPM = useStore((state) => state.setBPM);
   const setIsPlaying = useStore((state) => state.setIsPlaying);
@@ -1239,7 +1240,10 @@ export function Toolbar() {
               const hits = midiPractice.actualHits || [];
               const expected = midiPractice.expectedNotes?.length || 0;
               const matched = midiPractice.expectedNotes?.filter((n) => n.matched).length || 0;
-              const accuracy = expected > 0 ? Math.round((matched / expected) * 100) : 0;
+              const extraHits = hits.filter(h => h.isExtraHit).length;
+              // Penalize extra hits: accuracy = matched / (expected + extraHits)
+              const denominator = expected + extraHits;
+              const accuracy = denominator > 0 ? Math.round((matched / denominator) * 100) : 0;
               const matchedHits = hits.filter(h => h.matched);
               const timingErrors = matchedHits.length > 0 ? matchedHits.map((h) => Math.abs(h.timingError)) : [];
               const avgTimingError = timingErrors.length > 0
@@ -1259,7 +1263,7 @@ export function Toolbar() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <i className="fas fa-drum" />
-                    <span>{matched} / {expected || '--'}</span>
+                    <span>{matched} / {expected || '--'}{extraHits > 0 && <span style={{ color: '#ef4444', marginLeft: '0.25rem' }}>+{extraHits}</span>}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <i className="fas fa-clock" />
@@ -1288,7 +1292,11 @@ export function Toolbar() {
               const hits = microphonePractice.actualHits || [];
               const expected = microphonePractice.expectedNotes?.length || 0;
               const matched = microphonePractice.expectedNotes?.filter((n) => n.matched).length || 0;
-              const accuracy = expected > 0 ? Math.round((matched / expected) * 100) : 0;
+              const extraHits = hits.filter(h => h.isExtraHit).length;
+              // Penalize extra hits: accuracy = matched / (expected + extraHits)
+              // This prevents "spam to win" - playing many notes to accidentally match all expected ones
+              const denominator = expected + extraHits;
+              const accuracy = denominator > 0 ? Math.round((matched / denominator) * 100) : 0;
               const matchedHits = hits.filter(h => h.matched);
               const timingErrors = matchedHits.length > 0 ? matchedHits.map((h) => Math.abs(h.timingError)) : [];
               const avgTimingError = timingErrors.length > 0
@@ -1308,7 +1316,7 @@ export function Toolbar() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <i className="fas fa-microphone-alt" />
-                    <span>{matched} / {expected || '--'}</span>
+                    <span>{matched} / {expected || '--'}{extraHits > 0 && <span style={{ color: '#ef4444', marginLeft: '0.25rem' }}>+{extraHits}</span>}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <i className="fas fa-clock" />
@@ -1510,28 +1518,12 @@ export function Toolbar() {
         <RoutineSelector 
           onClose={() => setShowRoutineSelector(false)} 
           onStartRoutine={(routine) => {
-            setCurrentRoutine(routine);
+            setActiveRoutine(routine);  // Use store instead of local state
             setShowRoutineSelector(false);
-            setShowRoutinePlayer(true);
           }}
         />
       )}
-
-      {/* Routine Player Modal */}
-      {showRoutinePlayer && currentRoutine && (
-        <RoutinePlayer
-          routine={currentRoutine}
-          onClose={() => {
-            setShowRoutinePlayer(false);
-            setCurrentRoutine(null);
-          }}
-          onComplete={() => {
-            setShowRoutinePlayer(false);
-            setCurrentRoutine(null);
-            showToast('🎉 Routine Complete! Great practice session!', 'success');
-          }}
-        />
-      )}
+      {/* RoutinePlayer is now rendered in the main page layout, not here */}
 
       {/* Polyrhythm Builder Modal */}
       {showPolyrhythmBuilder && (

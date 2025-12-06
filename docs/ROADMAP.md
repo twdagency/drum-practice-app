@@ -284,6 +284,249 @@ Please help me:
 
 ---
 
+## 🥁 Routine System Enhancement Roadmap
+*Added: January 2025*
+
+### ✅ Phase 1: Immediate Improvements (COMPLETE)
+**Status**: DONE - January 2025
+
+- [x] **Custom Starting BPM** - Users can adjust all routine BPMs by ±50 BPM
+  - Tempo adjustment controls on routine start screen
+  - Shows "Easier" or "Harder" label
+  - Applied to start BPM, target BPM, and tempo progression
+  
+- [x] **Improved Routine Content**
+  - Fixed "40-Minute Rudiment Deep Dive" → "40-Minute Rudiment Session"
+  - Added PAS rudiment numbers (#1, #3, #17, etc.)
+  - Better tips and instructions throughout
+  
+- [x] **New Routines Added**
+  - 15-Minute Flam Focus (intermediate)
+  - 20-Minute Groove & Feel (musicality focus)
+  - 15-Minute Daily Maintenance (quick chops maintenance)
+
+---
+
+### 📝 Phase 2: User-Created Routines
+**Priority**: HIGH | **Estimated**: 2-3 weeks
+
+**Goal**: Let users create and save their own practice routines
+
+**Features**:
+- [ ] Routine Builder UI (extend/repurpose "Combine Presets" area)
+- [ ] Drag-and-drop exercise ordering
+- [ ] Set duration, start BPM, target BPM per exercise
+- [ ] Add custom tips and focus areas
+- [ ] Save/edit/delete custom routines
+- [ ] Import/export as JSON for backup
+
+**Technical Approach**:
+```typescript
+interface UserRoutine extends PracticeRoutine {
+  userId: string;
+  isPublic: boolean;
+  createdAt: number;
+  updatedAt: number;
+  forkCount?: number;
+  originalRoutineId?: string; // If forked from another
+}
+```
+
+**Files to create/modify**:
+- `/components/Routines/RoutineBuilder.tsx`
+- `/components/Routines/ExerciseEditor.tsx`
+- `/store/slices/userRoutinesSlice.ts`
+- `/lib/data/userRoutines.ts` (localStorage initially)
+
+---
+
+### 🌐 Phase 3: Social & Sharing Features  
+**Priority**: MEDIUM | **Estimated**: 3-4 weeks
+
+**Goal**: Enable community sharing and discovery of routines
+
+**Features**:
+- [ ] Share routines via unique link
+- [ ] Community routine library (browse public routines)
+- [ ] Fork and customize shared routines
+- [ ] Rating system (1-5 stars)
+- [ ] Review/comment system
+- [ ] Filter by: difficulty, duration, category, rating, popularity
+- [ ] Featured/Staff Picks section
+- [ ] Follow other users
+
+**Database Schema** (Supabase):
+```sql
+-- User routines table
+CREATE TABLE user_routines (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users,
+  name TEXT NOT NULL,
+  description TEXT,
+  category TEXT,
+  difficulty TEXT,
+  total_duration INT,
+  exercises JSONB,
+  is_public BOOLEAN DEFAULT false,
+  fork_count INT DEFAULT 0,
+  original_routine_id UUID REFERENCES user_routines,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Routine ratings
+CREATE TABLE routine_ratings (
+  id UUID PRIMARY KEY,
+  routine_id UUID REFERENCES user_routines,
+  user_id UUID REFERENCES auth.users,
+  rating INT CHECK (rating >= 1 AND rating <= 5),
+  review TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(routine_id, user_id)
+);
+
+-- Routine plays (for popularity tracking)
+CREATE TABLE routine_plays (
+  id UUID PRIMARY KEY,
+  routine_id UUID REFERENCES user_routines,
+  user_id UUID REFERENCES auth.users,
+  completed BOOLEAN DEFAULT false,
+  played_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+---
+
+### 🎮 Phase 4: Group Routines (Multiplayer)
+**Priority**: HIGH (Unique Feature!) | **Estimated**: 6-8 weeks
+
+**Goal**: Real-time group practice sessions with live leaderboard
+
+**Concept**: 
+Like a fitness class but for drumming! Users join a lobby, practice the same routine together in real-time, and compete on a live leaderboard.
+
+**Features**:
+- [ ] Create/host routine lobby
+- [ ] Join existing lobbies (public or invite code)
+- [ ] Lobby browser with filters (difficulty, starting time, routine type)
+- [ ] Countdown to synchronized start
+- [ ] Real-time score tracking during practice
+- [ ] Live leaderboard showing all participants
+- [ ] Post-routine results and rankings
+- [ ] Chat/reactions during practice
+- [ ] Scheduled routines (e.g., "Daily 8am warmup")
+- [ ] Recurring group sessions
+
+**Technical Architecture**:
+```
+┌─────────────────┐     WebSocket      ┌─────────────────┐
+│   Client A      │◄──────────────────►│   Server        │
+│   (Drummer 1)   │                    │   (Node.js)     │
+└─────────────────┘                    │                 │
+                                       │  - Lobby mgmt   │
+┌─────────────────┐     WebSocket      │  - Score sync   │
+│   Client B      │◄──────────────────►│  - Leaderboard  │
+│   (Drummer 2)   │                    │  - Timing sync  │
+└─────────────────┘                    │                 │
+                                       └────────┬────────┘
+┌─────────────────┐     WebSocket              │
+│   Client C      │◄──────────────────►        │
+│   (Drummer 3)   │                            │
+└─────────────────┘                            ▼
+                                       ┌─────────────────┐
+                                       │   Database      │
+                                       │   (Supabase)    │
+                                       │                 │
+                                       │  - Lobbies      │
+                                       │  - Sessions     │
+                                       │  - Results      │
+                                       └─────────────────┘
+```
+
+**Database Schema**:
+```sql
+-- Group lobbies
+CREATE TABLE group_lobbies (
+  id UUID PRIMARY KEY,
+  host_user_id UUID REFERENCES auth.users,
+  routine_id UUID REFERENCES user_routines,
+  name TEXT NOT NULL,
+  status TEXT CHECK (status IN ('waiting', 'countdown', 'in_progress', 'completed')),
+  max_participants INT DEFAULT 20,
+  is_public BOOLEAN DEFAULT true,
+  invite_code TEXT UNIQUE,
+  scheduled_start TIMESTAMPTZ,
+  actual_start TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Lobby participants
+CREATE TABLE lobby_participants (
+  id UUID PRIMARY KEY,
+  lobby_id UUID REFERENCES group_lobbies,
+  user_id UUID REFERENCES auth.users,
+  display_name TEXT,
+  current_score INT DEFAULT 0,
+  current_accuracy DECIMAL(5,2),
+  current_exercise_index INT DEFAULT 0,
+  is_ready BOOLEAN DEFAULT false,
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(lobby_id, user_id)
+);
+
+-- Session results (final scores)
+CREATE TABLE group_session_results (
+  id UUID PRIMARY KEY,
+  lobby_id UUID REFERENCES group_lobbies,
+  user_id UUID REFERENCES auth.users,
+  final_score INT,
+  final_accuracy DECIMAL(5,2),
+  exercises_completed INT,
+  total_exercises INT,
+  rank INT,
+  completed_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Real-time Events** (WebSocket):
+```typescript
+// Server → Client
+type ServerEvent = 
+  | { type: 'PARTICIPANT_JOINED'; user: { id: string; name: string } }
+  | { type: 'PARTICIPANT_LEFT'; userId: string }
+  | { type: 'PARTICIPANT_READY'; userId: string }
+  | { type: 'COUNTDOWN_START'; startsAt: number }
+  | { type: 'SESSION_START' }
+  | { type: 'SCORE_UPDATE'; scores: { [userId: string]: { score: number; accuracy: number } } }
+  | { type: 'EXERCISE_CHANGE'; exerciseIndex: number }
+  | { type: 'SESSION_COMPLETE'; results: SessionResult[] }
+  | { type: 'CHAT_MESSAGE'; userId: string; message: string };
+
+// Client → Server
+type ClientEvent = 
+  | { type: 'JOIN_LOBBY'; lobbyId: string }
+  | { type: 'LEAVE_LOBBY' }
+  | { type: 'SET_READY'; ready: boolean }
+  | { type: 'REPORT_SCORE'; score: number; accuracy: number }
+  | { type: 'SEND_CHAT'; message: string }
+  | { type: 'SEND_REACTION'; emoji: string };
+```
+
+**UI Components**:
+- `/components/GroupPlay/LobbyBrowser.tsx` - Browse/search public lobbies
+- `/components/GroupPlay/CreateLobby.tsx` - Create new lobby
+- `/components/GroupPlay/LobbyRoom.tsx` - Waiting room before start
+- `/components/GroupPlay/LiveLeaderboard.tsx` - Real-time scores during play
+- `/components/GroupPlay/SessionResults.tsx` - Post-routine rankings
+- `/components/GroupPlay/GroupChat.tsx` - In-lobby chat
+
+**Premium Feature Tiers**:
+- Free: Join public lobbies
+- Pro: Create private lobbies, schedule sessions
+- Premium: Unlimited participants, recurring sessions
+
+---
+
 ## Future Considerations (Bookmarked)
 
 ### Microphone Hit Detection Enhancements

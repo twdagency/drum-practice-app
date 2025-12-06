@@ -116,136 +116,117 @@ export function useMIDIPractice() {
   const countInActive = useStore((state) => state.midiPractice.countInActive);
   const startTime = useStore((state) => state.midiPractice.startTime);
   
-  // Find closest expected note for a MIDI hit
-  const findClosestExpectedNote = useCallback((
-    midiNote: number,
-    elapsedTime: number
-  ): { note: number; expectedTime: number; index: number } | null => {
-    // Use a wider search window (3x accuracy window) to find potential matches
-    // This prevents missing notes that are slightly outside the window
-    const searchWindow = accuracyWindow * 3;
-    let closest: { note: number; expectedTime: number; index: number } | null = null;
-    let minDistance = Infinity;
-
-    expectedNotes.forEach((expected, index) => {
-      // Skip already matched notes (but allow if within a small time of the note for double-hit detection)
-      if (expected.matched) {
-        // Still consider if it's very close (within 50ms) - might be a double-hit
-        const timeDiff = Math.abs(expected.time - elapsedTime);
-        if (timeDiff > 50) return;
-      }
-      
-      const distance = Math.abs(expected.time - elapsedTime);
-      
-      // Check if note matches and is within search window
-      // Also allow matching if the note is close even if already matched (for double-hits)
-      if (expected.note === midiNote && distance < searchWindow && distance < minDistance) {
-        minDistance = distance;
-        closest = {
-          note: expected.note,
-          expectedTime: expected.time,
-          index: index,
-        };
-      }
-    });
-
-    return closest;
-  }, [expectedNotes, accuracyWindow]);
-
   // Handle MIDI message
   const handleMIDIMessage = useCallback((event: MIDIMessageEvent) => {
+    // Read current state directly to avoid stale closures
+    const storeState = useStore.getState();
+    const currentIsPlaying = storeState.isPlaying;
+    const currentCountInActive = storeState.midiPractice.countInActive;
+    const currentExpectedNotes = storeState.midiPractice.expectedNotes;
+    const currentAccuracyWindow = storeState.midiPractice.accuracyWindow;
+    const currentLatencyAdjustment = storeState.midiPractice.latencyAdjustment;
+    
     if (!midiPracticeEnabled) {
-      console.log('MIDI Practice: Practice not enabled');
       return;
     }
     
-    if (!startTimeRef.current) {
-      console.log('MIDI Practice: Start time not set yet');
-      return;
-    }
-    
-    if (countInActive) {
-      console.log('MIDI Practice: Count-in still active, ignoring hits');
-      return;
-    }
-
     const [status, note, velocity] = event.data;
     
     // Match WordPress plugin: accept note-on messages (status 144-159) on any channel
-    // This matches the calibration tool behavior
     if (status >= 144 && status <= 159 && velocity > 0) {
-      console.log(`MIDI Practice: Received note-on, note=${note}, velocity=${velocity}, status=${status}`);
+      console.log(`[MIDI Practice] Received note-on: note=${note}, velocity=${velocity}`);
+      
+      if (!startTimeRef.current) {
+        console.log('[MIDI Practice] Start time not set yet - waiting for playback');
+        return;
+      }
+      
+      if (currentCountInActive) {
+        console.log('[MIDI Practice] Count-in active, ignoring hit');
+        return;
+      }
+      
+      if (!currentIsPlaying) {
+        console.log('[MIDI Practice] Not playing, ignoring hit');
+        return;
+      }
+
       const currentTime = performance.now();
       const elapsedTime = currentTime - startTimeRef.current;
-      
-      // Apply latency adjustment
-      const adjustedElapsedTime = elapsedTime - latencyAdjustment;
+      const adjustedElapsedTime = elapsedTime - currentLatencyAdjustment;
 
       // Find closest expected note
-      console.log(`MIDI Practice: Looking for note ${note} at time ${adjustedElapsedTime.toFixed(1)}ms`);
-      console.log(`MIDI Practice: Start time: ${startTimeRef.current?.toFixed(1)}, current time: ${currentTime.toFixed(1)}, elapsed: ${elapsedTime.toFixed(1)}ms, adjusted: ${adjustedElapsedTime.toFixed(1)}ms`);
-      console.log(`MIDI Practice: Expected notes (${expectedNotes.length}):`, expectedNotes.map(n => ({ note: n.note, time: typeof n.time === 'number' ? n.time : parseFloat(n.time as any), matched: n.matched })));
-      const closestNote = findClosestExpectedNote(note, adjustedElapsedTime);
-      console.log('MIDI Practice: Closest note found:', closestNote);
-      if (closestNote) {
-        console.log(`MIDI Practice: Match - note ${closestNote.note}, expected time ${closestNote.expectedTime}, actual time ${adjustedElapsedTime.toFixed(1)}ms`);
-      } else {
-        console.log(`MIDI Practice: No match found. Checking all notes...`);
-        expectedNotes.forEach((expected, idx) => {
-          const distance = Math.abs(expected.time - adjustedElapsedTime);
-          const noteMatch = expected.note === note;
-          console.log(`  Note ${idx}: note=${expected.note} (match=${noteMatch}), time=${expected.time}, distance=${distance.toFixed(1)}ms, matched=${expected.matched}`);
-        });
-      }
-      if (closestNote) {
-        const timingError = Math.abs(closestNote.expectedTime - adjustedElapsedTime);
-        const rawTimingError = adjustedElapsedTime - closestNote.expectedTime;
-        const isEarly = rawTimingError < 0;
-        // Use accuracy window for perfect detection (more lenient than just PERFECT_HIT_THRESHOLD)
-        const perfectThreshold = Math.min(CONSTANTS.TIMING.PERFECT_HIT_THRESHOLD, accuracyWindow / 4);
-        const isPerfect = timingError <= perfectThreshold;
-        
-        // Check if within accuracy window for matching
-        const isWithinWindow = timingError <= accuracyWindow;
-        
-        // Mark as matched only if within accuracy window
-        if (isWithinWindow) {
-          markMIDINoteMatched(closestNote.index);
+      const searchWindow = currentAccuracyWindow * 3;
+      let closest: { note: number; expectedTime: number; index: number } | null = null;
+      let minDistance = Infinity;
+
+      currentExpectedNotes.forEach((expected, index) => {
+        if (expected.matched) {
+          const timeDiff = Math.abs(expected.time - adjustedElapsedTime);
+          if (timeDiff > 50) return;
         }
         
-        // Always record the hit (even if outside window) so we can show yellow/red colors
-        const hit: PracticeHit = {
+        const distance = Math.abs(expected.time - adjustedElapsedTime);
+        if (expected.note === note && distance < searchWindow && distance < minDistance) {
+          minDistance = distance;
+          closest = {
+            note: expected.note,
+            expectedTime: expected.time,
+            index: index,
+          };
+        }
+      });
+      
+      // Handle EXTRA HITS - hits that don't match any expected note
+      if (!closest) {
+        console.log(`[MIDI Practice] Extra hit: note=${note} at ${adjustedElapsedTime.toFixed(1)}ms (no match found)`);
+        
+        const extraHit: PracticeHit = {
           time: adjustedElapsedTime,
           note: note,
-          expectedTime: closestNote.expectedTime,
-          timingError: timingError,
-          rawTimingError: rawTimingError,
-          early: isEarly,
-          perfect: isPerfect,
-          matched: isWithinWindow,
-        };
-        
-        // Add hit to actual hits (regardless of whether it's within window)
-        addMIDIHit(hit);
-        
-      } else {
-        // No matching note found
-        
-        // Still record the hit even if no match (for debugging)
-        const hit: PracticeHit = {
-          time: adjustedElapsedTime,
-          note: note,
-          expectedTime: 0,
-          timingError: 999,
+          expectedTime: -1,
+          timingError: Infinity,
           rawTimingError: 0,
           early: false,
           perfect: false,
           matched: false,
+          velocity: velocity,
+          isExtraHit: true,
         };
-        addMIDIHit(hit);
+        addMIDIHit(extraHit);
+        return;
       }
+      
+      const closestNote = closest;
+      const timingError = Math.abs(closestNote.expectedTime - adjustedElapsedTime);
+      const rawTimingError = adjustedElapsedTime - closestNote.expectedTime;
+      const isEarly = rawTimingError < 0;
+      const perfectThreshold = Math.min(CONSTANTS.TIMING.PERFECT_HIT_THRESHOLD, currentAccuracyWindow / 4);
+      const isPerfect = timingError <= perfectThreshold;
+      const isWithinWindow = timingError <= currentAccuracyWindow;
+      
+      console.log(`[MIDI Practice] Hit: note=${note}, expected=${closestNote.expectedTime.toFixed(1)}ms, actual=${adjustedElapsedTime.toFixed(1)}ms, error=${rawTimingError.toFixed(1)}ms, matched=${isWithinWindow}`);
+      
+      if (isWithinWindow) {
+        markMIDINoteMatched(closestNote.index);
+      }
+      
+      const hit: PracticeHit = {
+        time: adjustedElapsedTime,
+        note: note,
+        expectedTime: closestNote.expectedTime,
+        timingError: timingError,
+        rawTimingError: rawTimingError,
+        early: isEarly,
+        perfect: isPerfect,
+        matched: isWithinWindow,
+        velocity: velocity,
+        isExtraHit: false,
+      };
+      
+      addMIDIHit(hit);
     }
-  }, [midiPracticeEnabled, expectedNotes, accuracyWindow, latencyAdjustment, countInActive, findClosestExpectedNote, markMIDINoteMatched, addMIDIHit]);
+  }, [midiPracticeEnabled, markMIDINoteMatched, addMIDIHit]);
 
   // Build expected notes when practice is enabled and patterns change
   // This rebuilds expected notes whenever patterns are added, removed, or updated
@@ -273,17 +254,13 @@ export function useMIDIPractice() {
     setMIDIExpectedNotes(notes);
   }, [midiPracticeEnabled, patterns, bpm, buildExpectedNotes, setMIDIExpectedNotes]);
 
-  // Setup MIDI handler when practice is enabled and playing
+  // Setup MIDI handler when practice is enabled (attach immediately, like microphone)
+  // The handler itself checks isPlaying before processing hits
   useEffect(() => {
-    console.log('[MIDI Practice] Handler setup effect: enabled=', midiPracticeEnabled, 'isPlaying=', isPlaying, 'input=', midiPractice.input ? midiPractice.input.name + ' (' + midiPractice.input.id + ')' : 'null');
+    console.log('[MIDI Practice] Handler setup effect: enabled=', midiPracticeEnabled, 'input=', midiPractice.input ? midiPractice.input.name + ' (' + midiPractice.input.id + ')' : 'null');
     
     if (!midiPracticeEnabled) {
       console.log('[MIDI Practice] Handler not attached - practice not enabled');
-      return;
-    }
-    
-    if (!isPlaying) {
-      console.log('[MIDI Practice] Handler not attached - not playing yet (will attach when playback starts)');
       return;
     }
     
@@ -292,80 +269,74 @@ export function useMIDIPractice() {
       return;
     }
     
-    console.log('[MIDI Practice] All conditions met, attaching MIDI handler...');
-    console.log('[MIDI Practice] Handler details:', {
-      inputName: midiPractice.input?.name,
-      inputId: midiPractice.input?.id,
-      expectedNotes: expectedNotes.length,
-      countInActive: countInActive,
-      playbackPosition
-    });
+    console.log('[MIDI Practice] Attaching MIDI handler to:', midiPractice.input.name);
 
-    // Register MIDI handler immediately (will be attached even during count-in)
+    // Register MIDI handler immediately (like microphone practice)
+    // The handler checks isPlaying internally before processing hits
     const handler = (event: Event) => {
       const midiEvent = event as MIDIMessageEvent;
       handleMIDIMessage(midiEvent);
     };
     midiHandlerRef.current = handler;
     midiPractice.input.onmidimessage = handler;
-    console.log('[MIDI Practice] MIDI handler attached to:', midiPractice.input.name);
-
-    // Reset start time and matched notes when playback starts (new loop or restart)
-    // Reset when: playback starts (playbackPosition === null) OR loop changes (new loop)
-    const shouldReset = (isPlaying && playbackPosition === null && !countInActive && !hasResetRef.current) || 
-                        (isPlaying && currentLoop > 0 && !startTimeRef.current && !hasResetRef.current);
-    
-    if (shouldReset) {
-      // Playback just started or new loop - reset timing for fresh practice session
-      hasResetRef.current = true; // Mark as reset to prevent re-triggering
-      startTimeRef.current = null;
-      
-      // Only reset store state if it's different to prevent infinite loops
-      if (startTime !== null) {
-        setMIDIStartTime(null);
-      }
-      
-      // Reset matched notes for a fresh practice session (allow re-matching)
-      // Only reset if some notes are matched (prevents unnecessary updates)
-      if (expectedNotes.length > 0 && expectedNotes.some(note => note.matched)) {
-        const resetNotes = expectedNotes.map(note => ({ ...note, matched: false }));
-        setMIDIExpectedNotes(resetNotes);
-        console.log('[MIDI Practice] Reset start time and matched notes - playback starting/looping');
-      } else {
-        console.log('[MIDI Practice] Reset start time - playback starting/looping');
-      }
-    }
-    
-    // Reset the hasResetRef when playback stops or position moves past first note
-    if (!isPlaying || (playbackPosition !== null && playbackPosition >= 0 && !countInActive)) {
-      hasResetRef.current = false;
-    }
-    
-    // Set start time when first note is expected to play (like WordPress plugin)
-    // WordPress plugin sets it when count-in completes: performance.now() - firstNoteTime
-    // But also uses setTimeout with firstNoteTime when playback starts
-    // We'll set it when count-in completes and first note is about to play
-    if (expectedNotes.length > 0 && !startTimeRef.current && !countInActive && playbackPosition !== null && playbackPosition >= 0) {
-      // Count-in just completed, first note is about to play
-      const firstNoteTime = expectedNotes[0].time; // Usually 0
-      
-      // Set start time so that elapsedTime = 0 when first note plays
-      // This means startTime should be performance.now() when first note actually plays
-      // WordPress plugin uses setTimeout, but we can set it now and adjust for firstNoteTime
-      const now = performance.now();
-      const startTime = now - firstNoteTime; // Adjust for first note offset
-      startTimeRef.current = startTime;
-      setMIDIStartTime(startTime);
-      console.log('MIDI Practice start time set:', startTime, 'first note time:', firstNoteTime, 'now:', now);
-    }
+    console.log('[MIDI Practice] MIDI handler attached successfully');
 
     return () => {
       if (midiPractice.input && midiHandlerRef.current) {
+        console.log('[MIDI Practice] Detaching MIDI handler');
         midiPractice.input.onmidimessage = null;
         midiHandlerRef.current = null;
       }
     };
-  }, [midiPracticeEnabled, isPlaying, midiPractice.input, expectedNotes.length, countInActive, playbackPosition, countInEnabled, bpm, handleMIDIMessage, buildExpectedNotes, setMIDIExpectedNotes, setMIDIStartTime, expectedNotes, currentLoop]);
+  }, [midiPracticeEnabled, midiPractice.input, handleMIDIMessage]);
+
+  // Separate effect for managing start time and resets during playback
+  useEffect(() => {
+    if (!midiPracticeEnabled || !isPlaying) {
+      return;
+    }
+
+    // Reset start time and matched notes when playback starts (new loop or restart)
+    const shouldReset = (playbackPosition === null && !countInActive && !hasResetRef.current) || 
+                        (currentLoop > 0 && !startTimeRef.current && !hasResetRef.current);
+    
+    if (shouldReset) {
+      hasResetRef.current = true;
+      startTimeRef.current = null;
+      
+      if (startTime !== null) {
+        setMIDIStartTime(null);
+      }
+      
+      if (expectedNotes.length > 0 && expectedNotes.some(note => note.matched)) {
+        const resetNotes = expectedNotes.map(note => ({ ...note, matched: false }));
+        setMIDIExpectedNotes(resetNotes);
+        console.log('[MIDI Practice] Reset matched notes for new playback');
+      }
+    }
+    
+    // Reset hasResetRef when position moves
+    if (playbackPosition !== null && playbackPosition >= 0 && !countInActive) {
+      hasResetRef.current = false;
+    }
+    
+    // Set start time when first note plays
+    if (expectedNotes.length > 0 && !startTimeRef.current && !countInActive && playbackPosition !== null && playbackPosition >= 0) {
+      const firstNoteTime = expectedNotes[0].time;
+      const now = performance.now();
+      const newStartTime = now - firstNoteTime;
+      startTimeRef.current = newStartTime;
+      setMIDIStartTime(newStartTime);
+      console.log('[MIDI Practice] Start time set:', newStartTime.toFixed(1), 'ms');
+    }
+  }, [midiPracticeEnabled, isPlaying, playbackPosition, countInActive, expectedNotes, currentLoop, startTime, setMIDIStartTime, setMIDIExpectedNotes]);
+
+  // Reset hasResetRef when playback stops
+  useEffect(() => {
+    if (!isPlaying) {
+      hasResetRef.current = false;
+    }
+  }, [isPlaying]);
 
   // Reset when practice is disabled
   useEffect(() => {
